@@ -1,0 +1,1561 @@
+{
+    "passed": [
+        {
+            "path": "\/api\/health",
+            "status": 200
+        },
+        {
+            "path": "\/api\/debug-log",
+            "status": 200
+        },
+        {
+            "path": "\/api\/debug-clear",
+            "status": 200
+        },
+        {
+            "path": "\/api\/debug-categories",
+            "status": 200
+        },
+        {
+            "path": "\/api\/debug-courses",
+            "status": 200
+        },
+        {
+            "path": "\/api\/debug-dashboard",
+            "status": 200
+        },
+        {
+            "path": "\/api\/log-tail",
+            "status": 200
+        },
+        {
+            "path": "\/api\/scholarships",
+            "status": 200
+        },
+        {
+            "path": "\/api\/contests",
+            "status": 200
+        },
+        {
+            "path": "\/api\/blogs",
+            "status": 200
+        },
+        {
+            "path": "\/api\/faqs",
+            "status": 200
+        },
+        {
+            "path": "\/api\/testimonials",
+            "status": 200
+        },
+        {
+            "path": "\/api\/placement-partners",
+            "status": 200
+        },
+        {
+            "path": "\/api\/success-stories",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/courses",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/course-categories",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/course-levels",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/stats",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/settings",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/partners",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/testimonials-cms",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/faqs-cms",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/experts-cms",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/featured-courses",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/jobs",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/internships",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/experts",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/contests",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/scholarships",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/blogs",
+            "status": 200
+        },
+        {
+            "path": "\/api\/public\/blog-categories",
+            "status": 200
+        },
+        {
+            "path": "\/api\/qa-routes-map",
+            "status": 200
+        }
+    ],
+    "failed_500": [],
+    "failed_other": [
+        {
+            "path": "\/api\/reviews",
+            "status": 422,
+            "error": "{\"message\":\"The course id field is required.\",\"errors\":{\"course_id\":[\"The course id field is require"
+        },
+        {
+            "path": "\/api\/public\/jobs\/my-applications",
+            "status": 404,
+            "error": "{\n    \"message\": \"No query results for model [App\\\\Models\\\\Job] my-applications\",\n    \"exception\": \""
+        },
+        {
+            "path": "\/api\/public\/jobs\/bookmarks",
+            "status": 404,
+            "error": "{\n    \"message\": \"No query results for model [App\\\\Models\\\\Job] bookmarks\",\n    \"exception\": \"Symfon"
+        },
+        {
+            "path": "\/api\/public\/internships\/my-applications",
+            "status": 404,
+            "error": "{\n    \"message\": \"No query results for model [App\\\\Models\\\\Internship] my-applications\",\n    \"except"
+        },
+        {
+            "path": "\/api\/me",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/courses",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/messages",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/internships",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/scholarships",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/certificates",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/company\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/company\/analytics",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/company\/jobs",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/company\/applicants",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/company\/interviews",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/metrics",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/sessions\/upcoming",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/earnings\/chart",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/mentees\/requests",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/transactions",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/mentees",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/expert\/schedule",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/jobseeker\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/jobseeker\/applications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/jobseeker\/profile",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/intern\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/intern\/applications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/intern\/mentor-sessions",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/intern\/settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/intern\/resume",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/profile",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/dashboard\/student",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/dashboard\/student\/placement-progress",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/notifications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/certificates",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/mentor-sessions",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/messages\/unread",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/messages",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/student\/orders",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/students",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/placement-drives",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/internship-drives",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/campus-jobs",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/events",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/college\/companies",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/notifications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/notifications\/badges",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/dashboard\/summary",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/dashboard\/charts",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/dashboard\/feed",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/dashboard\/top\/courses",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/dashboard\/recent\/enrollments",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/users\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/users",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/approvals",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/crm\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/leads",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/delete-requests",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/system-licenses",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/system-email-templates",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/system-api-credentials",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/security\/logs",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/security\/sessions",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/backups\/dashboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/backups\/settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/certificates",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/certificates\/settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/certificates\/fonts",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/certificates\/templates",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/backups",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/blogs",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/roles\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/roles\/audit\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/roles\/audit",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/roles",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/delete-requests\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/role-requests",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/consultations",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/callback-requests",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/students\/settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/students\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/students",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/jobs\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/jobs\/dashboard-metrics",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/jobs",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/instructors\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/instructors\/dashboard-metrics",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/instructors",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/internships\/stats",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/internships\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/internships\/all-applications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/internships\/all-submissions",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/internships",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/courses\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/courses",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-categories\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-categories",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/blogs\/dashboard-metrics",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/blog-categories",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/communication\/inbox",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/communication\/broadcasts",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/communication\/announcements",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-subjects",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-levels\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-levels",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/mcq\/results",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/mcq\/stats",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/mcq\/leaderboard",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/mcq\/courses",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/mcq\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/certificates\/stats",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-qa\/stats",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-qa\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/course-qa",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/virtual-classes\/stats",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/virtual-classes\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/virtual-classes",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/media\/folders",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/media\/files",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/media\/trash",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/media\/statistics",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/enrollments\/export",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/enrollments",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/analytics\/summary",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/analytics\/leaderboards",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/analytics\/tab-stats",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/analytics\/chart-data",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/analytics\/recent-activity",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/admin\/zoom-settings",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/course-categories",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/courses",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/modules",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/lessons",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/jobs",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/internships",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/job-applications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/internship-applications",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/wishlist",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/cart",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        },
+        {
+            "path": "\/api\/orders",
+            "status": 401,
+            "error": "{\"message\":\"Unauthenticated.\",\"success\":false}"
+        }
+    ],
+    "testing": [
+        {
+            "uri": "api\/health",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/debug-log",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/debug-clear",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/debug-categories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/debug-courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/debug-dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/log-tail",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/scholarships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/contests",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/blogs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/faqs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/testimonials",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/reviews",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/placement-partners",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/success-stories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/course-categories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/course-levels",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/partners",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/testimonials-cms",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/faqs-cms",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/experts-cms",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/featured-courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/jobs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/internships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/experts",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/contests",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/scholarships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/blogs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/blog-categories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/jobs\/my-applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/jobs\/bookmarks",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/public\/internships\/my-applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/me",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/messages",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/internships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/scholarships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/certificates",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/company\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/company\/analytics",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/company\/jobs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/company\/applicants",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/company\/interviews",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/metrics",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/sessions\/upcoming",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/earnings\/chart",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/mentees\/requests",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/transactions",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/mentees",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/expert\/schedule",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/jobseeker\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/jobseeker\/applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/jobseeker\/profile",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/intern\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/intern\/applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/intern\/mentor-sessions",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/intern\/settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/intern\/resume",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/profile",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/dashboard\/student",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/dashboard\/student\/placement-progress",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/notifications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/certificates",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/mentor-sessions",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/messages\/unread",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/messages",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/student\/orders",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/students",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/placement-drives",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/internship-drives",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/campus-jobs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/events",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/college\/companies",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/notifications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/notifications\/badges",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/dashboard\/summary",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/dashboard\/charts",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/dashboard\/feed",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/dashboard\/top\/courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/dashboard\/recent\/enrollments",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/users\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/users",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/approvals",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/crm\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/leads",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/delete-requests",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/system-licenses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/system-email-templates",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/system-api-credentials",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/security\/logs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/security\/sessions",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/backups\/dashboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/backups\/settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/certificates",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/certificates\/settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/certificates\/fonts",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/certificates\/templates",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/backups",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/blogs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/roles\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/roles\/audit\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/roles\/audit",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/roles",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/delete-requests\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/role-requests",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/consultations",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/callback-requests",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/students\/settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/students\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/students",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/jobs\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/jobs\/dashboard-metrics",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/jobs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/instructors\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/instructors\/dashboard-metrics",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/instructors",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/internships\/stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/internships\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/internships\/all-applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/internships\/all-submissions",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/internships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/courses\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-categories\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-categories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/blogs\/dashboard-metrics",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/blog-categories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/communication\/inbox",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/communication\/broadcasts",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/communication\/announcements",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-subjects",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-levels\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-levels",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/mcq\/results",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/mcq\/stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/mcq\/leaderboard",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/mcq\/courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/mcq\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/certificates\/stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-qa\/stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-qa\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/course-qa",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/virtual-classes\/stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/virtual-classes\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/virtual-classes",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/media\/folders",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/media\/files",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/media\/trash",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/media\/statistics",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/enrollments\/export",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/enrollments",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/analytics\/summary",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/analytics\/leaderboards",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/analytics\/tab-stats",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/analytics\/chart-data",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/analytics\/recent-activity",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/admin\/zoom-settings",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/course-categories",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/courses",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/modules",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/lessons",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/jobs",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/internships",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/job-applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/internship-applications",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/wishlist",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/cart",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/orders",
+            "methods": "GET|HEAD"
+        },
+        {
+            "uri": "api\/qa-routes-map",
+            "methods": "GET|HEAD"
+        }
+    ]
+}
