@@ -190,8 +190,13 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('settings', [\App\Http\Controllers\Api\Public\PublicCmsController::class, 'settings']);
     Route::get('partners', [\App\Http\Controllers\Api\Public\PublicCmsController::class, 'partners']);
     Route::get('testimonials-cms', [\App\Http\Controllers\Api\Public\PublicCmsController::class, 'testimonials']);
-    Route::get('faqs-cms', [\App\Http\Controllers\Api\Public\PublicCmsController::class, 'faqs']);
     Route::get('experts-cms', [\App\Http\Controllers\Api\Public\PublicCmsController::class, 'experts']);
+
+    // ─── CMS Ecosystem (Public) ────────────────────────────────────────────────
+    Route::get('cms/companies', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCompanies']);
+    Route::get('cms/placement-partners', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPlacementPartners']);
+    Route::get('cms/colleges', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getColleges']);
+    Route::get('cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
 
     // Featured Courses (Homepage Hero)
     Route::get('featured-courses', fn() => response()->json([
@@ -708,6 +713,27 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     
     // Admin API
     Route::middleware(['auth:sanctum', 'role:super_admin|admin,sanctum'])->prefix('admin')->group(function () {
+        // --- CMS Ecosystem (Admin) ---
+        Route::get('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getCompanies']);
+        Route::post('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storeCompany']);
+        Route::put('cms/companies/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updateCompany']);
+        Route::delete('cms/companies/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deleteCompany']);
+        
+        Route::get('cms/placement-partners', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getPlacementPartners']);
+        Route::post('cms/placement-partners', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storePlacementPartner']);
+        Route::put('cms/placement-partners/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updatePlacementPartner']);
+        Route::delete('cms/placement-partners/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deletePlacementPartner']);
+        
+        Route::get('cms/colleges', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getColleges']);
+        Route::post('cms/colleges', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storeCollege']);
+        Route::put('cms/colleges/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updateCollege']);
+        Route::delete('cms/colleges/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deleteCollege']);
+        
+        Route::get('cms/portfolios', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getPortfolios']);
+        Route::post('cms/portfolios', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storePortfolio']);
+        Route::put('cms/portfolios/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updatePortfolio']);
+        Route::delete('cms/portfolios/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deletePortfolio']);
+
         // SEO Administration
         Route::apiResource('seo-metadata', \App\Http\Controllers\Api\Admin\AdminSeoController::class);
         // Notifications & Badges

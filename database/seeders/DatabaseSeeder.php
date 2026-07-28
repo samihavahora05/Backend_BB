@@ -80,7 +80,7 @@ class DatabaseSeeder extends Seeder
             JobModuleSeeder::class,
             InternshipModuleSeeder::class,
             StudentModuleSeeder::class,
-            // InstructorModuleSeeder removed — instructors are created manually by admin
+            CmsEcosystemSeeder::class,
         ]);
 
         $this->command->info('✅ Database Seeded Successfully with Enterprise Data!');
