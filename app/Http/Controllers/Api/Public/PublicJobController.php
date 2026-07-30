@@ -17,20 +17,22 @@ class PublicJobController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Job::query()->where('status', 'active');
+        $query = Job::query()->with('company.companyProfile')->where('status', 'active');
 
         // Search
         if ($s = $request->query('search')) {
             $query->where(function ($q) use ($s) {
                 $q->where('title', 'like', "%{$s}%")
-                  ->orWhere('company_name', 'like', "%{$s}%")
-                  ->orWhere('location', 'like', "%{$s}%");
+                  ->orWhere('location', 'like', "%{$s}%")
+                  ->orWhereHas('company.companyProfile', function($query) use ($s) {
+                      $query->where('company_name', 'like', "%{$s}%");
+                  });
             });
         }
 
         // Filters
         if ($type = $request->query('job_type')) {
-            $query->where('job_type', $type);
+            $query->where('employment_type', $type);
         }
         if ($loc = $request->query('location')) {
             $query->where('location', 'like', "%{$loc}%");
@@ -64,7 +66,7 @@ class PublicJobController extends Controller
             'company_name'     => $j->company_name,
             'company_logo'     => $j->company_logo ? asset('storage/' . $j->company_logo) : null,
             'location'         => $j->location,
-            'job_type'         => $j->job_type,
+            'job_type'         => $j->employment_type,
             'experience_level' => $j->experience_level,
             'salary_min'       => $j->hide_salary ? null : $j->salary_min,
             'salary_max'       => $j->hide_salary ? null : $j->salary_max,
@@ -92,7 +94,7 @@ class PublicJobController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $job = Job::where('status', 'active')->findOrFail($id);
+        $job = Job::with('company.companyProfile')->where('status', 'active')->findOrFail($id);
 
         // Track view
         \DB::table('job_views')->insertOrIgnore([
@@ -117,7 +119,7 @@ class PublicJobController extends Controller
                 'company_logo'         => $job->company_logo ? asset('storage/' . $job->company_logo) : null,
                 'company_description'  => $job->company_description ?? null,
                 'location'             => $job->location,
-                'job_type'             => $job->job_type,
+                'job_type'             => $job->employment_type,
                 'experience_level'     => $job->experience_level,
                 'education_level'      => $job->education_level ?? null,
                 'salary_min'           => $job->hide_salary ? null : $job->salary_min,

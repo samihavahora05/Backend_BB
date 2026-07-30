@@ -4,47 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 
-Route::get('/dev/migrate-fresh', function () {
-    try {
-        Artisan::call('migrate:fresh', ['--force' => true]);
-        Artisan::call('db:seed', ['--force' => true]);
-        return response()->json(['success' => true, 'output' => Artisan::output()]);
-    } catch (\Exception $e) {
-        return response()->json(['success' => false, 'error' => $e->getMessage()]);
-    }
-});
-
-Route::get('/dev/db-check', function () {
-    try {
-        $columns = Illuminate\Support\Facades\Schema::getColumnListing('leads');
-        return response()->json(['success' => true, 'columns' => $columns]);
-    } catch (\Exception $e) {
-        return response()->json(['success' => false, 'error' => $e->getMessage()]);
-    }
-});
-
-// Remove old dev routes to avoid cache issues
-Route::get('/dev/clear', function() {
-    \Illuminate\Support\Facades\Artisan::call('route:clear');
-    \Illuminate\Support\Facades\Artisan::call('cache:clear');
-    app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-    return 'cleared';
-});
-
-Route::get('/dev/perms', function () {
-    return response()->json([
-        'super_admin' => \App\Models\User::whereHas('roles', fn($q) => $q->where('name', 'super_admin'))->with('roles.permissions')->first(),
-        'admin' => \App\Models\User::whereHas('roles', fn($q) => $q->where('name', 'admin'))->with('roles.permissions')->first(),
-        'all_permissions' => \Spatie\Permission\Models\Permission::pluck('name')
-    ]);
-});
-
+use App\Http\Controllers\Api\System\HealthController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ApprovalController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\BlogController as AdminBlogController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\CallbackRequestController;
 use App\Http\Controllers\ScholarshipProgramController;
@@ -55,92 +16,23 @@ use App\Http\Controllers\TestimonialController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PlacementPartnerController;
 use App\Http\Controllers\SuccessStoryController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\MentorSessionController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CourseCategoryController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\LessonController;
-use App\Http\Controllers\JobController;
-use App\Http\Controllers\JobApplicationController;
-use App\Http\Controllers\InternshipController;
-use App\Http\Controllers\InternshipApplicationController;
-use App\Http\Controllers\WishlistController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\UploadController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ApprovalController;
 
-
-Route::get('/health', function () {
-    return response()->json(['status' => 'ok', 'timestamp' => now()]);
-});
-
-Route::get('/debug-log', function () {
-    $path = storage_path('logs/laravel.log');
-    if (!file_exists($path)) return 'No log file';
-    $file = file($path);
-    $lastLines = array_slice($file, -500);
-    return response(implode("", $lastLines))->header('Content-Type', 'text/plain');
-});
-
-Route::get('/debug-clear', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('optimize:clear');
-        \Illuminate\Support\Facades\Artisan::call('config:clear');
-        return "Cache cleared! " . \Illuminate\Support\Facades\Artisan::output();
-    } catch (\Exception $e) {
-        return $e->getMessage();
-    }
-});
-
-Route::get('/debug-categories', function () {
-    if (\App\Models\CourseCategory::count() === 0) {
-        \App\Models\CourseCategory::create(['name' => 'Data Science', 'slug' => 'data-science', 'status' => 'active']);
-        \App\Models\CourseCategory::create(['name' => 'Web Development', 'slug' => 'web-development', 'status' => 'active']);
-    }
-    if (\App\Models\CourseLevel::count() === 0) {
-        \App\Models\CourseLevel::create(['title' => 'Beginner', 'slug' => 'beginner', 'status' => 'active']);
-        \App\Models\CourseLevel::create(['title' => 'Intermediate', 'slug' => 'intermediate', 'status' => 'active']);
-        \App\Models\CourseLevel::create(['title' => 'Advanced', 'slug' => 'advanced', 'status' => 'active']);
-    }
-    return response()->json([
-        'count' => \App\Models\CourseCategory::count(),
-        'categories' => \App\Models\CourseCategory::all()
-    ]);
-});
-
-Route::get('/debug-courses', function () {
-    return response()->json(\App\Models\Course::all());
-});
-
-Route::get('/debug-dashboard', function (\App\Services\DashboardService $service) {
-    if (function_exists('opcache_reset')) opcache_reset();
-    \Illuminate\Support\Facades\Cache::forget('dashboard.summary');
-    \Illuminate\Support\Facades\Cache::forget('dashboard.charts.monthly');
-    try {
-        return response()->json($service->getPlatformSummary());
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 200);
-    }
-});
+Route::get('/health', [HealthController::class, 'health']);
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/log-tail', function () {
-    $path = storage_path('logs/laravel.log');
-    if (!file_exists($path)) return 'No log file';
-    
-    $file = fopen($path, 'r');
-    fseek($file, -2000, SEEK_END);
-    $tail = fread($file, 2000);
-    fclose($file);
-    return response($tail)->header('Content-Type', 'text/plain');
-});
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/social-login', [AuthController::class, 'socialLogin']);
@@ -174,16 +66,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::middleware('auth:sanctum')->get('courses/{slug}/enroll-status', [\App\Http\Controllers\Api\Public\PublicCourseController::class, 'enrollStatus']);
 
     // Course Categories (for filter dropdowns)
-    Route::get('course-categories', fn() => response()->json([
-        'success' => true,
-        'data'    => \App\Models\CourseCategory::where('status', 'active')->orderBy('name')->get(['id', 'name', 'slug']),
-    ]));
+    Route::get('course-categories', [\App\Http\Controllers\Api\Public\PublicCourseController::class, 'categories']);
 
     // Course Levels
-    Route::get('course-levels', fn() => response()->json([
-        'success' => true,
-        'data'    => \App\Models\CourseLevel::where('status', 'active')->orderBy('title')->get(['id', 'title', 'slug']),
-    ]));
+    Route::get('course-levels', [\App\Http\Controllers\Api\Public\PublicCourseController::class, 'levels']);
 
     // CMS & Platform Stats
     Route::get('stats', [\App\Http\Controllers\Api\Public\PublicCmsController::class, 'stats']);
@@ -199,27 +85,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
 
     // Featured Courses (Homepage Hero)
-    Route::get('featured-courses', fn() => response()->json([
-        'success' => true,
-        'data'    => \App\Models\Course::with(['category', 'level'])
-            ->where('status', 'Published')
-            ->where('is_featured', true)
-            ->where('is_archived', false)
-            ->latest()
-            ->take(6)
-            ->get()
-            ->map(fn($c) => [
-                'id'             => $c->id,
-                'slug'           => $c->slug,
-                'title'          => $c->title,
-                'thumbnail'      => $c->thumbnail ? asset('storage/' . $c->thumbnail) : null,
-                'price'          => $c->price,
-                'discount_price' => $c->discount_price,
-                'course_type'    => $c->course_type,
-                'category'       => $c->category?->name,
-                'level'          => $c->level?->name,
-            ]),
-    ]));
+    Route::get('featured-courses', [\App\Http\Controllers\Api\Public\PublicCourseController::class, 'featured']);
 
     // ─── Blog CMS ─────────────────────────────────────────────────────────────
     Route::get('blogs', [\App\Http\Controllers\Api\Public\PublicBlogController::class, 'index']);
@@ -310,7 +176,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Student Portal Integration
-    Route::middleware('role:student,sanctum')->prefix('student')->group(function () {
+    Route::middleware('role:student,sanctum')->prefix('student')->name('student.')->group(function () {
         Route::get('/courses', [\App\Http\Controllers\Api\Student\StudentCourseController::class, 'index']);
         Route::post('/courses/{course_id}/lessons/{lesson_id}/complete', [\App\Http\Controllers\Api\Student\StudentCourseController::class, 'markLessonComplete']);
         Route::get('/dashboard', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
@@ -325,8 +191,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('/resume/upload', [\App\Http\Controllers\Api\Student\StudentResumeController::class, 'upload']);
     });
 
-    // Company Portal Integration
-    Route::middleware('role:company,sanctum')->prefix('company')->group(function () {
+    // Company Portal Integration (Old / Deprecated prefix? Kept for safety)
+    Route::middleware('role:company,sanctum')->prefix('company')->name('company_old.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'index']);
         Route::get('/analytics', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'analytics']);
         
@@ -356,8 +222,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('/offers', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'store']);
     });
 
-    // Expert Portal Integration
-    Route::middleware('role:expert,sanctum')->prefix('expert')->group(function () {
+    // Expert Portal Integration (Old / Deprecated prefix?)
+    Route::middleware('role:expert,sanctum')->prefix('expert')->name('expert_old.')->group(function () {
         Route::get('/metrics', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'metrics']);
         Route::get('/sessions/upcoming', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'upcomingSessions']);
         Route::put('/sessions/{id}/meeting-link', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'updateMeetingLink']);
@@ -371,7 +237,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Company Portal Integration
-    Route::middleware(['auth:sanctum', 'role:company'])->prefix('company')->group(function () {
+    Route::middleware(['auth:sanctum', 'role:company'])->prefix('company')->name('company.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'index']);
         Route::get('/analytics', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'analytics']);
@@ -417,7 +283,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Job Seeker Portal Integration
-    Route::middleware(['auth:sanctum', 'role:job-seeker|jobseeker'])->prefix('jobseeker')->group(function () {
+    Route::middleware(['auth:sanctum', 'role:job-seeker|jobseeker'])->prefix('jobseeker')->name('jobseeker.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'index']);
         
@@ -447,7 +313,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
 
     // Intern Portal Integration
-    Route::middleware(['role:intern'])->prefix('intern')->group(function () {
+    Route::middleware(['role:intern'])->prefix('intern')->name('intern.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Api\InternDashboardController::class, 'index']);
         Route::get('/applications', [\App\Http\Controllers\Api\InternDashboardController::class, 'applications']);
         Route::get('/mentor-sessions', [\App\Http\Controllers\Api\InternDashboardController::class, 'mentorSessions']);
@@ -493,7 +359,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Student Dashboard & LMS Progress API
-    Route::prefix('student')->group(function () {
+    Route::prefix('student')->name('student_api.')->group(function () {
         // Resume
         Route::get('/resume', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'resume']);
         Route::post('/resume/upload', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'uploadResume']);
@@ -575,7 +441,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
     
     // Expert Dashboard API
-    Route::prefix('expert')->group(function () {
+    Route::prefix('expert')->name('expert.')->group(function () {
         Route::get('/metrics', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'metrics']);
         Route::get('/sessions/upcoming', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'upcomingSessions']);
         Route::get('/earnings/chart', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'earningsChart']);
@@ -586,7 +452,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
     
     // College Portal API (Placement Cell)
-    Route::middleware('role:college,sanctum')->prefix('college')->group(function () {
+    Route::middleware('role:college,sanctum')->prefix('college')->name('college.')->group(function () {
         // Dashboard & Students
         Route::get('/dashboard', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'index']);
         Route::get('/students', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'students']);
@@ -645,7 +511,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // College Profile Settings — accessible to college AND super_admin
-    Route::prefix('college')->group(function () {
+    Route::prefix('college')->name('college_api.')->group(function () {
         Route::get('/profile', function(\Illuminate\Http\Request $request) {
             $user = $request->user();
             $profile = \Illuminate\Support\Facades\DB::table('college_profiles')->where('user_id', $user->id)->first();
@@ -712,7 +578,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::post('/reviews', [ReviewController::class, 'store']);
     
     // Admin API
-    Route::middleware(['auth:sanctum', 'role:super_admin|admin,sanctum'])->prefix('admin')->group(function () {
+    Route::middleware(['auth:sanctum', 'role:super_admin|admin,sanctum'])->prefix('admin')->name('admin.')->group(function () {
         // --- CMS Ecosystem (Admin) ---
         Route::get('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getCompanies']);
         Route::post('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storeCompany']);
@@ -840,8 +706,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('dashboard/recent/{module}', [AdminDashboardController::class, 'getRecentData']);
         Route::get('dashboard/feed', [AdminDashboardController::class, 'getActivityFeed']);
         // Blog System (Enterprise)
-        Route::post('blogs/upload-image', [AdminBlogController::class, 'uploadImage']);
-        Route::apiResource('blogs', AdminBlogController::class);
+        Route::post('blogs/upload-image', [\App\Http\Controllers\Api\Admin\AdminBlogController::class, 'uploadImage']);
+        Route::apiResource('blogs', \App\Http\Controllers\Api\Admin\AdminBlogController::class);
         
         // Admin Roles & Permissions
         Route::post('roles/import', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'importRoles']);

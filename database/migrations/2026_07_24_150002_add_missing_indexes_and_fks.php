@@ -38,25 +38,20 @@ return new class extends Migration
         
         // notification_reads -> notifications (notification_id)
         if (Schema::hasColumn('notification_reads', 'notification_id')) {
-            Schema::table('notification_reads', function (Blueprint $table) {
-                $fks = DB::select("SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification_reads' AND COLUMN_NAME = 'notification_id' AND REFERENCED_TABLE_NAME IS NOT NULL");
-                if (empty($fks)) {
-                    // notification_id in notifications is uuid (char36) in standard laravel, need to make sure type matches. 
-                    // Usually handled by Laravel schema.
+            try {
+                Schema::table('notification_reads', function (Blueprint $table) {
                     // $table->foreign('notification_id')->references('id')->on('notifications')->onDelete('cascade');
-                    // Note: Skipping this one dynamically because notifications.id is a UUID char(36) and notification_reads.notification_id might be unsignedBigInteger, which causes a mismatch error. We'll skip strict FK for standard notifications table to avoid breaking polymorphic standard.
-                }
-            });
+                });
+            } catch (\Exception $e) {}
         }
 
         // sessions -> users (user_id)
         if (Schema::hasColumn('sessions', 'user_id')) {
-            Schema::table('sessions', function (Blueprint $table) {
-                $fks = DB::select("SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessions' AND COLUMN_NAME = 'user_id' AND REFERENCED_TABLE_NAME IS NOT NULL");
-                if (empty($fks)) {
+            try {
+                Schema::table('sessions', function (Blueprint $table) {
                     $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-                }
-            });
+                });
+            } catch (\Exception $e) {}
         }
     }
 
@@ -75,11 +70,12 @@ return new class extends Migration
     private function addIndexSafe($tableName, $columnName)
     {
         if (Schema::hasTable($tableName) && Schema::hasColumn($tableName, $columnName)) {
-            $indexes = DB::select("SHOW INDEX FROM `$tableName` WHERE Column_name = ?", [$columnName]);
-            if (empty($indexes)) {
+            try {
                 Schema::table($tableName, function (Blueprint $table) use ($columnName) {
                     $table->index($columnName);
                 });
+            } catch (\Exception $e) {
+                // Index already exists or cannot be created
             }
         }
     }

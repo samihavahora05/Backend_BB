@@ -21,6 +21,18 @@ class Internship extends Model
         'featured' => 'boolean',
     ];
 
+    protected $appends = ['company_name', 'company_logo'];
+
+    public function getCompanyNameAttribute()
+    {
+        return $this->company?->companyProfile?->company_name ?? 'Unknown Company';
+    }
+
+    public function getCompanyLogoAttribute()
+    {
+        return $this->company?->companyProfile?->logo ?? null;
+    }
+
     public function company()
     {
         return $this->belongsTo(User::class, 'company_id');

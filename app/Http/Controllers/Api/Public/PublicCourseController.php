@@ -182,4 +182,57 @@ class PublicCourseController extends Controller
             'status'      => $enrollment?->status ?? null,
         ]);
     }
+
+    /**
+     * Get active course categories
+     * GET /api/public/course-categories
+     */
+    public function categories()
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => \App\Models\CourseCategory::where('status', 'active')->orderBy('name')->get(['id', 'name', 'slug']),
+        ]);
+    }
+
+    /**
+     * Get active course levels
+     * GET /api/public/course-levels
+     */
+    public function levels()
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => \App\Models\CourseLevel::where('status', 'active')->orderBy('title')->get(['id', 'title', 'slug']),
+        ]);
+    }
+
+    /**
+     * Get featured courses
+     * GET /api/public/featured-courses
+     */
+    public function featured()
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => Course::with(['category', 'level'])
+                ->where('status', 'Published')
+                ->where('is_featured', true)
+                ->where('is_archived', false)
+                ->latest()
+                ->take(6)
+                ->get()
+                ->map(fn($c) => [
+                    'id'             => $c->id,
+                    'slug'           => $c->slug,
+                    'title'          => $c->title,
+                    'thumbnail'      => $c->thumbnail ? asset('storage/' . $c->thumbnail) : null,
+                    'price'          => $c->price,
+                    'discount_price' => $c->discount_price,
+                    'course_type'    => $c->course_type,
+                    'category'       => $c->category?->name,
+                    'level'          => $c->level?->name,
+                ]),
+        ]);
+    }
 }

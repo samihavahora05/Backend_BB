@@ -1,5 +1,9 @@
 <?php
-
+if (!function_exists('fake')) {
+    function fake($locale = null) {
+        return \Faker\Factory::create($locale ?? config('app.faker_locale', 'en_US'));
+    }
+}
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -48,6 +52,35 @@ return Application::configure(basePath: dirname(__DIR__))
                 ];
                 \Illuminate\Support\Facades\Log::error('403 Unauthorized Details', $data);
                 return response()->json($data, 403);
+            }
+        });
+
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+        });
+
+        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Resource not found.',
+                ], 404);
+            }
+        });
+        
+        $exceptions->render(function (\Illuminate\Database\QueryException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                \Illuminate\Support\Facades\Log::error('QueryException', ['message' => $e->getMessage()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => app()->isProduction() ? 'A database error occurred.' : $e->getMessage(),
+                ], 500);
             }
         });
     })->create();

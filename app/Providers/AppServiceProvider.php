@@ -37,11 +37,8 @@ class AppServiceProvider extends ServiceProvider
         // Fix for Spatie Permissions relying on Sanctum provider model
         config(['auth.guards.sanctum.provider' => 'users']);
 
-        // Security & Performance: Prevent N+1 queries in non-production environments
-        Model::preventLazyLoading(!app()->isProduction());
-        
-        // Ensure mass assignment exceptions are thrown in local
-        Model::preventSilentlyDiscardingAttributes(!app()->isProduction());
+        // Security & Performance: Enable full strict mode in local/development
+        Model::shouldBeStrict(!app()->isProduction());
 
         // --- TEMPORARY CRM CATEGORY SEED ---
         $categories = [
@@ -55,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
             "Partnership / Collaboration",
             "Campus Hiring"
         ];
-        if (!\App\Models\GlobalSetting::where('key', 'crm_lead_categories')->exists()) {
+        if (\Illuminate\Support\Facades\Schema::hasTable('global_settings') && !\App\Models\GlobalSetting::where('key', 'crm_lead_categories')->exists()) {
             \App\Models\GlobalSetting::create([
                 'group' => 'general',
                 'key' => 'crm_lead_categories',

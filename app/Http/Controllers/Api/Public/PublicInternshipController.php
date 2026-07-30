@@ -15,24 +15,26 @@ class PublicInternshipController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Internship::query()->whereIn('status', ['Active', 'active', 'Open', 'open', 'OPEN', 'Published', 'published']);
+        $query = Internship::query()->with('company.companyProfile')->whereIn('status', ['Active', 'active', 'Open', 'open', 'OPEN', 'Published', 'published']);
 
         if ($s = $request->query('search')) {
             $query->where(function ($q) use ($s) {
                 $q->where('title', 'like', "%{$s}%")
-                  ->orWhere('company_name', 'like', "%{$s}%")
-                  ->orWhere('location', 'like', "%{$s}%");
+                  ->orWhere('location', 'like', "%{$s}%")
+                  ->orWhereHas('company.companyProfile', function($query) use ($s) {
+                      $query->where('company_name', 'like', "%{$s}%");
+                  });
             });
         }
 
         if ($type = $request->query('type')) {
-            $query->where('type', $type); // Remote, On-site, Hybrid
+            $query->where('mode', $type); // Remote, On-site, Hybrid
         }
         if ($domain = $request->query('domain')) {
             $query->where('domain', 'like', "%{$domain}%");
         }
         if ($request->boolean('paid')) {
-            $query->where('is_paid', true);
+            $query->whereNotNull('stipend')->where('stipend', '>', 0);
         }
 
         $perPage = min((int)$request->query('per_page', 12), 50);
@@ -59,11 +61,11 @@ class PublicInternshipController extends Controller
             'company_name' => $i->company_name,
             'company_logo' => $i->company_logo ? asset('storage/' . $i->company_logo) : null,
             'location'     => $i->location,
-            'type'         => $i->type,
+            'type'         => $i->mode,
             'duration'     => $i->duration,
             'domain'       => $i->domain ?? null,
-            'is_paid'      => $i->is_paid,
-            'stipend'      => $i->is_paid ? $i->stipend : null,
+            'is_paid'      => $i->stipend > 0,
+            'stipend'      => $i->stipend,
             'start_date'   => $i->start_date ?? null,
             'last_date'    => $i->last_date ?? null,
             'posted_at'    => $i->created_at->diffForHumans(),
@@ -89,7 +91,7 @@ class PublicInternshipController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $internship = Internship::whereIn('status', ['Active', 'active', 'Open', 'open', 'OPEN', 'Published', 'published'])->findOrFail($id);
+        $internship = Internship::with('company.companyProfile')->whereIn('status', ['Active', 'active', 'Open', 'open', 'OPEN', 'Published', 'published'])->findOrFail($id);
 
         $hasApplied = false;
         if ($request->user()) {
