@@ -29,18 +29,24 @@ class ConsultationController extends Controller
 
         $consultation = Consultation::create($validated);
 
-        // Dispatch queued contact form confirmation email
-        SendQueuedEmailJob::dispatch(
-            $consultation->email,
-            new ContactFormMail($consultation->name, 'Consultation Request Booking', $consultation->query ?? 'No query specified.'),
-            'Consultation Request Received'
-        );
+        try {
+            // Dispatch queued contact form confirmation email
+            SendQueuedEmailJob::dispatch(
+                $consultation->email,
+                new ContactFormMail($consultation->name, 'Consultation Request Booking', $consultation->query ?? 'No query specified.'),
+                'Consultation Request Received'
+            );
 
-        SendAdminNotificationJob::dispatch(
-            'New Consultation Booking',
-            "A new consultation has been booked by {$consultation->name} ({$consultation->email}).",
-            $consultation->toArray()
-        );
+            SendAdminNotificationJob::dispatch(
+                'New Consultation Booking',
+                "A new consultation has been booked by {$consultation->name} ({$consultation->email}).",
+                $consultation->toArray()
+            );
+        } catch (\Exception $e) {
+            // Silently catch email failures so the user still gets a success message
+            // Useful if SMTP or queue connection is misconfigured on production
+            \Illuminate\Support\Facades\Log::error('Consultation Booking Email Failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Consultation booked successfully. We will contact you soon.',
