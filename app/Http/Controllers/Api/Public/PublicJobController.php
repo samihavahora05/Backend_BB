@@ -17,7 +17,11 @@ class PublicJobController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Job::query()->with('company.companyProfile')->where('status', 'active');
+        $query = Job::query()->with('company.companyProfile')
+            ->where(function($q) {
+                $q->whereIn('status', ['active', 'open', 'published'])
+                  ->orWhereNull('status');
+            });
 
         // Search
         if ($s = $request->query('search')) {

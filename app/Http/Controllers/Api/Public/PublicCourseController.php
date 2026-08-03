@@ -17,8 +17,14 @@ class PublicCourseController extends Controller
     public function index(Request $request)
     {
         $query = Course::with(['category', 'level'])->withCount('enrollments')
-            ->where('status', 'Published')
-            ->where('is_archived', false);
+            ->where(function($q) {
+                $q->whereIn('status', ['published', 'Published', 'active', 'Active'])
+                  ->orWhereNull('status');
+            })
+            ->where(function($q) {
+                $q->where('is_archived', false)
+                  ->orWhereNull('is_archived');
+            });
 
         // Search
         if ($s = $request->query('search')) {
@@ -110,7 +116,10 @@ class PublicCourseController extends Controller
             'modules.lessons' => fn($q) => $q->orderBy('order')->select('id', 'module_id', 'title', 'type', 'duration_minutes'),
         ])
         ->where('slug', $slug)
-        ->where('status', 'Published')
+        ->where(function($q) {
+            $q->whereIn('status', ['published', 'Published', 'active', 'Active'])
+              ->orWhereNull('status');
+        })
         ->firstOrFail();
 
         $totalLessons = $course->modules->flatMap(fn($m) => $m->lessons)->count();
@@ -216,9 +225,15 @@ class PublicCourseController extends Controller
         return response()->json([
             'success' => true,
             'data'    => Course::with(['category', 'level'])
-                ->where('status', 'Published')
+                ->where(function($q) {
+                    $q->whereIn('status', ['published', 'Published', 'active', 'Active'])
+                      ->orWhereNull('status');
+                })
                 ->where('is_featured', true)
-                ->where('is_archived', false)
+                ->where(function($q) {
+                    $q->where('is_archived', false)
+                      ->orWhereNull('is_archived');
+                })
                 ->latest()
                 ->take(6)
                 ->get()

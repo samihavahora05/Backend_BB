@@ -16,7 +16,7 @@ class PublicBlogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Blog::with(['author:id,name,profile_photo_path', 'categories:id,name,slug'])
+        $query = Blog::with(['author:id,first_name,last_name', 'categories:id,name,slug'])
             ->where('status', 'published')
             ->where(function($q) {
                 $q->whereNull('scheduled_at')
@@ -39,7 +39,7 @@ class PublicBlogController extends Controller
         if ($sort === 'popular') {
             $query->orderByDesc('views_count');
         } else {
-            $query->latest('published_at')->latest();
+            $query->latest(); // defaults to created_at
         }
 
         $perPage = min((int)$request->query('per_page', 9), 50);
@@ -53,7 +53,7 @@ class PublicBlogController extends Controller
             'thumbnail'    => $b->thumbnail,
             'author'       => [
                 'name'   => $b->author?->name,
-                'avatar' => $b->author?->profile_photo_url,
+                'avatar' => null,
             ],
             'categories'   => $b->categories->pluck('name'),
             'reading_time' => $b->reading_time,
@@ -78,7 +78,7 @@ class PublicBlogController extends Controller
      */
     public function show(Request $request, $slug)
     {
-        $blog = Blog::with(['author:id,name,profile_photo_path,bio', 'categories:id,name,slug', 'tags:id,name,slug'])
+        $blog = Blog::with(['author:id,first_name,last_name', 'categories:id,name,slug', 'tags:id,name,slug'])
             ->where('status', 'published')
             ->where('slug', $slug)
             ->firstOrFail();
@@ -95,6 +95,20 @@ class PublicBlogController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Fetch comments
+        $comments = \App\Models\BlogComment::with('user:id,first_name,last_name')
+            ->where('blog_id', $blog->id)
+            ->latest()
+            ->get();
+
+        // Check if current user liked it
+        $isLiked = false;
+        if (auth('sanctum')->check()) {
+            $isLiked = \App\Models\BlogLike::where('blog_id', $blog->id)
+                ->where('user_id', auth('sanctum')->id())
+                ->exists();
+        }
+
         return response()->json([
             'success' => true,
             'data'    => [
@@ -107,8 +121,8 @@ class PublicBlogController extends Controller
                 'video_url'        => $blog->video_url,
                 'author'           => [
                     'name'   => $blog->author?->name,
-                    'avatar' => $blog->author?->profile_photo_url,
-                    'bio'    => $blog->author?->bio,
+                    'avatar' => null,
+                    'bio'    => null,
                 ],
                 'categories'       => $blog->categories,
                 'tags'             => $blog->tags,
@@ -121,6 +135,8 @@ class PublicBlogController extends Controller
                 'meta_description' => $blog->meta_description ?? $blog->excerpt,
                 'keywords'         => $blog->keywords,
                 'og_image'         => $blog->og_image ?? $blog->thumbnail,
+                'comments'         => $comments,
+                'is_liked'         => $isLiked,
             ]
         ]);
     }
@@ -132,10 +148,10 @@ class PublicBlogController extends Controller
     public function categories()
     {
         $categories = BlogCategory::where('status', 'active')
+            ->whereHas('blogs', fn($q) => $q->where('status', 'published'))
             ->withCount(['blogs' => fn($q) => $q->where('status', 'published')])
-            ->having('blogs_count', '>', 0)
             ->orderByDesc('blogs_count')
-            ->get(['id', 'name', 'slug', 'blogs_count']);
+            ->get(['id', 'name', 'slug']);
 
         return response()->json(['success' => true, 'data' => $categories]);
     }

@@ -69,13 +69,15 @@ class BlogController extends Controller
         
         if ($like) {
             $like->delete();
-            return response()->json(['message' => 'Blog unliked successfully']);
+            $blog->decrement('likes_count');
+            return response()->json(['message' => 'Blog unliked successfully', 'likes_count' => $blog->likes_count]);
         } else {
             BlogLike::create([
                 'blog_id' => $blog->id,
                 'user_id' => $user_id
             ]);
-            return response()->json(['message' => 'Blog liked successfully']);
+            $blog->increment('likes_count');
+            return response()->json(['message' => 'Blog liked successfully', 'likes_count' => $blog->likes_count]);
         }
     }
 
@@ -85,7 +87,7 @@ class BlogController extends Controller
     public function addComment(Request $request, $id)
     {
         $request->validate([
-            'comment' => 'required|string|max:1000'
+            'content' => 'required|string|max:1000'
         ]);
 
         $blog = Blog::findOrFail($id);
@@ -93,12 +95,14 @@ class BlogController extends Controller
         $comment = BlogComment::create([
             'blog_id' => $blog->id,
             'user_id' => $request->user()->id,
-            'comment' => $request->comment
+            'content' => $request->content
         ]);
+
+        $blog->increment('comments_count');
 
         return response()->json([
             'message' => 'Comment added successfully',
-            'data' => $comment->load('user:id,name')
+            'data' => $comment->load('user:id,first_name,last_name')
         ], 201);
     }
 }

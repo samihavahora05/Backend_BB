@@ -17,7 +17,14 @@ class BlogObserver
     {
         // Auto-slug
         if (empty($blog->slug)) {
-            $blog->slug = Str::slug($blog->title);
+            $originalSlug = Str::slug($blog->title);
+            $slug = $originalSlug;
+            $count = 1;
+            while (Blog::where('slug', $slug)->where('id', '!=', $blog->id ?? 0)->exists()) {
+                $slug = $originalSlug . '-' . $count;
+                $count++;
+            }
+            $blog->slug = $slug;
         }
 
         // Reading time (approx 200 words per min)

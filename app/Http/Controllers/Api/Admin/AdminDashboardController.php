@@ -18,9 +18,9 @@ class AdminDashboardController extends Controller
                     'total' => \App\Models\Course::count(), 
                     'published' => \App\Models\Course::where('is_published', true)->count()
                 ],
-                'revenue' => [
-                    'total' => \App\Models\Order::where('status', 'completed')->sum('total_amount'), 
-                    'monthly' => \App\Models\Order::where('status', 'completed')->whereMonth('created_at', now()->month)->sum('total_amount')
+                'leads' => [
+                    'total' => \App\Models\Lead::count(), 
+                    'new' => \App\Models\Lead::where('status', 'new')->count()
                 ],
                 'orders' => [
                     'total' => \App\Models\Order::count(), 
@@ -45,27 +45,162 @@ class AdminDashboardController extends Controller
 
     public function charts()
     {
+        // Get enrollments and students for the last 12 months
+        $enrollments = [];
+        $students = [];
+
+        for ($i = 1; $i <= 12; $i++) {
+            $month = now()->month($i);
+            $monthStart = $month->copy()->startOfMonth();
+            $monthEnd = $month->copy()->endOfMonth();
+            
+            $enrolls = \App\Models\Order::where('status', 'completed')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->count();
+                
+            $studs = \App\Models\User::role('student')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->count();
+
+            $enrollments[] = [
+                'month' => $month->format('M'),
+                'count' => $enrolls
+            ];
+            
+            $students[] = [
+                'month' => $month->format('M'),
+                'count' => $studs
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
-                'revenue' => [],
-                'registrations' => []
+                'enrollments' => $enrollments,
+                'students' => $students
             ]
         ]);
     }
 
     public function topCourses()
     {
-        return response()->json(['success' => true, 'data' => []]);
+        $courses = \App\Models\Course::leftJoin('order_items', function($join) {
+                $join->on('courses.id', '=', 'order_items.purchasable_id')
+                     ->where('order_items.purchasable_type', \App\Models\Course::class);
+            })
+            ->leftJoin('orders', 'order_items.order_id', '=', 'orders.id')
+            ->selectRaw('courses.id, courses.title, courses.price, count(case when orders.status = "completed" then 1 end) as enrollments_count')
+            ->groupBy('courses.id', 'courses.title', 'courses.price')
+            ->orderByDesc('enrollments_count')
+            ->orderByDesc('courses.id')
+            ->take(5)
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'id' => $course->id,
+                    'title' => $course->title,
+                    'price' => $course->price,
+                    'enrollments_count' => (int) $course->enrollments_count
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $courses]);
     }
 
     public function recentEnrollments()
     {
-        return response()->json(['success' => true, 'data' => []]);
+        $enrollments = \App\Models\Order::with(['user', 'items.course'])
+            ->where('status', 'completed')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'user' => [
+                        'first_name' => $order->user->first_name ?? $order->user->name,
+                        'last_name' => $order->user->last_name ?? '',
+                    ],
+                    'items' => $order->items->map(function ($item) {
+                        return [
+                            'course' => [
+                                'title' => $item->course->title ?? 'Course',
+                            ]
+                        ];
+                    }),
+                    'payment_status' => $order->status,
+                    'created_at' => $order->created_at,
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $enrollments]);
     }
 
     public function feed()
     {
-        return response()->json(['success' => true, 'data' => []]);
+        $activities = collect();
+
+        // 1. Latest Users
+        \App\Models\User::latest()->take(15)->get()->each(function($user) use ($activities) {
+            $activities->push([
+                'id' => 'u_'.$user->id,
+                'admin' => ['first_name' => $user->first_name ?? $user->name ?? 'User', 'last_name' => $user->last_name ?? ''],
+                'action' => 'created a new account',
+                'table_name' => 'Platform',
+                'created_at' => $user->created_at,
+            ]);
+        });
+
+        // 2. Latest Courses
+        \App\Models\Course::latest()->take(15)->get()->each(function($course) use ($activities) {
+            $activities->push([
+                'id' => 'c_'.$course->id,
+                'admin' => ['first_name' => 'Admin', 'last_name' => 'System'],
+                'action' => 'published a new course',
+                'table_name' => $course->title,
+                'created_at' => $course->created_at,
+            ]);
+        });
+
+        // 3. Latest Orders
+        \App\Models\Order::with('user')->latest()->take(15)->get()->each(function($order) use ($activities) {
+            $activities->push([
+                'id' => 'o_'.$order->id,
+                'admin' => ['first_name' => $order->user->first_name ?? 'Someone', 'last_name' => $order->user->last_name ?? ''],
+                'action' => 'placed a new order',
+                'table_name' => 'Store',
+                'created_at' => $order->created_at,
+            ]);
+        });
+
+        // 4. Latest Leads
+        \App\Models\Lead::latest()->take(15)->get()->each(function($lead) use ($activities) {
+            $activities->push([
+                'id' => 'l_'.$lead->id,
+                'admin' => ['first_name' => 'New', 'last_name' => 'Lead'],
+                'action' => 'submitted an enquiry',
+                'table_name' => 'Website',
+                'created_at' => $lead->created_at,
+            ]);
+        });
+
+        // 5. Explicit Activity Logs
+        \App\Models\ActivityLog::with('user')->latest()->take(15)->get()->each(function($log) use ($activities) {
+            $activities->push([
+                'id' => 'al_'.$log->id,
+                'admin' => [
+                    'first_name' => $log->user->first_name ?? $log->user->name ?? 'System',
+                    'last_name' => $log->user->last_name ?? '',
+                ],
+                'action' => $log->action,
+                'table_name' => $log->description ?? 'System Record',
+                'created_at' => $log->created_at,
+            ]);
+        });
+
+        // Sort by newest first and take top 50
+        $sortedLogs = $activities->sortByDesc('created_at')->values()->take(50);
+
+        return response()->json(['success' => true, 'data' => $sortedLogs]);
     }
 }

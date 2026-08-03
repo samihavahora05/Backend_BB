@@ -775,6 +775,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         
         // ----- Enterprise ATS Jobs Management -----
         Route::prefix('jobs')->group(function () {
+            Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'bulkDelete']);
             Route::get('export', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'export']);
             Route::get('dashboard-metrics', [\App\Http\Controllers\Api\Admin\AdminJobDashboardController::class, 'getMetrics']);
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'duplicate']);

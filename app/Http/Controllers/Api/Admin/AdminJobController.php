@@ -124,6 +124,16 @@ class AdminJobController extends Controller
         return response()->json(['success' => true, 'message' => 'Job deleted successfully']);
     }
 
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'integer|exists:jobs,id',
+        ]);
+        Job::whereIn('id', $request->ids)->delete();
+        return response()->json(['success' => true, 'message' => 'Jobs deleted successfully']);
+    }
+
     /**
      * Export jobs as CSV
      */
