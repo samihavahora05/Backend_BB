@@ -43,7 +43,7 @@ class PublicNewsletterController extends Controller
                 'name' => 'Subscriber', // Name isn't provided in newsletter form
                 'email' => $request->email,
                 'status' => 'new',
-                'source' => 'Website Footer',
+                'source' => 'Newsletter',
                 'ip_address' => $request->ip(),
                 'browser' => substr($request->userAgent() ?? '', 0, 255),
             ]);

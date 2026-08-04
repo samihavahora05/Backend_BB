@@ -18,7 +18,7 @@ class PublicCourseController extends Controller
     {
         $query = Course::with(['category', 'level'])->withCount('enrollments')
             ->where(function($q) {
-                $q->whereIn('status', ['published', 'Published', 'active', 'Active'])
+                $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                   ->orWhereNull('status');
             })
             ->where(function($q) {
@@ -117,7 +117,7 @@ class PublicCourseController extends Controller
         ])
         ->where('slug', $slug)
         ->where(function($q) {
-            $q->whereIn('status', ['published', 'Published', 'active', 'Active'])
+            $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
               ->orWhereNull('status');
         })
         ->firstOrFail();
@@ -200,7 +200,7 @@ class PublicCourseController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data'    => \App\Models\CourseCategory::where('status', 'active')->orderBy('name')->get(['id', 'name', 'slug']),
+            'data'    => \App\Models\CourseCategory::whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED'])->orderBy('name')->get(['id', 'name', 'slug']),
         ]);
     }
 
@@ -212,7 +212,7 @@ class PublicCourseController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data'    => \App\Models\CourseLevel::where('status', 'active')->orderBy('title')->get(['id', 'title', 'slug']),
+            'data'    => \App\Models\CourseLevel::whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED'])->orderBy('title')->get(['id', 'title', 'slug']),
         ]);
     }
 
@@ -226,7 +226,7 @@ class PublicCourseController extends Controller
             'success' => true,
             'data'    => Course::with(['category', 'level'])
                 ->where(function($q) {
-                    $q->whereIn('status', ['published', 'Published', 'active', 'Active'])
+                    $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                       ->orWhereNull('status');
                 })
                 ->where('is_featured', true)

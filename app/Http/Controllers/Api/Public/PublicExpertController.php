@@ -23,7 +23,7 @@ class PublicExpertController extends Controller
         $query = ExpertProfile::with(['user:id,first_name,last_name,email'])
             ->where('is_available', true)
             ->where('is_verified', true)
-            ->whereHas('user', fn($q) => $q->where('status', 'active'));
+            ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE']));
 
         if ($s = $request->query('search')) {
             $query->where(function($q) use ($s) {
@@ -191,7 +191,7 @@ class PublicExpertController extends Controller
 
         $booking = MentorBooking::where('id', $booking_id)
             ->where('student_id', $request->user()->id)
-            ->where('status', 'Pending')
+            ->whereIn('status', ['Pending', 'pending', 'PENDING'])
             ->firstOrFail();
 
         // Verify Razorpay signature

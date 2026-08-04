@@ -35,9 +35,16 @@ class PublicCmsController extends Controller
 
     public function settings()
     {
-        return Cache::remember('public.cms.settings', now()->addHours(6), function () {
+        return Cache::remember('public.cms.settings.v2', now()->addHours(6), function () {
             $settings = \App\Models\GlobalSetting::where('group', 'general')
                 ->pluck('value', 'key')->toArray();
+                
+            $preloaderSettings = \App\Models\SystemSetting::where('group', 'preloader')
+                ->pluck('value', 'key')->toArray();
+                
+            if (!empty($preloaderSettings)) {
+                $settings['preloader'] = $preloaderSettings;
+            }
                 
             try {
                 $credentials = \App\Models\SystemApiCredential::where('status', true)->get();

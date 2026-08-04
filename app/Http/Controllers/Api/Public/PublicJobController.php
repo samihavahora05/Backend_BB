@@ -19,7 +19,7 @@ class PublicJobController extends Controller
     {
         $query = Job::query()->with('company.companyProfile')
             ->where(function($q) {
-                $q->whereIn('status', ['active', 'open', 'published'])
+                $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'open', 'Open', 'OPEN', 'published', 'Published', 'PUBLISHED'])
                   ->orWhereNull('status');
             });
 
@@ -98,7 +98,7 @@ class PublicJobController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $job = Job::with('company.companyProfile')->where('status', 'active')->findOrFail($id);
+        $job = Job::with('company.companyProfile')->whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED', 'open', 'Open', 'OPEN'])->findOrFail($id);
 
         // Track view
         \DB::table('job_views')->insertOrIgnore([
@@ -150,17 +150,14 @@ class PublicJobController extends Controller
      */
     public function apply(Request $request, $id)
     {
-        $job = Job::where('status', 'active')->findOrFail($id);
+        $job = Job::whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED', 'open', 'Open', 'OPEN'])->findOrFail($id);
 
         // Check deadline
         if ($job->application_deadline && $job->application_deadline->isPast()) {
             return response()->json(['success' => false, 'message' => 'Application deadline has passed'], 422);
         }
 
-        // Prevent students from applying to jobs
-        if ($request->user()->hasRole('student')) {
-            return response()->json(['success' => false, 'message' => 'Students can only apply for internships and courses.'], 403);
-        }
+
 
         // Check for duplicate application
         $alreadyApplied = JobApplication::where('job_id', $job->id)

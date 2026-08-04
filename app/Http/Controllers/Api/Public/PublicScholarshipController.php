@@ -17,7 +17,7 @@ class PublicScholarshipController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ScholarshipProgram::where('status', 'Active');
+        $query = ScholarshipProgram::whereIn('status', ['Active', 'active', 'ACTIVE', 'Published', 'published', 'PUBLISHED']);
 
         if ($s = $request->query('search')) {
             $query->where('title', 'like', "%{$s}%");
@@ -52,7 +52,7 @@ class PublicScholarshipController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $program = ScholarshipProgram::where('status', 'Active')->findOrFail($id);
+        $program = ScholarshipProgram::whereIn('status', ['Active', 'active', 'ACTIVE', 'Published', 'published', 'PUBLISHED'])->findOrFail($id);
         
         $hasApplied = false;
         if ($request->user()) {
@@ -81,7 +81,7 @@ class PublicScholarshipController extends Controller
      */
     public function apply(Request $request, $id)
     {
-        $program = ScholarshipProgram::where('status', 'Active')->findOrFail($id);
+        $program = ScholarshipProgram::whereIn('status', ['Active', 'active', 'ACTIVE', 'Published', 'published', 'PUBLISHED'])->findOrFail($id);
 
         if ($program->deadline && $program->deadline->isPast()) {
             return response()->json(['success' => false, 'message' => 'The deadline for this scholarship has passed.'], 400);

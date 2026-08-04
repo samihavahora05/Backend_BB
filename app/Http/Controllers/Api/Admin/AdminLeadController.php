@@ -102,6 +102,24 @@ class AdminLeadController extends Controller
     }
 
     /**
+     * Bulk Delete Leads
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:leads,id',
+        ]);
+
+        Lead::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Selected leads deleted successfully.'
+        ]);
+    }
+
+    /**
      * Convert Lead to Student
      */
     public function convertToStudent(Request $request, $id)

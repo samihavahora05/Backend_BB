@@ -2,9 +2,12 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+
 use Illuminate\Support\Facades\Artisan;
 
 use App\Http\Controllers\Api\System\HealthController;
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\CallbackRequestController;
@@ -119,6 +122,14 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('support/tickets', [\App\Http\Controllers\Api\Public\PublicCRMController::class, 'createTicket']);
     });
 
+    // ─── TEST ROUTE ──────────────────────────────────────────────────────────
+    Route::get('test-saved-jobs', function() {
+        return \App\Models\SavedJob::with('job')->get();
+    });
+    Route::get('test-me', function(Illuminate\Http\Request $request) {
+        return ['user' => auth('sanctum')->user()];
+    });
+
     // ─── Jobs Platform ───────────────────────────────────────────────────────
     Route::get('jobs', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'index']);
     Route::get('jobs/{id}', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'show'])->where('id', '[0-9]+');
@@ -182,6 +193,35 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
         
         // New Real Data Endpoints
+        Route::get('/referrals', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'index']);
+        Route::post('/referrals/track/{code}', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'trackClick']);
+        
+        // Profile
+        Route::get('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'getProfile']);
+        Route::put('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'updateProfile']);
+        Route::delete('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'deleteAccount']);
+
+        Route::get('/contests', [\App\Http\Controllers\Api\Student\StudentContestController::class, 'index']);
+        
+        Route::get('/wishlist', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'index']);
+        Route::delete('/wishlist/{type}/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'destroy']);
+
+        Route::get('/payments', [\App\Http\Controllers\Api\Student\StudentOrderController::class, 'index']);
+
+        // Support Tickets (student)
+        Route::get('/support', [\App\Http\Controllers\Api\Student\StudentSupportController::class, 'index']);
+        Route::post('/support', [\App\Http\Controllers\Api\Student\StudentSupportController::class, 'store']);
+        Route::get('/support/{id}', [\App\Http\Controllers\Api\Student\StudentSupportController::class, 'show']);
+        Route::post('/support/{id}/reply', [\App\Http\Controllers\Api\Student\StudentSupportController::class, 'reply']);
+
+        // Save / Bookmark routes
+        Route::post('/save/job/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'saveJob']);
+        Route::delete('/save/job/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'unsaveJob']);
+        Route::post('/save/internship/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'saveInternship']);
+        Route::delete('/save/internship/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'unsaveInternship']);
+        Route::post('/save/course/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'saveCourse']);
+        Route::delete('/save/course/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'unsaveCourse']);
+
         Route::get('/messages', [\App\Http\Controllers\Api\Student\StudentMessageController::class, 'index']);
         Route::get('/internships', [\App\Http\Controllers\Api\Student\StudentInternshipController::class, 'index']);
         Route::get('/scholarships', [\App\Http\Controllers\Api\Student\StudentScholarshipController::class, 'index']);
@@ -339,9 +379,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('/dashboard/student/placement-progress', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'placementProgress']);
     
     // Global Notification Routes
+
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
-        Route::put('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::put('/read-all', [NotificationController::class, 'markAllRead']);
         Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
     });
@@ -395,11 +436,18 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         // Mentor Sessions
         Route::get('/mentor-sessions', function (\Illuminate\Http\Request $r) {
-            return response()->json(\App\Models\MentorSession::with('expert.user')
+            return response()->json(['success' => true, 'data' => \App\Models\MentorSession::with('expert.user')
                 ->where('student_id', $r->user()->id)
                 ->orderBy('scheduled_at', 'desc')
-                ->get());
+                ->get()]);
         });
+
+        // Unified My Applications
+        Route::get('/all-applications', [\App\Http\Controllers\Api\Student\StudentApplicationController::class, 'index']);
+
+        // Referrals
+        Route::get('/referrals', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'index']);
+        Route::post('/referrals/track/{code}', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'trackClick'])->withoutMiddleware(['auth:sanctum']);
 
         // Certificates earned
         Route::get('/certificates', function(\Illuminate\Http\Request $r) {
@@ -438,6 +486,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
                 ]);
             return response()->json(['success' => true, 'data' => $orders]);
         });
+
+        // Dashboard Stats
+        Route::get('/dashboard/student', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
     });
     
     // Expert Dashboard API
@@ -633,6 +684,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         
         // Leads & CRM API
         Route::get('crm/dashboard', [\App\Http\Controllers\Api\Admin\AdminCRMController::class, 'dashboard']);
+        Route::delete('leads/bulk', [\App\Http\Controllers\Api\Admin\AdminLeadController::class, 'bulkDelete']);
         Route::apiResource('leads', \App\Http\Controllers\Api\Admin\AdminLeadController::class);
         Route::post('leads/{id}/convert', [\App\Http\Controllers\Api\Admin\AdminLeadController::class, 'convertToStudent']);
         Route::post('leads/{id}/convert-company', [\App\Http\Controllers\Api\Admin\AdminLeadController::class, 'convertToCompanyLead']);
@@ -1139,3 +1191,22 @@ Route::get('/qa-routes-map', function () {
     }
     return response()->json($scanData);
 });
+
+Route::get('/test-notify', function () {
+    $user = \App\Models\User::whereHas('roles', function($q) {
+        $q->where('name', 'student');
+    })->first();
+
+    if ($user) {
+        $user->notify(new \App\Notifications\PlatformNotification(
+            'Test Notification',
+            'This is a test notification for student.',
+            'system_alert',
+            ['url' => '/student/dashboard']
+        ));
+    }
+
+    return response()->json($user->notifications()->take(5)->get());
+});
+
+

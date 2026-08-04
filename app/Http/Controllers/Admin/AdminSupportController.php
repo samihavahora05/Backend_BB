@@ -13,7 +13,7 @@ class AdminSupportController extends Controller
 {
     public function index(Request $request)
     {
-        $query = SupportTicket::with(['company.user', 'assignedAdmin:id,first_name,last_name,email']);
+        $query = SupportTicket::with(['company.user', 'user:id,first_name,last_name,email', 'assignedAdmin:id,first_name,last_name,email']);
 
         if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
@@ -53,14 +53,21 @@ class AdminSupportController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:Open,In Progress,Resolved,Closed'
+            'status' => 'required|in:Open,In Progress,Contacted,Resolved,Closed'
         ]);
 
         $ticket = SupportTicket::findOrFail($id);
         $ticket->status = $request->status;
         $ticket->save();
 
-        // In real app, send email notification to company about status change
+        if ($ticket->user) {
+            $ticket->user->notify(new \App\Notifications\PlatformNotification(
+                'Ticket Status Updated',
+                'Your support ticket #' . $ticket->ticket_number . ' is now marked as ' . $request->status,
+                'support_ticket_status',
+                ['ticket_id' => $ticket->id]
+            ));
+        }
 
         return response()->json([
             'message' => 'Status updated successfully',
@@ -114,7 +121,15 @@ class AdminSupportController extends Controller
             $ticket->save();
         }
 
-        // In real app, send email notification to company about reply
+        // Notify the ticket creator (e.g. the student or company user)
+        if ($ticket->user) {
+            $ticket->user->notify(new \App\Notifications\PlatformNotification(
+                'Support Ticket Reply',
+                'An admin has replied to your support ticket #' . $ticket->ticket_number,
+                'support_ticket_reply',
+                ['ticket_id' => $ticket->id]
+            ));
+        }
 
         return response()->json([
             'message' => 'Reply sent successfully',

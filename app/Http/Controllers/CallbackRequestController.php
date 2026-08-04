@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CallbackRequest;
+use App\Models\Lead;
 use Illuminate\Http\Request;
 
 use App\Traits\PaginateQuery;
@@ -25,12 +25,22 @@ class CallbackRequestController extends Controller
             'query' => 'nullable|string',
         ]);
 
-        $callback = CallbackRequest::create($validated);
+        $leadData = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'message' => $validated['query'] ?? null,
+            'type' => 'Callback Request',
+            'source' => 'Need Guidance',
+            'status' => 'new'
+        ];
+
+        $callback = Lead::create($leadData);
 
         // Dispatch queued callback request confirmation email
         SendQueuedEmailJob::dispatch(
             $callback->email,
-            new ContactFormMail($callback->name, 'Callback Request Booking', $callback->query ?? 'No query specified.'),
+            new ContactFormMail($callback->name, 'Callback Request Booking', $callback->message ?? 'No query specified.'),
             'Callback Request Received'
         );
 
@@ -43,15 +53,18 @@ class CallbackRequestController extends Controller
     /**
      * Admin method to view all callback requests
      */
+    /**
+     * Admin method to view all callback requests
+     */
     public function index(Request $request)
     {
-        $query = CallbackRequest::query();
+        $query = Lead::where('type', 'Callback Request');
 
         $paginated = $this->paginateWithMeta(
             $query,
             $request,
             ['name', 'created_at'],
-            ['name', 'email', 'query']
+            ['name', 'email', 'message']
         );
 
         return response()->json(array_merge(['success' => true], $paginated));
@@ -63,7 +76,7 @@ class CallbackRequestController extends Controller
      */
     public function show($id)
     {
-        $callback = CallbackRequest::findOrFail($id);
+        $callback = Lead::findOrFail($id);
         return response()->json($callback);
     }
 
@@ -73,11 +86,11 @@ class CallbackRequestController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'sometimes|in:pending,contacted,resolved',
-            'assigned_to' => 'nullable|exists:users,id',
+            'status' => 'sometimes|in:new,contacted,in_progress,converted,dead,closed,spam',
+            'assigned_admin_id' => 'nullable|exists:users,id',
         ]);
 
-        $callback = CallbackRequest::findOrFail($id);
+        $callback = Lead::findOrFail($id);
         $callback->update($validated);
 
         return response()->json([
@@ -91,7 +104,7 @@ class CallbackRequestController extends Controller
      */
     public function destroy($id)
     {
-        $callback = CallbackRequest::findOrFail($id);
+        $callback = Lead::findOrFail($id);
         $callback->delete();
 
         return response()->json(['message' => 'Callback request deleted successfully']);

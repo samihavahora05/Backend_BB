@@ -26,8 +26,12 @@ class StudentDashboardController extends Controller
         $activeCourses = $enrollments->where('status', 'active')->count();
         $completedCourses = $enrollments->where('status', 'completed')->count();
 
-        // 2. Applications stats (Internships + Scholarships)
+        // 2. Applications stats (Internships + Scholarships + Jobs)
         $internshipApps = InternshipApplication::where('user_id', $user->id)
+            ->whereNotIn('status', ['rejected', 'hired'])
+            ->count();
+        
+        $jobApps = JobApplication::where('user_id', $user->id)
             ->whereNotIn('status', ['rejected', 'hired'])
             ->count();
         
@@ -35,7 +39,7 @@ class StudentDashboardController extends Controller
             ->whereNotIn('status', ['Rejected', 'Awarded'])
             ->count();
 
-        $activeApplications = $internshipApps + $scholarshipApps;
+        $activeApplications = $internshipApps + $jobApps + $scholarshipApps;
 
         // 3. Certificates stats
         $certificatesEarned = IssuedCertificate::where('user_id', $user->id)->count();
@@ -90,8 +94,24 @@ class StudentDashboardController extends Controller
                 ];
             });
 
+        $recentJobs = JobApplication::with('job')
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get()
+            ->map(function ($app) {
+                return [
+                    'id' => 'job_' . $app->id,
+                    'role' => $app->job->title ?? 'Job',
+                    'company' => $app->job->company_name ?? 'Unknown Company',
+                    'status' => ucfirst($app->status),
+                    'statusColor' => $this->getStatusColor($app->status),
+                    'appliedDate' => $app->created_at->diffForHumans(),
+                ];
+            });
+
         // Combine and take latest 3
-        $applications = collect($recentInternships)->concat($recentScholarships)->sortByDesc('appliedDate')->take(3)->values();
+        $applications = collect($recentInternships)->concat($recentJobs)->concat($recentScholarships)->sortByDesc('appliedDate')->take(3)->values();
 
         // 6. Upcoming classes / mentor sessions
         $upcomingSessions = MentorSession::with('expert.user')

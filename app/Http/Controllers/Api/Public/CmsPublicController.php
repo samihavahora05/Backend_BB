@@ -15,7 +15,7 @@ class CmsPublicController extends Controller
     {
         return response()->json(
             CmsCompany::with('industry')
-                ->where('status', 'published')
+                ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                 ->orderBy('display_order')
                 ->get()
         );
@@ -25,16 +25,20 @@ class CmsPublicController extends Controller
     {
         return response()->json(
             CmsPlacementPartner::with('industry')
-                ->where('status', 'published')
+                ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                 ->orderBy('display_order')
                 ->get()
+                ->map(function ($partner) {
+                    $partner->logo_url = $partner->logo_url ? asset('storage/' . $partner->logo_url) : null;
+                    return $partner;
+                })
         );
     }
 
     public function getColleges()
     {
         return response()->json(
-            CmsCollege::where('status', 'published')
+            CmsCollege::whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                 ->orderBy('display_order')
                 ->get()
         );
@@ -43,7 +47,7 @@ class CmsPublicController extends Controller
     public function getPortfolios()
     {
         return response()->json(
-            CmsPortfolio::where('status', 'published')
+            CmsPortfolio::whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                 ->orderBy('display_order')
                 ->get()
         );

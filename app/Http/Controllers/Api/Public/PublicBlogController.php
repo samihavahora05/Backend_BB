@@ -17,7 +17,7 @@ class PublicBlogController extends Controller
     public function index(Request $request)
     {
         $query = Blog::with(['author:id,first_name,last_name', 'categories:id,name,slug'])
-            ->where('status', 'published')
+            ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
             ->where(function($q) {
                 $q->whereNull('scheduled_at')
                   ->orWhere('scheduled_at', '<=', now());
@@ -79,7 +79,7 @@ class PublicBlogController extends Controller
     public function show(Request $request, $slug)
     {
         $blog = Blog::with(['author:id,first_name,last_name', 'categories:id,name,slug', 'tags:id,name,slug'])
-            ->where('status', 'published')
+            ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -147,9 +147,9 @@ class PublicBlogController extends Controller
      */
     public function categories()
     {
-        $categories = BlogCategory::where('status', 'active')
-            ->whereHas('blogs', fn($q) => $q->where('status', 'published'))
-            ->withCount(['blogs' => fn($q) => $q->where('status', 'published')])
+        $categories = BlogCategory::whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED'])
+            ->whereHas('blogs', fn($q) => $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE']))
+            ->withCount(['blogs' => fn($q) => $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])])
             ->orderByDesc('blogs_count')
             ->get(['id', 'name', 'slug']);
 
