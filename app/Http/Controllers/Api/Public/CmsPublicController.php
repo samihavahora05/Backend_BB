@@ -44,6 +44,15 @@ class CmsPublicController extends Controller
         );
     }
 
+    public function getCollegeBySlug($slug)
+    {
+        $college = CmsCollege::where('slug', $slug)
+            ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
+            ->firstOrFail();
+            
+        return response()->json($college);
+    }
+
     public function getPortfolios()
     {
         return response()->json(

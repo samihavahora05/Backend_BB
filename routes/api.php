@@ -85,6 +85,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('cms/companies', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCompanies']);
     Route::get('cms/placement-partners', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPlacementPartners']);
     Route::get('cms/colleges', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getColleges']);
+    Route::get('cms/colleges/{slug}', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCollegeBySlug']);
     Route::get('cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
 
     // Featured Courses (Homepage Hero)
@@ -123,6 +124,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // ─── TEST ROUTE ──────────────────────────────────────────────────────────
+
     Route::get('test-saved-jobs', function() {
         return \App\Models\SavedJob::with('job')->get();
     });

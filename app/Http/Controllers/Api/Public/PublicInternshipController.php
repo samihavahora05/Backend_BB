@@ -94,8 +94,12 @@ class PublicInternshipController extends Controller
         $internship = Internship::with('company.companyProfile')->whereIn('status', ['Active', 'active', 'Open', 'open', 'OPEN', 'Published', 'published'])->findOrFail($id);
 
         $hasApplied = false;
+        $isBookmarked = false;
         if ($request->user()) {
             $hasApplied = InternshipApplication::where('internship_id', $internship->id)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+            $isBookmarked = \App\Models\SavedInternship::where('internship_id', $internship->id)
                 ->where('user_id', $request->user()->id)
                 ->exists();
         }
@@ -105,6 +109,7 @@ class PublicInternshipController extends Controller
             'data'    => array_merge($internship->toArray(), [
                 'company_logo' => $internship->company_logo ? asset('storage/' . $internship->company_logo) : null,
                 'has_applied'  => $hasApplied,
+                'is_bookmarked'=> $isBookmarked,
                 'posted_at'    => $internship->created_at->diffForHumans(),
             ])
         ]);

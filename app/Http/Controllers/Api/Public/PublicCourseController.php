@@ -108,7 +108,7 @@ class PublicCourseController extends Controller
      * Public course detail page
      * GET /api/public/courses/{slug}
      */
-    public function show($slug)
+    public function show(Request $request, $slug)
     {
         $course = Course::with([
             'category', 'level', 'expert',
@@ -124,6 +124,13 @@ class PublicCourseController extends Controller
 
         $totalLessons = $course->modules->flatMap(fn($m) => $m->lessons)->count();
         $totalMinutes = $course->modules->flatMap(fn($m) => $m->lessons)->sum('duration_minutes');
+
+        $isBookmarked = false;
+        if ($request->user()) {
+            $isBookmarked = \App\Models\Wishlist::where('course_id', $course->id)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+        }
 
         return response()->json([
             'success' => true,
@@ -141,6 +148,7 @@ class PublicCourseController extends Controller
                 'language'          => $course->language,
                 'duration'          => $course->duration,
                 'duration_hours'    => $course->duration_hours,
+                'is_bookmarked'     => $isBookmarked,
                 'category'          => ['id' => $course->category?->id, 'name' => $course->category?->name],
                 'level'             => ['id' => $course->level?->id, 'name' => $course->level?->name],
                 'instructor'        => $course->expert ? [

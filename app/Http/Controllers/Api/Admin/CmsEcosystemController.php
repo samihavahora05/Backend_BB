@@ -113,9 +113,29 @@ class CmsEcosystemController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'location' => 'required|string',
+            'location' => 'nullable|string',
             'logo_url' => 'nullable|string',
-            'is_featured' => 'boolean'
+            'banner_image' => 'nullable|string',
+            'is_featured' => 'boolean',
+            'status' => 'nullable|in:published,draft,archived',
+            'short_description' => 'nullable|string',
+            'full_description' => 'nullable|string',
+            'website_url' => 'nullable|string',
+            'is_ugc_approved' => 'boolean',
+            'naac_grade' => 'nullable|string',
+            'nirf_ranking' => 'nullable|string',
+            'is_wes_approved' => 'boolean',
+            'degree_types' => 'nullable|array',
+            'popular_courses' => 'nullable|array',
+            'duration' => 'nullable|string',
+            'eligibility' => 'nullable|string',
+            'admission_process' => 'nullable|string',
+            'placement_support' => 'nullable|string',
+            'career_services' => 'nullable|string',
+            'accreditation' => 'nullable|string',
+            'seo_title' => 'nullable|string',
+            'seo_description' => 'nullable|string',
+            'meta_keywords' => 'nullable|string',
         ]);
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . time();
@@ -128,9 +148,29 @@ class CmsEcosystemController extends Controller
         $college = CmsCollege::findOrFail($id);
         $validated = $request->validate([
             'name' => 'sometimes|string',
-            'location' => 'sometimes|string',
+            'location' => 'nullable|string',
             'logo_url' => 'nullable|string',
-            'is_featured' => 'boolean'
+            'banner_image' => 'nullable|string',
+            'is_featured' => 'boolean',
+            'status' => 'nullable|in:published,draft,archived',
+            'short_description' => 'nullable|string',
+            'full_description' => 'nullable|string',
+            'website_url' => 'nullable|string',
+            'is_ugc_approved' => 'boolean',
+            'naac_grade' => 'nullable|string',
+            'nirf_ranking' => 'nullable|string',
+            'is_wes_approved' => 'boolean',
+            'degree_types' => 'nullable|array',
+            'popular_courses' => 'nullable|array',
+            'duration' => 'nullable|string',
+            'eligibility' => 'nullable|string',
+            'admission_process' => 'nullable|string',
+            'placement_support' => 'nullable|string',
+            'career_services' => 'nullable|string',
+            'accreditation' => 'nullable|string',
+            'seo_title' => 'nullable|string',
+            'seo_description' => 'nullable|string',
+            'meta_keywords' => 'nullable|string',
         ]);
 
         if (isset($validated['name']) && $validated['name'] !== $college->name) {

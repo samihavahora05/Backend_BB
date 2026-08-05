@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\Student;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Wishlist;
-use App\Models\SavedJob;
+use App\Models\JobBookmark;
 use App\Models\SavedInternship;
 
 class StudentWishlistController extends Controller
@@ -26,7 +26,7 @@ class StudentWishlistController extends Controller
             ];
         });
 
-        $jobs = SavedJob::with('job')->where('user_id', $user->id)->get()->map(function ($item) {
+        $jobs = JobBookmark::with('job')->where('user_id', $user->id)->get()->map(function ($item) {
             return [
                 'id' => $item->id,
                 'type' => 'job',
@@ -50,7 +50,7 @@ class StudentWishlistController extends Controller
                 'courses'               => $courses,
                 'jobs'                  => $jobs,
                 'internships'           => $internships,
-                'saved_job_ids'         => SavedJob::where('user_id', $user->id)->pluck('job_id'),
+                'saved_job_ids'         => JobBookmark::where('user_id', $user->id)->pluck('job_id'),
                 'saved_internship_ids'  => SavedInternship::where('user_id', $user->id)->pluck('internship_id'),
                 'saved_course_ids'      => Wishlist::where('user_id', $user->id)->pluck('course_id'),
                 'total'                 => $courses->count() + $jobs->count() + $internships->count()
@@ -67,7 +67,7 @@ class StudentWishlistController extends Controller
         if ($type === 'course') {
             Wishlist::where('user_id', $user->id)->where('id', $id)->delete();
         } else if ($type === 'job') {
-            SavedJob::where('user_id', $user->id)->where('id', $id)->delete();
+            JobBookmark::where('user_id', $user->id)->where('id', $id)->delete();
         } else if ($type === 'internship') {
             SavedInternship::where('user_id', $user->id)->where('id', $id)->delete();
         }
@@ -79,18 +79,18 @@ class StudentWishlistController extends Controller
     public function saveJob(Request $request, $id)
     {
         $user = $request->user();
-        $exists = SavedJob::where('user_id', $user->id)->where('job_id', $id)->first();
+        $exists = JobBookmark::where('user_id', $user->id)->where('job_id', $id)->first();
         if ($exists) {
             return response()->json(['success' => true, 'saved' => true]);
         }
-        SavedJob::create(['user_id' => $user->id, 'job_id' => $id]);
+        JobBookmark::create(['user_id' => $user->id, 'job_id' => $id]);
         return response()->json(['success' => true, 'saved' => true]);
     }
 
     public function unsaveJob(Request $request, $id)
     {
         $user = $request->user();
-        SavedJob::where('user_id', $user->id)->where('job_id', $id)->delete();
+        JobBookmark::where('user_id', $user->id)->where('job_id', $id)->delete();
         return response()->json(['success' => true, 'saved' => false]);
     }
 
