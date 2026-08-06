@@ -19,6 +19,7 @@ class PublicCourseController extends Controller
         $query = Course::with(['category', 'level'])->withCount('enrollments')
             ->where(function($q) {
                 $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
+                  ->orWhere('is_published', true)
                   ->orWhereNull('status');
             })
             ->where(function($q) {
@@ -118,6 +119,7 @@ class PublicCourseController extends Controller
         ->where('slug', $slug)
         ->where(function($q) {
             $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
+              ->orWhere('is_published', true)
               ->orWhereNull('status');
         })
         ->firstOrFail();
@@ -235,6 +237,7 @@ class PublicCourseController extends Controller
             'data'    => Course::with(['category', 'level'])
                 ->where(function($q) {
                     $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
+                      ->orWhere('is_published', true)
                       ->orWhereNull('status');
                 })
                 ->where('is_featured', true)

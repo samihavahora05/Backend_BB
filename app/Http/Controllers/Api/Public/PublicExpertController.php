@@ -38,6 +38,17 @@ class PublicExpertController extends Controller
             $query->where('specialization', 'like', "%{$spec}%");
         }
 
+        if ($domain = $request->query('domain')) {
+            $query->where('specialization', 'like', "%{$domain}%");
+        }
+
+        if ($exp = $request->query('experience')) {
+            if ($exp === '3-5 Years') $query->whereBetween('experience_years', [3, 5]);
+            elseif ($exp === '5-10 Years') $query->whereBetween('experience_years', [5, 10]);
+            elseif ($exp === '10-15 Years') $query->whereBetween('experience_years', [10, 15]);
+            elseif ($exp === '15+ Years') $query->where('experience_years', '>=', 15);
+        }
+
         $sort = $request->query('sort', 'rating_high');
         if ($sort === 'rating_high') {
             $query->orderByDesc('average_rating');

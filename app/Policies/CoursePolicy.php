@@ -13,7 +13,7 @@ class CoursePolicy
      */
     public function update(User $user, Course $course): bool
     {
-        return $user->hasRole('super-admin') || $user->id === $course->expert_id;
+        return $user->hasAnyRole(['super-admin', 'super_admin', 'admin']) || $user->id === $course->expert_id;
     }
 
     /**
@@ -21,6 +21,6 @@ class CoursePolicy
      */
     public function delete(User $user, Course $course): bool
     {
-        return $user->hasRole('super-admin') || $user->id === $course->expert_id;
+        return $user->hasAnyRole(['super-admin', 'super_admin', 'admin']) || $user->id === $course->expert_id;
     }
 }

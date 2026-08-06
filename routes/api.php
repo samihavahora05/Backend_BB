@@ -661,6 +661,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('notifications/read-all', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'markAllAsRead']);
         Route::put('notifications/{id}/read', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'markAsRead']);
 
+        // Mentor Bookings
+        Route::get('mentor-bookings', [\App\Http\Controllers\Admin\AdminMentorBookingController::class, 'index']);
+
         // Dashboard APIs are now handled below (AdminDashboardController)
         Route::get('dashboard/summary', [AdminDashboardController::class, 'summary']);
         Route::get('dashboard/charts', [AdminDashboardController::class, 'charts']);

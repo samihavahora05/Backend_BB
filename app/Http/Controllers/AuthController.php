@@ -45,7 +45,7 @@ class AuthController extends Controller
         // Auto-provision profile based on role
         match ($roleName) {
             'student' => $user->studentProfile()->create(),
-            'expert' => $user->expertProfile()->create(),
+            'expert' => $user->expertProfile()->create(['is_verified' => true, 'is_available' => true]),
             'company' => $user->companyProfile()->create(),
             'college' => $user->collegeProfile()->create(),
             'intern' => $user->internProfile()->create(),
@@ -56,34 +56,16 @@ class AuthController extends Controller
         // Dispatch Welcome Email Job
         \App\Jobs\SendWelcomeEmailJob::dispatch($user);
 
-        if ($roleName === 'student') {
-            $user->update(['status' => 'active']);
-            $token = $user->createToken('auth_token')->plainTextToken;
-            
-            return response()->json([
-                'message' => 'User registered successfully.',
-                'user' => $user->load('roles'),
-                'token' => $token,
-                'status' => 'active'
-            ], 201);
-        } else {
-            $user->update(['status' => 'pending_approval']);
-            
-            // Notify all admins about the new pending user
-            $admins = User::whereHas('roles', function($q) {
-                $q->whereIn('name', ['admin', 'super_admin']);
-            })->get();
-            
-            if ($admins->isNotEmpty()) {
-                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewUserPendingApproval($user));
-            }
-            
-            return response()->json([
-                'message' => 'Account created successfully. Your account is pending admin approval.',
-                'user' => $user->load('roles'),
-                'status' => 'pending_approval'
-            ], 201);
-        }
+        // Bypass approvals and activate instantly
+        $user->update(['status' => 'active']);
+        $token = $user->createToken('auth_token')->plainTextToken;
+        
+        return response()->json([
+            'message' => 'User registered successfully.',
+            'user' => $user->load('roles'),
+            'token' => $token,
+            'status' => 'active'
+        ], 201);
     }
 
 

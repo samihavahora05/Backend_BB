@@ -31,7 +31,16 @@ class PublicInternshipController extends Controller
             $query->where('mode', $type); // Remote, On-site, Hybrid
         }
         if ($domain = $request->query('domain')) {
-            $query->where('domain', 'like', "%{$domain}%");
+            $query->where(function($q) use ($domain) {
+                $q->where('department', 'like', "%{$domain}%")
+                  ->orWhere('title', 'like', "%{$domain}%");
+            });
+        }
+        if ($duration = $request->query('duration')) {
+            $query->where('duration', 'like', "%{$duration}%");
+        }
+        if ($level = $request->query('experience_level')) {
+            $query->where('eligibility', 'like', "%{$level}%");
         }
         if ($request->boolean('paid')) {
             $query->whereNotNull('stipend')->where('stipend', '>', 0);

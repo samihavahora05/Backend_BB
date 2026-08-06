@@ -48,6 +48,7 @@ class CourseController extends Controller
             'price' => $request->price,
             'level' => $request->level,
             'is_published' => true, // default to published for easier testing
+            'status' => 'Published',
         ]);
 
         // Send notifications to all students/users for new course
