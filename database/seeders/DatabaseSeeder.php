@@ -80,7 +80,13 @@ class DatabaseSeeder extends Seeder
             JobModuleSeeder::class,
             InternshipModuleSeeder::class,
             StudentModuleSeeder::class,
+            InstructorModuleSeeder::class,
+            OnlineUniversitiesSeeder::class,
             CmsEcosystemSeeder::class,
+            CmsContentSeeder::class,
+            PlatformSettingsSeeder::class,
+            EventsAndActivitiesSeeder::class,
+            CRMAndSalesSeeder::class,
         ]);
 
         $this->command->info('✅ Database Seeded Successfully with Enterprise Data!');

@@ -11,21 +11,22 @@ class Testimonial extends Model
 
     protected $fillable = [
         'name',
-        'designation',
+        'role',
         'company',
-        'review',
+        'content',
         'rating',
         'status',
         'display_order',
-        'profile_image',
+        'photo_url',
+        'is_featured',
     ];
 
     protected $appends = ['image_url'];
 
     public function getImageUrlAttribute()
     {
-        if ($this->profile_image) {
-            return asset('storage/' . $this->profile_image);
+        if ($this->photo_url) {
+            return asset('storage/' . $this->photo_url);
         }
         
         return null;
