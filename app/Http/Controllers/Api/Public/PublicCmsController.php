@@ -131,13 +131,15 @@ class PublicCmsController extends Controller
 
     public function experts()
     {
-        return Cache::remember('public.cms.experts', now()->addHours(6), function () {
-            $experts = ExpertProfile::with('user')
-                ->where('is_available', true)
-                ->where('is_verified', true)
-                ->orderBy('average_rating', 'desc')
-                ->take(3)
-                ->get()
+        $experts = ExpertProfile::with('user')
+            ->where(function($q) {
+                $q->where('is_available', true)
+                  ->orWhereNull('is_available');
+            })
+            ->orderBy('average_rating', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get()
                 ->map(fn($e) => [
                     'id' => $e->id,
                     'name' => $e->user ? trim(($e->user->first_name ?? '') . ' ' . ($e->user->last_name ?? '')) : 'Unknown',
@@ -158,6 +160,5 @@ class PublicCmsController extends Controller
                 'success' => true,
                 'data' => $experts
             ]);
-        });
     }
 }

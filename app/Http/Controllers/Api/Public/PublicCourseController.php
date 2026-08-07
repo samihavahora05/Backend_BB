@@ -240,11 +240,11 @@ class PublicCourseController extends Controller
                       ->orWhere('is_published', true)
                       ->orWhereNull('status');
                 })
-                ->where('is_featured', true)
                 ->where(function($q) {
                     $q->where('is_archived', false)
                       ->orWhereNull('is_archived');
                 })
+                ->orderBy('is_featured', 'desc')
                 ->latest()
                 ->take(6)
                 ->get()

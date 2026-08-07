@@ -2,19 +2,28 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
 
-use Illuminate\Support\Facades\Artisan;
 
-use App\Http\Controllers\Api\System\HealthController;
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ConsultationController;
-use App\Http\Controllers\CallbackRequestController;
-use App\Http\Controllers\ScholarshipProgramController;
-use App\Http\Controllers\ContestController;
-use App\Http\Controllers\BlogController;
-use App\Http\Controllers\FaqController;
+Route::get('/debug-profiles', function() {
+    $allProfiles = \App\Models\ExpertProfile::with('user')->get();
+    
+    $queryProfiles = \App\Models\ExpertProfile::with(['user'])
+        ->where(function($q) {
+            $q->where('is_available', true)
+              ->orWhereNull('is_available');
+        })
+        ->whereHas('user', function($q) {
+            $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'pending', 'Pending', 'PENDING'])->orWhereNull('status');
+        })->get();
+        
+    return [
+        'total' => $allProfiles->count(),
+        'all_profiles' => $allProfiles,
+        'query_profiles_count' => $queryProfiles->count(),
+        'query_profiles' => $queryProfiles
+    ];
+});
 use App\Http\Controllers\TestimonialController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PlacementPartnerController;
@@ -125,12 +134,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
     // ─── TEST ROUTE ──────────────────────────────────────────────────────────
 
-    Route::get('test-saved-jobs', function() {
-        return \App\Models\SavedJob::with('job')->get();
-    });
-    Route::get('test-me', function(Illuminate\Http\Request $request) {
-        return ['user' => auth('sanctum')->user()];
-    });
+
 
     // ─── Jobs Platform ───────────────────────────────────────────────────────
     Route::get('jobs', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'index']);

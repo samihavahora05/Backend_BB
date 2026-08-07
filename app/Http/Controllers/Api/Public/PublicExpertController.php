@@ -21,9 +21,11 @@ class PublicExpertController extends Controller
     public function index(Request $request)
     {
         $query = ExpertProfile::with(['user:id,first_name,last_name,email'])
-            ->where('is_available', true)
-            ->where('is_verified', true)
-            ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE']));
+            ->where(function($q) {
+                $q->where('is_available', true)
+                  ->orWhereNull('is_available');
+            })
+            ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'pending', 'Pending', 'PENDING'])->orWhereNull('status'));
 
         if ($s = $request->query('search')) {
             $query->where(function($q) use ($s) {
@@ -95,7 +97,10 @@ class PublicExpertController extends Controller
             'sessions' => fn($q) => $q->where('is_active', true),
             'availabilities' => fn($q) => $q->where('is_active', true)
         ])
-        ->where('is_available', true)
+        ->where(function($q) {
+            $q->where('is_available', true)
+              ->orWhereNull('is_available');
+        })
         ->findOrFail($id);
 
         return response()->json([

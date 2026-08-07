@@ -57,6 +57,27 @@ class UserController extends Controller
 
         $user->assignRole($request->role);
 
+        // Auto-create basic profile based on role so they appear in public listings immediately
+        if ($request->role === 'expert') {
+            \App\Models\ExpertProfile::create([
+                'user_id' => $user->id,
+                'designation' => 'Expert',
+                'company' => 'Independent',
+                'hourly_rate' => 0,
+                'is_available' => true,
+                'is_verified' => false
+            ]);
+        } elseif ($request->role === 'student') {
+            \App\Models\StudentProfile::create([
+                'user_id' => $user->id,
+            ]);
+        } elseif ($request->role === 'company') {
+            \App\Models\CompanyProfile::create([
+                'user_id' => $user->id,
+                'company_name' => 'Pending Name'
+            ]);
+        }
+
         return response()->json(['success' => true, 'data' => $user->load('roles')], 201);
     }
 
