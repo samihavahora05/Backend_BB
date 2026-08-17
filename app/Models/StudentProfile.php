@@ -17,11 +17,30 @@ class StudentProfile extends Model
         'user_id',
         'first_name',
         'last_name',
-        'bio',
+        'phone',
         'date_of_birth',
         'gender',
         'profile_photo',
+        'education_level',
+        'college_name',
+        'university',
+        'course',
+        'specialization',
+        'graduation_year',
         'skills',
+        'certifications',
+        'projects',
+        'linkedin_url',
+        'github_url',
+        'portfolio_url',
+        'resume_path',
+        'bio',
+        'city',
+        'state',
+        'country',
+        'pincode',
+        'profile_completion',
+        'is_verified',
         'status',
         'student_type',
         'job_title',
@@ -31,11 +50,7 @@ class StudentProfile extends Model
         'address_line_1',
         'address_line_2',
         'emergency_contact_name',
-        'emergency_contact_phone',
-        'city',
-        'state',
-        'country',
-        'resume_path'
+        'emergency_contact_phone'
     ];
 
     /**
@@ -46,6 +61,10 @@ class StudentProfile extends Model
         return [
             'date_of_birth' => 'date',
             'skills' => 'json',
+            'certifications' => 'json',
+            'projects' => 'json',
+            'is_verified' => 'boolean',
+            'profile_completion' => 'integer',
         ];
     }
 

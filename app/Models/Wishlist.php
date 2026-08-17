@@ -12,3 +12,5 @@ class Wishlist extends Model
     {
         return $this->belongsTo(Course::class);
     }
+
+}

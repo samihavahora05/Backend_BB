@@ -67,7 +67,9 @@ class StudentProfileController extends Controller
         }
 
         if ($request->has('name')) {
-            $user->name = $request->name;
+            $nameParts = explode(' ', trim($request->name), 2);
+            $user->first_name = $nameParts[0];
+            $user->last_name = $nameParts[1] ?? '';
             $user->save();
         }
 
@@ -94,7 +96,6 @@ class StudentProfileController extends Controller
     public function deleteAccount(Request $request)
     {
         $user = $request->user();
-        // Just disable or delete
         $user->is_active = false;
         $user->status = 'inactive';
         $user->save();

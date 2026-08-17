@@ -17,6 +17,13 @@ class MentorSession extends Model
         'duration_minutes',
         'price',
         'is_active',
+        // Legacy direct-booking fields (used by MentorSessionController)
+        'student_id',
+        'expert_id',
+        'scheduled_at',
+        'meeting_url',
+        'notes',
+        'status',
     ];
 
     protected function casts(): array
@@ -25,6 +32,7 @@ class MentorSession extends Model
             'price' => 'decimal:2',
             'duration_minutes' => 'integer',
             'is_active' => 'boolean',
+            'scheduled_at' => 'datetime',
         ];
     }
 
@@ -36,5 +44,15 @@ class MentorSession extends Model
     public function bookings(): HasMany
     {
         return $this->hasMany(MentorBooking::class, 'session_id');
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'student_id');
+    }
+
+    public function expert(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'expert_id');
     }
 }

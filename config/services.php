@@ -39,5 +39,10 @@ return [
         'key' => env('FCM_SERVER_KEY'),
     ],
 
+    'razorpay' => [
+        'key' => env('RAZORPAY_KEY_ID'),
+        'secret' => env('RAZORPAY_KEY_SECRET'),
+    ],
+
 ];
 

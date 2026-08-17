@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseEnrollment;
 use App\Models\Module;
+use App\Support\StorageHelper;
 use Illuminate\Http\Request;
 
 class PublicCourseController extends Controller
@@ -18,7 +19,7 @@ class PublicCourseController extends Controller
     {
         $query = Course::with(['category', 'level'])->withCount('enrollments')
             ->where(function($q) {
-                $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
+                $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE', 'draft', 'Draft', 'DRAFT'])
                   ->orWhere('is_published', true)
                   ->orWhereNull('status');
             })
@@ -81,7 +82,7 @@ class PublicCourseController extends Controller
             'slug'              => $c->slug,
             'title'             => $c->title,
             'short_description' => $c->short_description,
-            'thumbnail'         => $c->thumbnail ? asset('storage/' . $c->thumbnail) : null,
+            'thumbnail'         => StorageHelper::url($c->thumbnail),
             'price'             => $c->price,
             'discount_price'    => $c->discount_price,
             'course_type'       => $c->course_type,
@@ -114,11 +115,11 @@ class PublicCourseController extends Controller
         $course = Course::with([
             'category', 'level', 'expert',
             'modules' => fn($q) => $q->orderBy('order'),
-            'modules.lessons' => fn($q) => $q->orderBy('order')->select('id', 'module_id', 'title', 'type', 'duration_minutes'),
+            'modules.lessons' => fn($q) => $q->orderBy('order'),
         ])
         ->where('slug', $slug)
         ->where(function($q) {
-            $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
+            $q->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE', 'draft', 'Draft', 'DRAFT'])
               ->orWhere('is_published', true)
               ->orWhereNull('status');
         })
@@ -142,7 +143,7 @@ class PublicCourseController extends Controller
                 'title'             => $course->title,
                 'short_description' => $course->short_description,
                 'description'       => $course->description,
-                'thumbnail'         => $course->thumbnail ? asset('storage/' . $course->thumbnail) : null,
+                'thumbnail'         => StorageHelper::url($course->thumbnail),
                 'preview_video_url' => $course->preview_video_url,
                 'price'             => $course->price,
                 'discount_price'    => $course->discount_price,
@@ -168,7 +169,7 @@ class PublicCourseController extends Controller
                     'lessons' => $m->lessons->map(fn($l) => [
                         'id'               => $l->id,
                         'title'            => $l->title,
-                        'type'             => $l->type,
+                        'type'             => $l->video_url ? 'video' : 'article',
                         'duration_minutes' => $l->duration_minutes,
                         // Content is locked — students see it after enrollment
                     ]),
@@ -252,7 +253,7 @@ class PublicCourseController extends Controller
                     'id'             => $c->id,
                     'slug'           => $c->slug,
                     'title'          => $c->title,
-                    'thumbnail'      => $c->thumbnail ? asset('storage/' . $c->thumbnail) : null,
+                    'thumbnail'      => StorageHelper::url($c->thumbnail),
                     'price'          => $c->price,
                     'discount_price' => $c->discount_price,
                     'course_type'    => $c->course_type,

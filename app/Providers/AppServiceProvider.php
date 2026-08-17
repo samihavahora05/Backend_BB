@@ -52,12 +52,18 @@ class AppServiceProvider extends ServiceProvider
             "Partnership / Collaboration",
             "Campus Hiring"
         ];
-        if (\Illuminate\Support\Facades\Schema::hasTable('global_settings') && !\App\Models\GlobalSetting::where('key', 'crm_lead_categories')->exists()) {
-            \App\Models\GlobalSetting::create([
-                'group' => 'general',
-                'key' => 'crm_lead_categories',
-                'value' => json_encode($categories)
-            ]);
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('global_settings') && !\App\Models\GlobalSetting::where('key', 'crm_lead_categories')->exists()) {
+                \App\Models\GlobalSetting::create([
+                    'group' => 'general',
+                    'key' => 'crm_lead_categories',
+                    'value' => json_encode($categories)
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Database not migrated yet (or SQLite file not created yet) —
+            // never let this optional seed step break the whole app on boot.
+            \Illuminate\Support\Facades\Log::warning('global_settings boot seed skipped: ' . $e->getMessage());
         }
         // -----------------------------------
 

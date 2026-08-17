@@ -31,52 +31,51 @@ class DatabaseSeeder extends Seeder
             Role::firstOrCreate(['name' => $role]);
         }
 
-        // 2. Create the Super Admin manually
-        $admin = User::factory()->create([
-            'first_name' => 'Super',
-            'last_name' => 'Admin',
-            'email' => 'admin@blueboxx.in',
-            'password' => bcrypt('password'), // password
-        ]);
+        // 2. Create the Super Admin safely
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@blueboxx.in'],
+            [
+                'first_name' => 'Super',
+                'last_name' => 'Admin',
+                'password' => bcrypt('password'),
+                'status' => 'active',
+            ]
+        );
         $admin->assignRole('super_admin');
 
-        // 3. Seed Students
-        StudentProfile::factory(20)->create()->each(function ($profile) {
-            $profile->user->assignRole('student');
-        });
+        // 3. Seed Students if few exist
+        if (User::role('student')->count() < 10) {
+            StudentProfile::factory(10)->create()->each(function ($profile) {
+                $profile->user->assignRole('student');
+            });
+        }
 
-        // Seed Interns & Job Seekers
-        InternProfile::factory(10)->create()->each(function ($profile) {
-            $profile->user->assignRole('student');
-        });
-        JobSeekerProfile::factory(10)->create()->each(function ($profile) {
-            $profile->user->assignRole('student');
-        });
-
-        // NOTE: Instructors (Experts) are created by admin via the Instructors Manager panel.
-        // Do NOT auto-seed fake instructors here.
-
-        // 5. Seed Companies & Colleges
-        CompanyProfile::factory(10)->create(); // Create 10 companies
-        CollegeProfile::factory(5)->create(); // Create 5 colleges
+        // Seed Companies & Colleges if few exist
+        if (CompanyProfile::count() < 5) {
+            CompanyProfile::factory(5)->create();
+        }
+        if (CollegeProfile::count() < 3) {
+            CollegeProfile::factory(3)->create();
+        }
 
         // 6. Seed LMS (Courses, Modules, Lessons)
-        CourseCategory::factory(5)->create()->each(function ($category) {
-            // Create 2 courses per category
-            Course::factory(2)->create(['category_id' => $category->id])->each(function ($course) {
-                // Create 3 modules per course
-                Module::factory(3)->create(['course_id' => $course->id])->each(function ($module) {
-                    // Create 5 lessons per module
-                    Lesson::factory(5)->create(['module_id' => $module->id]);
+        if (Course::count() < 5) {
+            CourseCategory::factory(3)->create()->each(function ($category) {
+                Course::factory(2)->create(['category_id' => $category->id])->each(function ($course) {
+                    Module::factory(3)->create(['course_id' => $course->id])->each(function ($module) {
+                        Lesson::factory(5)->create(['module_id' => $module->id]);
+                    });
                 });
             });
-        });
+        }
 
         // 7. Seed ATS (Jobs & Internships)
-        // Create random jobs
-        Job::factory(15)->create();
+        if (Job::count() < 5) {
+            Job::factory(10)->create();
+        }
         
         $this->call([
+            ComprehensiveDataSeeder::class,
             JobModuleSeeder::class,
             InternshipModuleSeeder::class,
             StudentModuleSeeder::class,

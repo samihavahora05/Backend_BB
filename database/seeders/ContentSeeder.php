@@ -23,7 +23,8 @@ class ContentSeeder extends Seeder
     {
         // 1. Create a Seed Company User
         $companyUser = User::create([
-            'name' => 'Acme Corp Inc',
+            'first_name' => 'Acme Corp',
+            'last_name' => 'Inc',
             'email' => 'hr@acme.com',
             'phone' => '9876543210',
             'password' => Hash::make('password123'),
@@ -37,7 +38,8 @@ class ContentSeeder extends Seeder
 
         // 2. Create a Seed Expert User
         $expertUser = User::create([
-            'name' => 'Priya Desai',
+            'first_name' => 'Priya',
+            'last_name' => 'Desai',
             'email' => 'priya@expert.com',
             'phone' => '9876543211',
             'password' => Hash::make('password123'),
@@ -88,6 +90,7 @@ class ContentSeeder extends Seeder
             'title' => 'Frontend Developer Intern',
             'description' => 'Looking for a React developer intern to build beautiful user interfaces.',
             'duration_months' => 3,
+            'duration' => '3 Months',
             'stipend' => 25000.00,
             'status' => 'open',
         ]);
@@ -97,6 +100,7 @@ class ContentSeeder extends Seeder
             'title' => 'UI/UX Design Intern',
             'description' => 'Figma UI design intern to support web redesign projects.',
             'duration_months' => 6,
+            'duration' => '6 Months',
             'stipend' => 20000.00,
             'status' => 'open',
         ]);

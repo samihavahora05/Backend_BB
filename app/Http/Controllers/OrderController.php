@@ -42,31 +42,23 @@ class OrderController extends Controller
         });
         $receiptId = 'rcpt_' . Str::random(10);
 
-        // Razorpay API keys (read from dynamic config)
-        $razorpayKey = config('services.razorpay.key');
-        $razorpaySecret = config('services.razorpay.secret');
-
-        if (!$razorpayKey || !$razorpaySecret) {
-            return response()->json(['message' => 'Payment gateway not configured'], 500);
+        $amountInPaise = (int)($totalAmount * 100);
+        $gatewayService = app(\App\Services\Payments\PaymentGatewayInterface::class);
+        
+        try {
+            $gatewayOrder = $gatewayService->createOrder($receiptId, $amountInPaise, 'INR');
+            $orderId = $gatewayOrder['order_id'];
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to create Razorpay Order: ' . $e->getMessage()], 400);
         }
 
-        $api = new Api($razorpayKey, $razorpaySecret);
-
         try {
-            // Create Razorpay Order
-            $razorpayOrder = $api->order->create([
-                'receipt'         => $receiptId,
-                'amount'          => $totalAmount * 100, // in paise
-                'currency'        => 'INR',
-                'payment_capture' => 1 // auto capture
-            ]);
-
             // Use DB Transaction to ensure both Order and OrderItems are created safely
-            DB::transaction(function () use ($user, $razorpayOrder, $totalAmount, $courses, &$order) {
+            DB::transaction(function () use ($user, $orderId, $totalAmount, $courses, &$order) {
                 // Create Local Order
                 $order = Order::create([
                     'user_id' => $user->id,
-                    'order_number' => $razorpayOrder['id'],
+                    'order_number' => $orderId,
                     'total_amount' => $totalAmount,
                     'status' => 'pending'
                 ]);
@@ -83,13 +75,13 @@ class OrderController extends Controller
 
             return response()->json([
                 'order' => $order,
-                'razorpay_order_id' => $razorpayOrder['id'],
+                'razorpay_order_id' => $orderId,
                 'amount' => $totalAmount,
                 'key' => $razorpayKey
             ], 201);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Payment gateway error', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Failed to create order', 'error' => $e->getMessage()], 500);
         }
     }
 

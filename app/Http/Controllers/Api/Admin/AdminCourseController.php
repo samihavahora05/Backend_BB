@@ -35,8 +35,41 @@ class AdminCourseController extends Controller
         ]);
     }
 
+    protected function sanitizeRequest(Request $request): void
+    {
+        $inputs = $request->all();
+
+        // Convert empty string IDs to null
+        foreach (['level_id', 'expert_id', 'category_id'] as $field) {
+            if (isset($inputs[$field]) && (trim((string)$inputs[$field]) === '' || $inputs[$field] === 'null' || $inputs[$field] === 'undefined')) {
+                $inputs[$field] = null;
+            }
+        }
+
+        // Convert empty numeric fields to null
+        foreach (['price', 'discount_price', 'duration_hours'] as $field) {
+            if (isset($inputs[$field]) && (trim((string)$inputs[$field]) === '' || $inputs[$field] === 'null')) {
+                $inputs[$field] = null;
+            }
+        }
+
+        // Unset non-file thumbnail string if passed so 'nullable|image' validation rule passes
+        if (isset($inputs['thumbnail']) && !($inputs['thumbnail'] instanceof \Illuminate\Http\UploadedFile)) {
+            unset($inputs['thumbnail']);
+        }
+
+        // Sanitize landing page URL if empty
+        if (isset($inputs['landing_page_url']) && trim((string)$inputs['landing_page_url']) === '') {
+            $inputs['landing_page_url'] = null;
+        }
+
+        $request->replace($inputs);
+    }
+
     public function store(Request $request)
     {
+        $this->sanitizeRequest($request);
+
         $data = $request->validate([
             'category_id' => 'required|exists:course_categories,id',
             'level_id' => 'nullable|exists:course_levels,id',
@@ -44,10 +77,10 @@ class AdminCourseController extends Controller
             'title' => 'required|string|max:255',
             'short_description' => 'nullable|string',
             'description' => 'nullable|string',
-            'thumbnail' => 'nullable|image|max:2048',
+            'thumbnail' => 'nullable|image|max:5120',
             'preview_video_url' => 'nullable|string|max:255',
             'demo_pdf_url' => 'nullable|string|max:255',
-            'landing_page_url' => 'nullable|url',
+            'landing_page_url' => 'nullable|string|max:1000',
             'price' => 'nullable|numeric|min:0',
             'discount_price' => 'nullable|numeric|min:0',
             'course_type' => ['nullable', Rule::in(['Free', 'Paid'])],
@@ -67,6 +100,10 @@ class AdminCourseController extends Controller
         $data['price'] = $data['price'] ?? 0;
         $data['discount_price'] = $data['discount_price'] ?? 0;
 
+        if (!array_key_exists('is_published', $data)) {
+            $data['is_published'] = ($data['status'] ?? null) === 'Published';
+        }
+
         $course = $this->courseService->createCourse($data);
         return response()->json(['success' => true, 'message' => 'Course created successfully', 'data' => $course], 201);
     }
@@ -79,6 +116,8 @@ class AdminCourseController extends Controller
 
     public function update(Request $request, $id)
     {
+        $this->sanitizeRequest($request);
+
         $course = Course::findOrFail($id);
 
         $data = $request->validate([
@@ -88,10 +127,10 @@ class AdminCourseController extends Controller
             'title' => 'nullable|string|max:255',
             'short_description' => 'nullable|string',
             'description' => 'nullable|string',
-            'thumbnail' => 'nullable|image|max:2048',
+            'thumbnail' => 'nullable|image|max:5120',
             'preview_video_url' => 'nullable|string|max:255',
             'demo_pdf_url' => 'nullable|string|max:255',
-            'landing_page_url' => 'nullable|url',
+            'landing_page_url' => 'nullable|string|max:1000',
             'price' => 'nullable|numeric|min:0',
             'discount_price' => 'nullable|numeric|min:0',
             'course_type' => ['nullable', Rule::in(['Free', 'Paid'])],
@@ -103,6 +142,10 @@ class AdminCourseController extends Controller
             'is_archived' => 'nullable|boolean',
             'is_published' => 'nullable|boolean',
         ]);
+
+        if (array_key_exists('status', $data) && !array_key_exists('is_published', $data)) {
+            $data['is_published'] = $data['status'] === 'Published';
+        }
 
         $course = $this->courseService->updateCourse($course, $data);
         return response()->json(['success' => true, 'message' => 'Course updated successfully', 'data' => $course]);

@@ -10,6 +10,7 @@ use App\Models\JobApplication;
 use App\Models\IssuedCertificate;
 use App\Models\MentorSession;
 use App\Models\Job;
+use App\Support\StorageHelper;
 use Illuminate\Support\Facades\Auth;
 
 class StudentDashboardController extends Controller
@@ -28,7 +29,7 @@ class StudentDashboardController extends Controller
 
         // 2. Applications stats (Internships + Scholarships + Jobs)
         $internshipApps = InternshipApplication::where('user_id', $user->id)
-            ->whereNotIn('status', ['rejected', 'hired'])
+            ->whereNotIn('status', ['rejected', 'selected', 'joined', 'completed'])
             ->count();
         
         $jobApps = JobApplication::where('user_id', $user->id)
@@ -41,23 +42,31 @@ class StudentDashboardController extends Controller
 
         $activeApplications = $internshipApps + $jobApps + $scholarshipApps;
 
+        $interviews = InternshipApplication::where('user_id', $user->id)->whereIn('status', ['interview', 'shortlisted'])->count()
+            + JobApplication::where('user_id', $user->id)->whereIn('status', ['interview', 'shortlisted'])->count()
+            + \App\Models\ScholarshipApplication::where('user_id', $user->id)->where('status', 'shortlisted')->count();
+
+        $offers = InternshipApplication::where('user_id', $user->id)->whereIn('status', ['selected', 'offer_sent', 'joined'])->count()
+            + JobApplication::where('user_id', $user->id)->whereIn('status', ['hired', 'offer'])->count()
+            + \App\Models\ScholarshipApplication::where('user_id', $user->id)->where('status', 'awarded')->count();
+
         // 3. Certificates stats
         $certificatesEarned = IssuedCertificate::where('user_id', $user->id)->count();
 
         // 4. Get active courses with progress
-        $courses = CourseEnrollment::with('course', 'course.category')
+        $courses = CourseEnrollment::with('course', 'course.level', 'course.category')
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->take(3)
             ->get()
             ->map(function ($enrollment) {
                 return [
-                    'id' => $enrollment->course->id,
-                    'title' => $enrollment->course->title,
-                    'level' => $enrollment->course->level?->title ?? 'Beginner',
-                    'category' => $enrollment->course->category,
-                    'thumbnail' => $enrollment->course->thumbnail ? asset('storage/' . $enrollment->course->thumbnail) : null,
-                    'progress' => $enrollment->progress_percentage,
+                    'id' => $enrollment->course?->id ?? 0,
+                    'title' => $enrollment->course?->title ?? 'Course',
+                    'level' => $enrollment->course?->level?->title ?? 'Beginner',
+                    'category' => $enrollment->course?->category,
+                    'thumbnail' => StorageHelper::url($enrollment->course?->thumbnail),
+                    'progress' => $enrollment->progress_percentage ?? 0,
                 ];
             });
 
@@ -68,13 +77,16 @@ class StudentDashboardController extends Controller
             ->take(3)
             ->get()
             ->map(function ($app) {
+                $title = $app->internship?->title ?? 'Internship Application';
+                $companyName = $app->internship?->company_name ?? $app->internship?->company?->name ?? 'Blueboxx Partner';
                 return [
                     'id' => 'int_' . $app->id,
-                    'role' => $app->internship->title,
-                    'company' => $app->internship->company->name ?? 'Unknown Company',
-                    'status' => ucfirst($app->status),
-                    'statusColor' => $this->getStatusColor($app->status),
-                    'appliedDate' => $app->created_at->diffForHumans(),
+                    'role' => $title,
+                    'company' => $companyName,
+                    'status' => ucfirst($app->status ?? 'Applied'),
+                    'statusColor' => $this->getStatusColor(strtolower($app->status ?? 'applied')),
+                    'appliedAt' => $app->created_at,
+                    'appliedDate' => $app->created_at ? $app->created_at->diffForHumans() : 'Recently',
                 ];
             });
 
@@ -86,11 +98,12 @@ class StudentDashboardController extends Controller
             ->map(function ($app) {
                 return [
                     'id' => 'sch_' . $app->id,
-                    'role' => $app->program->title ?? 'Scholarship',
+                    'role' => $app->program?->title ?? 'Scholarship',
                     'company' => 'Blueboxx DA',
-                    'status' => ucfirst($app->status),
-                    'statusColor' => $this->getStatusColor(strtolower($app->status)),
-                    'appliedDate' => $app->created_at->diffForHumans(),
+                    'status' => ucfirst($app->status ?? 'Applied'),
+                    'statusColor' => $this->getStatusColor(strtolower($app->status ?? 'applied')),
+                    'appliedAt' => $app->created_at,
+                    'appliedDate' => $app->created_at ? $app->created_at->diffForHumans() : 'Recently',
                 ];
             });
 
@@ -102,16 +115,19 @@ class StudentDashboardController extends Controller
             ->map(function ($app) {
                 return [
                     'id' => 'job_' . $app->id,
-                    'role' => $app->job->title ?? 'Job',
-                    'company' => $app->job->company_name ?? 'Unknown Company',
-                    'status' => ucfirst($app->status),
-                    'statusColor' => $this->getStatusColor($app->status),
-                    'appliedDate' => $app->created_at->diffForHumans(),
+                    'role' => $app->job?->title ?? 'Job',
+                    'company' => $app->job?->company_name ?? 'Unknown Company',
+                    'status' => ucfirst($app->status ?? 'Applied'),
+                    'statusColor' => $this->getStatusColor(strtolower($app->status ?? 'applied')),
+                    'appliedAt' => $app->created_at,
+                    'appliedDate' => $app->created_at ? $app->created_at->diffForHumans() : 'Recently',
                 ];
             });
 
-        // Combine and take latest 3
-        $applications = collect($recentInternships)->concat($recentJobs)->concat($recentScholarships)->sortByDesc('appliedDate')->take(3)->values();
+        $applications = collect($recentInternships)->concat($recentJobs)->concat($recentScholarships)
+            ->sortByDesc('appliedAt')
+            ->take(3)
+            ->values();
 
         // 6. Upcoming classes / mentor sessions
         $upcomingSessions = MentorSession::with('expert.user')
@@ -123,7 +139,7 @@ class StudentDashboardController extends Controller
             ->get()
             ->map(function ($session) {
                 return [
-                    'title' => 'Mentor Session: ' . $session->expert->user->name,
+                    'title' => 'Mentor Session: ' . ($session->expert?->user?->first_name ?? 'Mentor'),
                     'course' => '1-on-1 Mentorship',
                     'date' => \Carbon\Carbon::parse($session->scheduled_at)->format('M d'),
                     'time' => \Carbon\Carbon::parse($session->scheduled_at)->format('g:i A'),
@@ -136,6 +152,8 @@ class StudentDashboardController extends Controller
                 'active_courses' => $activeCourses,
                 'completed_courses' => $completedCourses,
                 'active_applications' => $activeApplications,
+                'interviews_scheduled' => $interviews,
+                'offers_received' => $offers,
                 'certificates_earned' => $certificatesEarned,
             ],
             'courses' => $courses,
@@ -168,18 +186,21 @@ class StudentDashboardController extends Controller
 
         foreach ($internships as $app) {
             if ($app->status === 'interview') $interviews++;
-            if ($app->status === 'hired') $offers++;
+            if (in_array($app->status, ['selected', 'offer_sent', 'joined'])) $offers++;
+
+            $companyName = $app->internship->company_name ?? 'Unknown Company';
+            $companyLogo = $app->internship->company_logo;
 
             $allApps[] = [
                 'id' => 'int_' . $app->id,
                 'role' => $app->internship->title ?? 'Internship',
-                'company' => $app->internship->company->name ?? 'Unknown Company',
-                'logo' => $app->internship->company->company_logo 
-                            ? asset('storage/' . $app->internship->company->company_logo) 
-                            : "https://ui-avatars.com/api/?name=" . urlencode($app->internship->company->name ?? 'C') . "&background=0d1635&color=fff",
+                'company' => $companyName,
+                'logo' => $companyLogo
+                            ? asset('storage/' . $companyLogo)
+                            : "https://ui-avatars.com/api/?name=" . urlencode($companyName) . "&background=0d1635&color=fff",
                 'appliedDate' => $app->created_at->format('M d, Y'),
                 'status' => strtolower($app->status),
-                'nextAction' => $app->status === 'interview' ? 'Interview Scheduled' : ($app->status === 'hired' ? 'Offer Extended' : 'Application under review'),
+                'nextAction' => $app->status === 'interview' ? 'Interview Scheduled' : (in_array($app->status, ['selected', 'offer_sent', 'joined']) ? 'Offer Extended' : 'Application under review'),
             ];
         }
 
@@ -198,16 +219,13 @@ class StudentDashboardController extends Controller
             ];
         }
 
-        // Sort by applied date desc
         usort($allApps, function ($a, $b) {
             return strtotime($b['appliedDate']) - strtotime($a['appliedDate']);
         });
 
-        // Pipeline stats
         $appliedCount = count($allApps);
         $shortlistedCount = collect($allApps)->where('status', 'shortlisted')->count();
 
-        // Calculate a dummy "Placement Score" based on activity
         $score = min(100, 40 + ($appliedCount * 2) + ($interviews * 5) + ($offers * 10));
 
         return response()->json([

@@ -23,18 +23,16 @@ return new class extends Migration
             });
         }
 
-        // Expert Availability Slots (Recurring Weekly)
-        if (!Schema::hasTable('expert_availabilities')) {
-            Schema::create('expert_availabilities', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('expert_profile_id')->constrained()->cascadeOnDelete();
-                $table->integer('day_of_week'); // 0 = Sunday, 6 = Saturday
-                $table->time('start_time');
-                $table->time('end_time');
-                $table->boolean('is_available')->default(true);
-                $table->timestamps();
-            });
-        }
+        // NOTE: expert_availabilities is intentionally NOT created here.
+        // It previously was, using an `is_available` column, but the app
+        // (ExpertAvailability model + PublicExpertController::show()) uses
+        // `is_active`. That mismatch, combined with a second migration also
+        // trying to create this table, caused migrations to fail partway
+        // and left the table (when it existed) without the `is_active`
+        // column, producing the Experts profile 500 error. The table is now
+        // owned exclusively by 2026_08_11_000003_create_expert_availabilities_table.php,
+        // which creates it with the correct schema and self-heals older
+        // databases that already have it in the old shape.
 
         // Expert Bookings
         if (!Schema::hasTable('expert_bookings')) {

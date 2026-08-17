@@ -12,9 +12,13 @@ class Payment extends Model
 
     protected $fillable = [
         'order_id',
+        'user_id',
         'gateway',
+        'payment_gateway',
+        'payment_method',
         'transaction_id',
-        'status', // success, failed, pending
+        'amount',
+        'status',
     ];
 
     public function order(): BelongsTo

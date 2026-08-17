@@ -23,25 +23,19 @@ class PaymentController extends Controller
             'razorpay_signature' => 'required|string'
         ]);
 
-        $razorpayKey = config('services.razorpay.key');
-        $razorpaySecret = config('services.razorpay.secret');
+        $gatewayService = app(\App\Services\Payments\PaymentGatewayInterface::class);
+        $isValid = $gatewayService->verifyPayment($request->all());
 
-        if (!$razorpayKey || !$razorpaySecret) {
-            return response()->json(['message' => 'Payment gateway not configured'], 500);
+        if (!$isValid) {
+            return response()->json(['message' => 'Razorpay payment signature verification failed.'], 400);
         }
 
-        $api = new Api($razorpayKey, $razorpaySecret);
-        $attributes = [
-            'razorpay_order_id' => $request->razorpay_order_id,
-            'razorpay_payment_id' => $request->razorpay_payment_id,
-            'razorpay_signature' => $request->razorpay_signature
-        ];
-
         try {
-            // Verify signature
-            $api->utility->verifyPaymentSignature($attributes);
 
-            $order = Order::where('order_number', $request->razorpay_order_id)->firstOrFail();
+            $order = Order::where('order_number', $request->razorpay_order_id)
+                ->orWhere('id', $request->razorpay_order_id)
+                ->firstOrFail();
+                
             $order->update(['status' => 'completed']);
 
             $payment = Payment::create([
@@ -59,29 +53,36 @@ class PaymentController extends Controller
             // Enroll Student and Send Email & Notifications
             $orderItems = \App\Models\OrderItem::where('order_id', $order->id)->get();
             foreach ($orderItems as $item) {
-                $course = \App\Models\Course::with('expert')->find($item->course_id);
-                if ($course) {
-                    \App\Models\CourseEnrollment::create([
-                        'user_id' => $request->user()->id,
-                        'course_id' => $course->id,
-                        'enrolled_at' => now(),
-                        'status' => 'active'
-                    ]);
+                $courseId = $item->course_id ?? $item->purchasable_id;
+                if ($courseId) {
+                    $course = \App\Models\Course::with('expert')->find($courseId);
+                    if ($course) {
+                        \App\Models\CourseEnrollment::firstOrCreate([
+                            'user_id' => $request->user()->id,
+                            'course_id' => $course->id,
+                        ], [
+                            'enrolled_at' => now(),
+                            'status' => 'active'
+                        ]);
 
-                    // Send course enrollment notification
-                    $request->user()->notify(new PlatformNotification(
-                        "Course Enrolled! 🎓",
-                        "You have successfully enrolled in: '{$course->title}'.",
-                        'course_enrolled',
-                        ['course_id' => $course->id]
-                    ));
+                        // Send course enrollment notification
+                        try {
+                            $request->user()->notify(new PlatformNotification(
+                                "Course Enrolled! 🎓",
+                                "You have successfully enrolled in: '{$course->title}'.",
+                                'course_enrolled',
+                                ['course_id' => $course->id]
+                            ));
 
-                    // Send course enrollment email confirmation
-                    SendQueuedEmailJob::dispatch(
-                        $request->user()->email,
-                        new CourseEnrollmentMail($course->title, now()->toDateString(), route('courses.show', $course->id)),
-                        'Course Enrollment Confirmation'
-                    );
+                            SendQueuedEmailJob::dispatch(
+                                $request->user()->email,
+                                new CourseEnrollmentMail($course->title, now()->toDateString(), route('courses.show', $course->id)),
+                                'Course Enrollment Confirmation'
+                            );
+                        } catch (\Throwable $err) {
+                            \Illuminate\Support\Facades\Log::warning("Enrollment notification warning: " . $err->getMessage());
+                        }
+                    }
                 }
             }
 

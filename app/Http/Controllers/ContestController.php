@@ -34,32 +34,63 @@ class ContestController extends Controller
     }
 
     /**
+     * Admin method to list every contest, regardless of status,
+     * with registration counts for the manager UI.
+     */
+    public function adminIndex(Request $request)
+    {
+        $query = Contest::withCount('registrations')->with(['category:id,name', 'college:id,name']);
+
+        $paginated = $this->paginateWithMeta(
+            $query,
+            $request,
+            ['title', 'start_date', 'status', 'created_at'],
+            ['title', 'description']
+        );
+
+        return response()->json(array_merge(['success' => true], $paginated));
+    }
+
+    /**
      * Admin method to create a new contest
      */
     public function store(Request $request)
     {
+        if ($request->has('status')) {
+            $s = strtolower($request->status);
+            if ($s === 'active') $s = 'ongoing';
+            $request->merge(['status' => $s]);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'status' => 'required|in:upcoming,ongoing,completed'
+            'description' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'status' => 'required|in:upcoming,ongoing,completed',
+            'category_id' => 'nullable',
+            'college_id' => 'nullable',
         ]);
 
         $contest = Contest::create($validated);
 
         // Send notifications to all students/users
-        $students = User::role('student')->get();
-        foreach ($students as $student) {
-            $student->notify(new PlatformNotification(
-                "New Contest Published! 🏆",
-                "Join the contest: '{$contest->title}' scheduled on {$contest->start_date}.",
-                'contest_published',
-                ['contest_id' => $contest->id]
-            ));
+        try {
+            $students = User::role('student')->get();
+            foreach ($students as $student) {
+                $student->notify(new PlatformNotification(
+                    "New Contest Published! 🏆",
+                    "Join the contest: '{$contest->title}' scheduled on {$contest->start_date}.",
+                    'contest_published',
+                    ['contest_id' => $contest->id]
+                ));
+            }
+        } catch (\Throwable $e) {
+            // Ignore notification error if roles not configured
         }
 
         return response()->json([
+            'success' => true,
             'message' => 'Contest created successfully.',
             'data' => $contest
         ], 201);
@@ -72,7 +103,7 @@ class ContestController extends Controller
     public function show($id)
     {
         $contest = Contest::findOrFail($id);
-        return response()->json($contest);
+        return response()->json(['success' => true, 'data' => $contest]);
     }
 
     /**
@@ -80,18 +111,27 @@ class ContestController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($request->has('status')) {
+            $s = strtolower($request->status);
+            if ($s === 'active') $s = 'ongoing';
+            $request->merge(['status' => $s]);
+        }
+
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'start_date' => 'sometimes|date',
-            'end_date' => 'sometimes|date|after:start_date',
-            'status' => 'sometimes|in:upcoming,ongoing,completed'
+            'description' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'status' => 'sometimes|in:upcoming,ongoing,completed',
+            'category_id' => 'nullable',
+            'college_id' => 'nullable',
         ]);
 
         $contest = Contest::findOrFail($id);
         $contest->update($validated);
 
         return response()->json([
+            'success' => true,
             'message' => 'Contest updated successfully.',
             'data' => $contest
         ]);
@@ -134,11 +174,15 @@ class ContestController extends Controller
         ]);
 
         // Dispatch queued email confirmation
-        SendQueuedEmailJob::dispatch(
-            $request->user()->email,
-            new ContestRegistrationMail($contest->title, $contest->start_date),
-            'Contest Registration Confirmed'
-        );
+        try {
+            SendQueuedEmailJob::dispatch(
+                $request->user()->email,
+                new ContestRegistrationMail($contest->title, $contest->start_date),
+                'Contest Registration Confirmed'
+            );
+        } catch (\Throwable $e) {
+            \Log::info("Contest email notification skipped: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Registered for contest successfully.',

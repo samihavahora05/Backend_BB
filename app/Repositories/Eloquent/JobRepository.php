@@ -87,6 +87,7 @@ class JobRepository implements JobRepositoryInterface
             'total_jobs' => Job::count(),
             'active_jobs' => Job::where('status', 'active')->count(),
             'pending_jobs' => Job::where('status', 'pending_approval')->count(),
+            'expired_jobs' => Job::where('status', 'expired')->count(),
             'total_applications' => JobApplication::count(),
             'offers_sent' => \App\Models\JobOffer::count(),
             'hiring_rate' => $this->calculateHiringRate(),

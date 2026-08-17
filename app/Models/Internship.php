@@ -25,12 +25,26 @@ class Internship extends Model
 
     public function getCompanyNameAttribute()
     {
-        return $this->company?->companyProfile?->company_name ?? 'Unknown Company';
+        if ($this->relationLoaded('company') && $this->company) {
+            if ($this->company->relationLoaded('companyProfile')) {
+                return $this->company->companyProfile?->company_name 
+                    ?? $this->company->name 
+                    ?? trim("{$this->company->first_name} {$this->company->last_name}") 
+                    ?: 'Unknown Company';
+            }
+            return $this->company->name 
+                ?? trim("{$this->company->first_name} {$this->company->last_name}") 
+                ?: 'Unknown Company';
+        }
+        return 'Unknown Company';
     }
 
     public function getCompanyLogoAttribute()
     {
-        return $this->company?->companyProfile?->logo ?? null;
+        if ($this->relationLoaded('company') && $this->company && $this->company->relationLoaded('companyProfile')) {
+            return $this->company->companyProfile?->logo ?? null;
+        }
+        return null;
     }
 
     public function company()

@@ -13,6 +13,9 @@ class Quiz extends Model
 
     protected $fillable = [
         'lesson_id',
+        'virtual_class_id',
+        'title',
+        'questions',
         'passing_score',
     ];
 
@@ -21,6 +24,11 @@ class Quiz extends Model
         return [
             'passing_score' => 'integer',
         ];
+    }
+
+    public function virtualClass(): BelongsTo
+    {
+        return $this->belongsTo(VirtualClass::class);
     }
 
     public function lesson(): BelongsTo

@@ -45,6 +45,11 @@ class VirtualClass extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function quiz()
+    {
+        return $this->hasOne(Quiz::class);
+    }
+
     public function enrollments()
     {
         return $this->hasMany(VirtualClassEnrollment::class);

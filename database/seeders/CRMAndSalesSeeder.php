@@ -31,7 +31,7 @@ class CRMAndSalesSeeder extends Seeder
                 'phone' => '+919876543211',
                 'source' => 'Website Contact Form',
                 'status' => 'new',
-                'notes' => 'Interested in corporate training programs for a team of 50 developers.',
+                'message' => 'Interested in corporate training programs for a team of 50 developers.',
             ],
             [
                 'name' => 'Sarah Connor',
@@ -39,7 +39,7 @@ class CRMAndSalesSeeder extends Seeder
                 'phone' => '+919876543212',
                 'source' => 'Landing Page Campaign',
                 'status' => 'contacted',
-                'notes' => 'Looking for career guidance regarding data science internships.',
+                'message' => 'Looking for career guidance regarding data science internships.',
             ]
         ];
 
@@ -73,8 +73,13 @@ class CRMAndSalesSeeder extends Seeder
             );
 
             OrderItem::firstOrCreate(
-                ['order_id' => $order->id, 'item_type' => Course::class, 'item_id' => $course->id],
+                ['order_id' => $order->id],
                 [
+                    'course_id' => $course->id,
+                    'purchasable_type' => Course::class,
+                    'purchasable_id' => $course->id,
+                    'item_type' => Course::class,
+                    'item_id' => $course->id,
                     'price' => $course->price ?? 4999.00,
                     'quantity' => 1,
                 ]
@@ -83,8 +88,11 @@ class CRMAndSalesSeeder extends Seeder
             Payment::firstOrCreate(
                 ['order_id' => $order->id],
                 [
+                    'user_id' => $student->id,
                     'transaction_id' => 'TXN-' . strtoupper(Str::random(12)),
                     'amount' => $order->total_amount,
+                    'gateway' => 'Razorpay',
+                    'payment_gateway' => 'Razorpay',
                     'payment_method' => 'Razorpay',
                     'status' => 'completed',
                 ]

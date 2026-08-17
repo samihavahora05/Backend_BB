@@ -17,7 +17,7 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
-        $query = Course::with(['category', 'expert'])
+        $query = Course::with(['category', 'level', 'expert'])
             ->when($request->category_id, fn($q, $id) => $q->where('category_id', $id))
             ->where('is_published', true);
 
@@ -68,7 +68,7 @@ class CourseController extends Controller
 
     public function show($id)
     {
-        $course = Course::with(['category', 'expert', 'modules.lessons'])->findOrFail($id);
+        $course = Course::with(['category', 'level', 'expert', 'modules.lessons'])->findOrFail($id);
         return response()->json($course);
     }
 

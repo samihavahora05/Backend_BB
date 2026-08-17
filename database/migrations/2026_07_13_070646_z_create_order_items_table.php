@@ -11,8 +11,13 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
-            $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
+            $table->foreignId('course_id')->nullable()->constrained('courses')->onDelete('cascade');
+            $table->string('purchasable_type')->nullable();
+            $table->unsignedBigInteger('purchasable_id')->nullable();
+            $table->string('item_type')->nullable();
+            $table->unsignedBigInteger('item_id')->nullable();
             $table->decimal('price', 10, 2)->default(0);
+            $table->integer('quantity')->default(1);
             $table->timestamps();
         });
     }

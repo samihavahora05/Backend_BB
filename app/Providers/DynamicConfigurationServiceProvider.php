@@ -106,15 +106,23 @@ class DynamicConfigurationServiceProvider extends ServiceProvider
         $smtpSettings = $settings->where('group', 'smtp');
         if ($smtpSettings->isNotEmpty()) {
             $mapped = $smtpSettings->pluck('value', 'key');
-            
-            if ($mapped->has('mailer') && $mapped['mailer'] === 'SMTP') {
+
+            // Never let a DB-stored SMTP configuration silently override the
+            // developer's own .env in local development — this previously
+            // caused registration to fail with a Gmail auth error even
+            // though MAIL_MAILER=log was set, because a stale/invalid
+            // credential saved via the admin Settings screen took priority
+            // on every request. Local always respects .env's MAIL_MAILER.
+            $hasCompleteCredentials = $mapped->get('host') && $mapped->get('username') && $mapped->get('password');
+
+            if (!app()->environment('local') && $mapped->has('mailer') && $mapped['mailer'] === 'SMTP' && $hasCompleteCredentials) {
                 config(['mail.default' => 'smtp']);
                 config(['mail.mailers.smtp.host' => $mapped->get('host')]);
                 config(['mail.mailers.smtp.port' => $mapped->get('port')]);
                 config(['mail.mailers.smtp.encryption' => $mapped->get('encryption')]);
                 config(['mail.mailers.smtp.username' => $mapped->get('username')]);
                 config(['mail.mailers.smtp.password' => $mapped->get('password')]);
-                
+
                 config(['mail.from.address' => $mapped->get('from_address')]);
                 config(['mail.from.name' => $mapped->get('from_name')]);
             }

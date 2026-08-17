@@ -17,7 +17,7 @@ class PublicContestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Contest::whereIn('status', ['Upcoming', 'Active']);
+        $query = Contest::whereIn('status', ['upcoming', 'ongoing']);
 
         if ($s = $request->query('search')) {
             $query->where('title', 'like', "%{$s}%");
@@ -83,7 +83,7 @@ class PublicContestController extends Controller
     {
         $contest = Contest::findOrFail($id);
 
-        if ($contest->status !== 'Upcoming' && $contest->status !== 'Active') {
+        if ($contest->status !== 'upcoming' && $contest->status !== 'ongoing') {
             return response()->json(['success' => false, 'message' => 'Contest is not open for registration.'], 400);
         }
 
@@ -120,7 +120,7 @@ class PublicContestController extends Controller
     {
         $contest = Contest::findOrFail($id);
 
-        if ($contest->status !== 'Active') {
+        if ($contest->status !== 'ongoing') {
             return response()->json(['success' => false, 'message' => 'Contest is not active.'], 400);
         }
 

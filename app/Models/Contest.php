@@ -33,6 +33,11 @@ class Contest extends Model
         return $this->belongsTo(User::class, 'college_id');
     }
 
+    public function category()
+    {
+        return $this->belongsTo(CourseCategory::class, 'category_id');
+    }
+
     public function registrations(): HasMany
     {
         return $this->hasMany(ContestRegistration::class);

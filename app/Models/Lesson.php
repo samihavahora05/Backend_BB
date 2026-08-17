@@ -30,6 +30,11 @@ class Lesson extends Model
         ];
     }
 
+    public function getTypeAttribute(): string
+    {
+        return $this->attributes['type'] ?? (!empty($this->attributes['video_url']) ? 'video' : 'article');
+    }
+
     public function module(): BelongsTo
     {
         return $this->belongsTo(Module::class);

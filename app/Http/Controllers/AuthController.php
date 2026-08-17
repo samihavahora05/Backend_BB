@@ -35,7 +35,8 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $roleName = $request->role;
+        // Never trust a public registration request to select an elevated role.
+        $roleName = 'student';
         $role = \Spatie\Permission\Models\Role::firstOrCreate([
             'name' => $roleName,
             'guard_name' => 'web'
@@ -53,8 +54,8 @@ class AuthController extends Controller
             default => null,
         };
 
-        // Dispatch Welcome Email Job
-        \App\Jobs\SendWelcomeEmailJob::dispatch($user);
+        // Student registration does not require email/SMTP.
+        // Welcome emails are intentionally not dispatched here.
 
         // Bypass approvals and activate instantly
         $user->update(['status' => 'active']);
@@ -125,19 +126,6 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user();
-        
-        // Auto-fix admin role if it's the admin user
-        if ($user->email === 'admin@blueboxx.in' || $user->id === 1) {
-            $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-            if (!$user->hasRole($role)) {
-                $user->assignRole($role);
-            }
-            // Remove student role if they have it
-            $studentRole = \Spatie\Permission\Models\Role::where('name', 'student')->where('guard_name', 'web')->first();
-            if ($studentRole && $user->hasRole($studentRole)) {
-                $user->removeRole($studentRole);
-            }
-        }
         
         $user->load('roles');
         

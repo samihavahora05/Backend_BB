@@ -22,7 +22,7 @@ class AdminJobController extends Controller
 
     public function index(Request $request)
     {
-        $query = Job::with(['company'])
+        $query = Job::with(['company.companyProfile'])
             ->withCount(['applications', 'views']);
 
         if ($request->filled('search')) {

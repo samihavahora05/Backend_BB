@@ -69,21 +69,8 @@ class StudentApplicationController extends Controller
             });
         $applications = $applications->concat($scholarships);
 
-        // 4. Contest Registrations
-        $contests = ContestRegistration::with('contest:id,title')
-            ->where('user_id', $userId)
-            ->get()
-            ->map(function ($app) {
-                return [
-                    'id' => 'contest_'.$app->id,
-                    'type' => 'Contest',
-                    'title' => $app->contest->title ?? 'N/A',
-                    'status' => $app->status,
-                    'applied_on' => $app->created_at,
-                    'link' => '/student/contests'
-                ];
-            });
-        $applications = $applications->concat($contests);
+        // Contests are managed separately on /student/contests
+
 
         // Sort by applied_on desc
         $sortedApplications = $applications->sortByDesc('applied_on')->values()->map(function ($app) {

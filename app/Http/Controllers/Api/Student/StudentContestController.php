@@ -31,7 +31,7 @@ class StudentContestController extends Controller
             });
 
         $active = $registrations->filter(function ($reg) {
-            return optional($reg['contest'])->status === 'active' || optional($reg['contest'])->status === 'upcoming';
+            return optional($reg['contest'])->status === 'ongoing' || optional($reg['contest'])->status === 'upcoming';
         })->values();
 
         $past = $registrations->filter(function ($reg) {

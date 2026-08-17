@@ -15,15 +15,14 @@ class AdminInternshipController extends Controller
     public function stats()
     {
         $total = Internship::count();
-        $open = Internship::where('status', 'open')->count();
+        $open = Internship::where(function($q) {
+            $q->whereIn(DB::raw('LOWER(status)'), ['open', 'active', 'published'])
+              ->orWhereNull('status');
+        })->count();
         $applications = InternshipApplication::count();
         $pending = InternshipApplication::where('status', 'pending')->count();
         $approved = InternshipApplication::where('status', 'approved')->count();
-        // Assuming there's a submissions table, we'll try to query if possible, otherwise return 0 for now
-        $submissions = 0;
-        if(class_exists('\App\Models\InternshipSubmission')) {
-            $submissions = \App\Models\InternshipSubmission::count();
-        }
+        $submissions = class_exists('\App\Models\InternshipSubmission') ? \App\Models\InternshipSubmission::count() : 0;
 
         return response()->json([
             'success' => true,
@@ -40,7 +39,7 @@ class AdminInternshipController extends Controller
 
     private function buildInternshipQuery(Request $request)
     {
-        $query = Internship::with(['company'])->withCount('applications');
+        $query = Internship::with(['company.companyProfile'])->withCount('applications');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -57,7 +56,15 @@ class AdminInternshipController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $status = strtolower($request->status);
+            $query->where(function($q) use ($status) {
+                if ($status === 'open') {
+                    $q->whereIn(DB::raw('LOWER(status)'), ['open', 'active', 'published'])
+                      ->orWhereNull('status');
+                } else {
+                    $q->where(DB::raw('LOWER(status)'), $status);
+                }
+            });
         }
         if ($request->filled('mode')) {
             $query->where('mode', $request->mode);
@@ -88,7 +95,10 @@ class AdminInternshipController extends Controller
         $perPage = $request->input('per_page', 15);
         $internships = $query->paginate($perPage);
 
-        return response()->json($internships);
+        return response()->json([
+            'success' => true,
+            'data' => $internships
+        ]);
     }
 
     public function show($id)
@@ -208,10 +218,23 @@ class AdminInternshipController extends Controller
         $query = InternshipApplication::with(['user', 'internship']);
 
         if ($request->has('search') && !empty($request->search)) {
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('first_name', 'like', "%{$request->search}%")
-                  ->orWhere('last_name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%");
+            $s = $request->search;
+            $query->where(function($q) use ($s) {
+                $q->where('first_name', 'like', "%{$s}%")
+                  ->orWhere('last_name', 'like', "%{$s}%")
+                  ->orWhere('email', 'like', "%{$s}%")
+                  ->orWhere('phone', 'like', "%{$s}%")
+                  ->orWhere('degree', 'like', "%{$s}%")
+                  ->orWhere('application_type', 'like', "%{$s}%")
+                  ->orWhere('source_page', 'like', "%{$s}%")
+                  ->orWhereHas('user', function($userQ) use ($s) {
+                      $userQ->where('first_name', 'like', "%{$s}%")
+                            ->orWhere('last_name', 'like', "%{$s}%")
+                            ->orWhere('email', 'like', "%{$s}%");
+                  })
+                  ->orWhereHas('internship', function($intQ) use ($s) {
+                      $intQ->where('title', 'like', "%{$s}%");
+                  });
             });
         }
         if ($request->has('status') && !empty($request->status)) {
@@ -219,10 +242,34 @@ class AdminInternshipController extends Controller
         }
 
         $apps = $query->latest()->paginate($request->input('per_page', 15));
-        return response()->json($apps);
+
+        $apps->through(function($app) {
+            $app->applicant_name  = $app->applicant_name;
+            $app->applicant_email = $app->applicant_email;
+            $app->applicant_phone = $app->applicant_phone;
+            $app->resume_download = $app->resume_url ? asset('storage/' . $app->resume_url) : null;
+            return $app;
+        });
+
+        return response()->json(['success' => true, 'data' => $apps]);
     }
 
+    public function showApplication($id)
+    {
+        $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
+        
+        $data = array_merge($app->toArray(), [
+            'applicant_name'  => $app->applicant_name,
+            'applicant_email' => $app->applicant_email,
+            'applicant_phone' => $app->applicant_phone,
+            'resume_download' => $app->resume_url ? asset('storage/' . $app->resume_url) : null,
+        ]);
 
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
 
     // Tasks
     public function createTask(Request $request)
@@ -244,12 +291,12 @@ class AdminInternshipController extends Controller
     {
         if(!class_exists('\App\Models\InternshipSubmission')) {
             // Mock empty if no model
-            return response()->json(['data' => []]);
+            return response()->json(['success' => true, 'data' => []]);
         }
         $query = \App\Models\InternshipSubmission::with(['user', 'task.internship']);
         
         $subs = $query->latest()->paginate($request->input('per_page', 15));
-        return response()->json($subs);
+        return response()->json(['success' => true, 'data' => $subs]);
     }
 
     public function gradeSubmission(Request $request, $id)
@@ -278,7 +325,7 @@ class AdminInternshipController extends Controller
         }
 
         $apps = $query->latest()->paginate($request->input('per_page', 15));
-        return response()->json($apps);
+        return response()->json(['success' => true, 'data' => $apps]);
     }
 
     public function updateApplicationStatus(Request $request, $id)

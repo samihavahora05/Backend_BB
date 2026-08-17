@@ -19,7 +19,13 @@ class AdminInstructorController extends Controller
 
     public function index(Request $request)
     {
-        $instructors = $this->repository->getAllInstructors($request->all(), $request->get('per_page', 15));
+        $filters = $request->all();
+        // Frontend sends the tab filter as `status`; the repository filters on `approval_status`.
+        if ($request->filled('status') && !$request->filled('approval_status')) {
+            $filters['approval_status'] = $request->get('status');
+        }
+
+        $instructors = $this->repository->getAllInstructors($filters, $request->get('per_page', 15));
         return InstructorListResource::collection($instructors);
     }
 

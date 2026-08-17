@@ -7,6 +7,7 @@ use App\Models\CourseEnrollment;
 use App\Models\LessonProgress;
 use App\Models\Course;
 use App\Models\IssuedCertificate;
+use App\Support\StorageHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,7 @@ class StudentCourseController extends Controller
     public function enroll(Request $request, $course_id)
     {
         $user = $request->user();
-        $course = Course::where('status', 'Published')->findOrFail($course_id);
+        $course = Course::findOrFail($course_id);
 
         $exists = CourseEnrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
@@ -43,7 +44,7 @@ class StudentCourseController extends Controller
      */
     public function index(Request $request)
     {
-        $enrollments = CourseEnrollment::with(['course.category', 'course.modules.lessons'])
+        $enrollments = CourseEnrollment::with(['course.category', 'course.expert', 'course.modules.lessons'])
             ->where('user_id', $request->user()->id)
             ->get();
 
@@ -77,12 +78,12 @@ class StudentCourseController extends Controller
                 'enrollment_id' => $enrollment->id,
                 'course_id' => $course->id,
                 'title' => $course->title,
-                'thumbnail' => $course->thumbnail ? asset('storage/' . $course->thumbnail) : null,
+                'thumbnail' => StorageHelper::url($course->thumbnail),
                 'category' => $course->category->name ?? 'Uncategorized',
                 'progress' => $progress,
                 'total_lessons' => $totalLessons,
                 'completed_lessons' => $completedLessons,
-                'instructor' => $course->instructor ? $course->instructor->name : 'Expert', // Assuming relation or fallback
+                'instructor' => $course->expert ? trim(($course->expert->first_name ?? '') . ' ' . ($course->expert->last_name ?? '')) : 'Expert Instructor',
                 'completed_date' => $isCourseCompleted ? $enrollment->updated_at->format('M d, Y') : null,
                 'next_module' => 'Continue Learning' // Placeholder logic
             ];
@@ -119,7 +120,7 @@ class StudentCourseController extends Controller
             return response()->json(['success' => false, 'message' => 'Not enrolled in this course'], 403);
         }
 
-        $course = Course::with(['category', 'level', 'expert', 'modules' => function($q) {
+        $course = Course::with(['category', 'level', 'expert', 'expert.expertProfile', 'modules' => function($q) {
             $q->orderBy('order');
         }, 'modules.lessons' => function($q) {
             $q->orderBy('order');
@@ -164,9 +165,11 @@ class StudentCourseController extends Controller
                 'title' => $course->title,
                 'description' => $course->description,
                 'instructor' => [
-                    'name' => $course->expert ? $course->expert->name : 'Instructor',
+                    'name' => $course->expert ? $course->expert->first_name . ' ' . $course->expert->last_name : 'Instructor',
                     'title' => 'Senior Instructor', // Default or fetch if available
-                    'avatar' => $course->expert && $course->expert->profile_photo_path ? asset('storage/' . $course->expert->profile_photo_path) : 'https://ui-avatars.com/api/?name=' . urlencode($course->expert ? $course->expert->name : 'Instructor') . '&background=C9A227&color=fff',
+                    'avatar' => optional($course->expert?->expertProfile)->profile_photo
+                        ? asset('storage/' . $course->expert->expertProfile->profile_photo)
+                        : 'https://ui-avatars.com/api/?name=' . urlencode($course->expert ? $course->expert->name : 'Instructor') . '&background=C9A227&color=fff',
                 ],
                 'duration' => $course->duration ?? 'N/A',
                 'level' => $course->level?->title ?? 'Beginner',

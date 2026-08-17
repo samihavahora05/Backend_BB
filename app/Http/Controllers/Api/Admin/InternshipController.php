@@ -21,8 +21,37 @@ class InternshipController extends Controller
 
     public function index(Request $request)
     {
-        $internships = $this->repository->getAllInternships($request->all(), $request->get('per_page', 15));
-        
+        $query = \App\Models\Internship::with(['company.companyProfile'])->withCount('applications');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('department', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhereHas('company', function ($companyQuery) use ($search) {
+                      $companyQuery->where('first_name', 'like', "%{$search}%")
+                                   ->orWhere('last_name', 'like', "%{$search}%")
+                                   ->orWhere('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $status = strtolower($request->status);
+            $query->where(function($q) use ($status) {
+                if ($status === 'open') {
+                    $q->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(status)'), ['open', 'active', 'published'])
+                      ->orWhereNull('status');
+                } else {
+                    $q->where(\Illuminate\Support\Facades\DB::raw('LOWER(status)'), $status);
+                }
+            });
+        }
+
+        $perPage = $request->input('per_page', 15);
+        $internships = $query->latest()->paginate($perPage);
+
         return response()->json([
             'success' => true,
             'data' => $internships

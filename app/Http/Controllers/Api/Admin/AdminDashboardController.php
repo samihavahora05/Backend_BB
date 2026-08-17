@@ -26,6 +26,10 @@ class AdminDashboardController extends Controller
                     'total' => \App\Models\Order::count(), 
                     'completed' => \App\Models\Order::where('status', 'completed')->count()
                 ],
+                'enrollments' => [
+                    'total' => \App\Models\CourseEnrollment::count(),
+                    'active' => \App\Models\CourseEnrollment::where('status', 'active')->count()
+                ],
                 'jobs' => [
                     'total' => \App\Models\Job::count(), 
                     'active' => \App\Models\Job::where('status', 'active')->count()
@@ -45,7 +49,6 @@ class AdminDashboardController extends Controller
 
     public function charts()
     {
-        // Get enrollments and students for the last 12 months
         $enrollments = [];
         $students = [];
 
@@ -140,7 +143,6 @@ class AdminDashboardController extends Controller
     {
         $activities = collect();
 
-        // 1. Latest Users
         \App\Models\User::latest()->take(15)->get()->each(function($user) use ($activities) {
             $activities->push([
                 'id' => 'u_'.$user->id,
@@ -151,7 +153,6 @@ class AdminDashboardController extends Controller
             ]);
         });
 
-        // 2. Latest Courses
         \App\Models\Course::latest()->take(15)->get()->each(function($course) use ($activities) {
             $activities->push([
                 'id' => 'c_'.$course->id,
@@ -162,7 +163,6 @@ class AdminDashboardController extends Controller
             ]);
         });
 
-        // 3. Latest Orders
         \App\Models\Order::with('user')->latest()->take(15)->get()->each(function($order) use ($activities) {
             $activities->push([
                 'id' => 'o_'.$order->id,
@@ -173,7 +173,6 @@ class AdminDashboardController extends Controller
             ]);
         });
 
-        // 4. Latest Leads
         \App\Models\Lead::latest()->take(15)->get()->each(function($lead) use ($activities) {
             $activities->push([
                 'id' => 'l_'.$lead->id,
@@ -184,7 +183,6 @@ class AdminDashboardController extends Controller
             ]);
         });
 
-        // 5. Explicit Activity Logs
         \App\Models\ActivityLog::with('user')->latest()->take(15)->get()->each(function($log) use ($activities) {
             $activities->push([
                 'id' => 'al_'.$log->id,
@@ -198,7 +196,6 @@ class AdminDashboardController extends Controller
             ]);
         });
 
-        // Sort by newest first and take top 50
         $sortedLogs = $activities->sortByDesc('created_at')->values()->take(50);
 
         return response()->json(['success' => true, 'data' => $sortedLogs]);

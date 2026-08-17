@@ -3,27 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-
-
-Route::get('/debug-profiles', function() {
-    $allProfiles = \App\Models\ExpertProfile::with('user')->get();
-    
-    $queryProfiles = \App\Models\ExpertProfile::with(['user'])
-        ->where(function($q) {
-            $q->where('is_available', true)
-              ->orWhereNull('is_available');
-        })
-        ->whereHas('user', function($q) {
-            $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'pending', 'Pending', 'PENDING'])->orWhereNull('status');
-        })->get();
-        
-    return [
-        'total' => $allProfiles->count(),
-        'all_profiles' => $allProfiles,
-        'query_profiles_count' => $queryProfiles->count(),
-        'query_profiles' => $queryProfiles
-    ];
-});
+// ─── Controller Imports ────────────────────────────────────────────────────────
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\System\HealthController;
 use App\Http\Controllers\TestimonialController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PlacementPartnerController;
@@ -40,6 +22,21 @@ use App\Http\Controllers\LessonController;
 use App\Http\Controllers\Api\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ApprovalController;
+use App\Http\Controllers\ConsultationController;
+use App\Http\Controllers\CallbackRequestController;
+use App\Http\Controllers\ScholarshipProgramController;
+use App\Http\Controllers\ContestController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\FaqController;
+use App\Http\Controllers\InternshipController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobApplicationController;
+use App\Http\Controllers\InternshipApplicationController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\UploadController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentController;
 
 Route::get('/health', [HealthController::class, 'health']);
 
@@ -96,6 +93,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('cms/colleges', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getColleges']);
     Route::get('cms/colleges/{slug}', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCollegeBySlug']);
     Route::get('cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
+    Route::get('cms/job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getJobOffers']);
+    Route::get('job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getJobOffers']);
+    Route::get('cms/testimonials', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getTestimonials']);
+    Route::get('testimonials', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getTestimonials']);
 
     // Featured Courses (Homepage Hero)
     Route::get('featured-courses', [\App\Http\Controllers\Api\Public\PublicCourseController::class, 'featured']);
@@ -114,6 +115,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('jobs/bookmarks', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'bookmarks']);
 
         // Internship Applications
+        Route::post('internships/apply-general', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'applyGeneral']);
         Route::post('internships/{id}/apply', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'apply']);
         Route::get('internships/my-applications', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'myApplications']);
 
@@ -190,6 +192,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::prefix('checkout')->group(function () {
         Route::post('/create-order', [\App\Http\Controllers\Api\CheckoutController::class, 'createOrder']);
         Route::post('/verify', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
+        Route::post('/verify-payment', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
     });
 
     // Student Portal Integration
@@ -208,6 +211,15 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::delete('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'deleteAccount']);
 
         Route::get('/contests', [\App\Http\Controllers\Api\Student\StudentContestController::class, 'index']);
+
+        // Virtual Classes
+        Route::get('/virtual-classes', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'index']);
+        Route::get('/virtual-classes/{id}', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'show']);
+        Route::post('/virtual-classes/{id}/enroll', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'enroll']);
+        Route::get('/virtual-classes/{id}/quiz', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'showQuiz']);
+        Route::post('/virtual-classes/{id}/quiz/submit', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'submitQuiz']);
+        Route::get('/mcq-results', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'mcqResults']);
+        Route::get('/quiz-results', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'mcqResults']);
         
         Route::get('/wishlist', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'index']);
         Route::delete('/wishlist/{type}/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'destroy']);
@@ -377,8 +389,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::put('/profile/password', [AuthController::class, 'changePassword']);
 
     // Checkout & Payments
-    Route::post('/checkout/create-order', [\App\Http\Controllers\OrderController::class, 'store']);
-    Route::post('/checkout/verify', [\App\Http\Controllers\PaymentController::class, 'verify']);
+    Route::post('/checkout/create-order', [\App\Http\Controllers\Api\CheckoutController::class, 'createOrder']);
+    Route::post('/checkout/verify', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
+    Route::post('/checkout/verify-payment', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
 
     // Dashboard Stats API
     Route::get('/dashboard/student', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
@@ -442,14 +455,63 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         // Mentor Sessions
         Route::get('/mentor-sessions', function (\Illuminate\Http\Request $r) {
-            return response()->json(['success' => true, 'data' => \App\Models\MentorSession::with('expert.user')
-                ->where('student_id', $r->user()->id)
-                ->orderBy('scheduled_at', 'desc')
-                ->get()]);
+            $userId = $r->user()->id;
+            
+            $sessions = \App\Models\MentorSession::with(['expert.user', 'expertProfile.user'])
+                ->where('student_id', $userId)
+                ->get()
+                ->map(function ($s) {
+                    $expertName = $s->expert?->name ?? $s->expertProfile?->user?->name ?? 'Expert Mentor';
+                    return [
+                        'id' => $s->id,
+                        'mentor' => $expertName,
+                        'title' => $s->notes ?? $s->title ?? '1:1 Mentorship Session',
+                        'scheduled_at' => $s->scheduled_at ? $s->scheduled_at->toIso8601String() : null,
+                        'duration_minutes' => $s->duration_minutes ?? 60,
+                        'status' => $s->status ?? 'scheduled',
+                        'meeting_url' => $s->meeting_url,
+                        'avatar' => "https://api.dicebear.com/7.x/initials/svg?seed=" . urlencode($expertName)
+                    ];
+                });
+
+            $bookings = \App\Models\MentorBooking::with(['expert.user'])
+                ->where('student_id', $userId)
+                ->get()
+                ->map(function ($b) {
+                    $expertName = $b->expert?->user?->name ?? 'Expert Mentor';
+                    $status = strtolower($b->status) === 'confirmed' ? 'scheduled' : strtolower($b->status);
+                    return [
+                        'id' => $b->id,
+                        'mentor' => $expertName,
+                        'title' => $b->student_notes ?? '1:1 Mentorship Session',
+                        'scheduled_at' => $b->booking_date ? \Carbon\Carbon::parse($b->booking_date . ' ' . ($b->start_time ?? '10:00:00'))->toIso8601String() : null,
+                        'duration_minutes' => 60,
+                        'status' => $status,
+                        'meeting_url' => $b->meeting_link ?? null,
+                        'avatar' => "https://api.dicebear.com/7.x/initials/svg?seed=" . urlencode($expertName)
+                    ];
+                });
+
+            $merged = collect($sessions)->concat($bookings)->sortByDesc('scheduled_at')->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $merged
+            ]);
         });
+        Route::post('/mentor-sessions/book/{session_id}', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'bookSession']);
+        Route::post('/mentor-sessions/verify/{booking_id}', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'verifyBooking']);
 
         // Unified My Applications
         Route::get('/all-applications', [\App\Http\Controllers\Api\Student\StudentApplicationController::class, 'index']);
+
+        // Contests
+        Route::get('/contests', [\App\Http\Controllers\Api\Student\StudentContestController::class, 'index']);
+        Route::post('/contests/{id}/register', [\App\Http\Controllers\ContestController::class, 'registerUser']);
+
+        // Checkout & Razorpay Payments
+        Route::post('/checkout/create-order', [\App\Http\Controllers\Api\CheckoutController::class, 'createOrder']);
+        Route::post('/checkout/verify-payment', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
 
         // Referrals
         Route::get('/referrals', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'index']);
@@ -472,6 +534,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             return response()->json(['success' => true, 'data' => $certs]);
         });
 
+        // Student Payments history
+        Route::get('/payments', [\App\Http\Controllers\Api\Student\StudentOrderController::class, 'index']);
+
         // Orders & Payments history
         Route::get('/orders', function(\Illuminate\Http\Request $r) {
             $orders = \App\Models\Order::with(['items', 'payments'])
@@ -492,6 +557,28 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
                 ]);
             return response()->json(['success' => true, 'data' => $orders]);
         });
+
+        // Student Profile
+        Route::get('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'getProfile']);
+        Route::put('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'updateProfile']);
+        Route::post('/profile/photo', function (\Illuminate\Http\Request $request) {
+            $request->validate(['photo' => 'required|image|max:2048']);
+            $user = $request->user();
+            $path = $request->file('photo')->store('profile-photos/students', 'public');
+            $profile = \App\Models\StudentProfile::firstOrCreate(['user_id' => $user->id]);
+            // Delete old photo if exists
+            if ($profile->profile_photo) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($profile->profile_photo);
+            }
+            $profile->profile_photo = $path;
+            $profile->save();
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile photo updated successfully.',
+                'avatar'  => asset('storage/' . $path),
+            ]);
+        });
+        Route::delete('/account', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'deleteAccount']);
 
         // Dashboard Stats
         Route::get('/dashboard/student', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
@@ -760,12 +847,6 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         });
         Route::apiResource('backups', \App\Http\Controllers\Api\Admin\AdminBackupController::class)->only(['index', 'destroy']);
 
-        // Dashboard
-        Route::get('dashboard/summary', [AdminDashboardController::class, 'getSummary']);
-        Route::get('dashboard/charts', [AdminDashboardController::class, 'getCharts']);
-        Route::get('dashboard/top/{module}', [AdminDashboardController::class, 'getTopLists']);
-        Route::get('dashboard/recent/{module}', [AdminDashboardController::class, 'getRecentData']);
-        Route::get('dashboard/feed', [AdminDashboardController::class, 'getActivityFeed']);
         // Blog System (Enterprise)
         Route::post('blogs/upload-image', [\App\Http\Controllers\Api\Admin\AdminBlogController::class, 'uploadImage']);
         Route::apiResource('blogs', \App\Http\Controllers\Api\Admin\AdminBlogController::class);
@@ -798,6 +879,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         
         // Admin Scholarships & Contests
         Route::apiResource('scholarships', ScholarshipProgramController::class)->except(['index', 'show']);
+        Route::get('contests', [ContestController::class, 'adminIndex']);
         Route::apiResource('contests', ContestController::class)->except(['index', 'show']);
         
         // Admin Site Content (FAQs, Testimonials, Reviews, Partners, Success Stories)
@@ -895,7 +977,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
             // Per-Internship Applications
             Route::get('{id}/applications', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'applicationsByInternship']);
-            Route::get('applications/{id}', [\App\Http\Controllers\Api\Admin\InternshipApplicationController::class, 'show']);
+            Route::get('applications/{id}', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'showApplication']);
             Route::put('applications/{id}/status', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'updateApplicationStatus']);
             
             // Tasks & Submissions
@@ -907,6 +989,15 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         });
         Route::apiResource('internships', \App\Http\Controllers\Api\Admin\InternshipController::class);
         
+        // ----- Contests Management -----
+        Route::prefix('contests')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ContestController::class, 'adminIndex']);
+            Route::post('/', [\App\Http\Controllers\ContestController::class, 'store']);
+            Route::get('/{id}', [\App\Http\Controllers\ContestController::class, 'show']);
+            Route::put('/{id}', [\App\Http\Controllers\ContestController::class, 'update']);
+            Route::delete('/{id}', [\App\Http\Controllers\ContestController::class, 'destroy']);
+        });
+
         // ----- Courses -----
         Route::prefix('courses')->group(function () {
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'bulkDelete']);
@@ -984,16 +1075,6 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('course-settings', [\App\Http\Controllers\Api\Admin\AdminCourseSettingController::class, 'update']);
         
         // ----- Courses -----
-        Route::prefix('courses')->group(function () {
-            Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'bulkDelete']);
-            Route::post('bulk-status', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'bulkStatus']);
-            Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'duplicate']);
-            Route::put('{id}/status', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'updateStatus']);
-            Route::put('{id}/archive', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'toggleArchive']);
-            Route::get('export', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'export']);
-        });
-        Route::apiResource('courses', \App\Http\Controllers\Api\Admin\AdminCourseController::class);
-        
         // ----- Course Curriculum -----
         Route::prefix('courses/{course_id}/curriculum')->group(function () {
             Route::get('', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'getCurriculum']);
@@ -1056,6 +1137,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('export', [\App\Http\Controllers\Api\Admin\VirtualClassController::class, 'export']);
             Route::put('{id}/status', [\App\Http\Controllers\Api\Admin\VirtualClassController::class, 'updateStatus']);
         });
+        Route::get('virtual-classes/{virtualClassId}/quiz', [\App\Http\Controllers\Api\Admin\VirtualClassQuizController::class, 'show']);
+        Route::post('virtual-classes/{virtualClassId}/quiz', [\App\Http\Controllers\Api\Admin\VirtualClassQuizController::class, 'upsert']);
+        Route::delete('virtual-classes/{virtualClassId}/quiz', [\App\Http\Controllers\Api\Admin\VirtualClassQuizController::class, 'destroy']);
         Route::apiResource('virtual-classes', \App\Http\Controllers\Api\Admin\VirtualClassController::class);
 
         // Phase 3: Media Manager & Enrollments
@@ -1080,25 +1164,12 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('certificates', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'index']);
         Route::post('certificates', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'store']);
 
-        // Phase 5: Dashboard Analytics
-        Route::get('dashboard/summary', [\App\Http\Controllers\Api\Admin\AdminDashboardController::class, 'summary']);
-        Route::get('dashboard/charts', [\App\Http\Controllers\Api\Admin\AdminDashboardController::class, 'charts']);
-        Route::get('dashboard/top/courses', [\App\Http\Controllers\Api\Admin\AdminDashboardController::class, 'topCourses']);
-        Route::get('dashboard/recent/enrollments', [\App\Http\Controllers\Api\Admin\AdminDashboardController::class, 'recentEnrollments']);
-        Route::get('dashboard/feed', [\App\Http\Controllers\Api\Admin\AdminDashboardController::class, 'feed']);
 
         Route::get('analytics/summary', [\App\Http\Controllers\Api\Admin\AdminAnalyticsController::class, 'summary']);
         Route::get('analytics/leaderboards', [\App\Http\Controllers\Api\Admin\AdminAnalyticsController::class, 'leaderboards']);
         Route::get('analytics/tab-stats', [\App\Http\Controllers\Api\Admin\AdminAnalyticsController::class, 'tabStats']);
         Route::get('analytics/chart-data', [\App\Http\Controllers\Api\Admin\AdminAnalyticsController::class, 'chartData']);
         Route::get('analytics/recent-activity', [\App\Http\Controllers\Api\Admin\AdminAnalyticsController::class, 'recentActivity']);
-
-        // MCQ Results
-        Route::get('mcq/results', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'results']);
-        Route::get('mcq/stats', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'stats']);
-        Route::get('mcq/leaderboard', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'leaderboard']);
-        Route::get('mcq/courses', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'courses']);
-        Route::get('mcq/export', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'export']);
 
         // ----- Zoom Settings -----
         Route::get('zoom-settings', [\App\Http\Controllers\Api\Admin\ZoomSettingsController::class, 'show']);
