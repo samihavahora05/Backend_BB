@@ -1,89 +1,101 @@
-# BlueBoxx DA Platform - Backend
+# ⚙️ Blueboxx DA - Backend RESTful API Engine
 
-This is the central Laravel 12 backend for the BlueBoxx DA Platform. It powers the E-Learning Engine, Career ATS, Enterprise Dashboards, CMS, and unified authentication.
+A robust, enterprise-grade RESTful API & Management Engine built with **Laravel (v11)** and **MySQL**. **Backend_BB** powers the core infrastructure for **Blueboxx DA**, managing authentication, expert session bookings, Razorpay payment verification, student learning analytics, company hiring portals, and database notifications.
 
-## Requirements
-- PHP 8.2+
-- Composer 2.x
-- Node.js 18+ (for frontend assets if needed)
-- MySQL 8.0+ (Production)
-- SQLite (Testing)
-- Redis (Optional, for caching and queues)
+---
 
-## Installation
+## ✨ Key Features & Modules
 
-1. **Clone the repository and install dependencies:**
+- 🔒 **Sanctum Authentication & RBAC**: Secure API token authentication supporting multi-role access control (`student`, `expert`, `company`, `college`, `admin`).
+- 👨‍🏫 **Expert Mentorship System**: Dynamic expert profile resolution, availability slot scheduling, booking verification, and notification dispatching.
+- 💳 **Razorpay Payment Gateway**: Order generation, HMAC-SHA256 signature verification, transaction logging, order items mapping, and payment history APIs (`/api/student/payments`).
+- 📚 **LMS & Course Management**: Course categories, video lesson progress, virtual live classes, quiz submissions, and certificate issuance records.
+- 💼 **Job & Internship Applications**: Comprehensive application workflows, status tracking (`Applied`, `Shortlisted`, `Selected`, `Rejected`), and hiring company seeders.
+- 🔔 **Notification Infrastructure**: Real-time database notification queueing (`BookingConfirmedNotification`, `PlatformNotification`), mark-as-read triggers, and email notifications.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: [Laravel 11.x](https://laravel.com/)
+- **Language**: PHP 8.2+
+- **Database**: [MySQL](https://www.mysql.com/) / MariaDB
+- **Authentication**: Laravel Sanctum (Bearer Token)
+- **Payment Gateway**: [Razorpay API SDK Integration](https://razorpay.com/docs/)
+- **Queue & Mailer**: Database Queue Driver & Blade Mail Templates
+
+---
+
+## 📁 Key Architecture & Controllers
+
+```text
+app/
+├── Http/
+│   └── Controllers/
+│       ├── Api/
+│       │   ├── CheckoutController.php           # Razorpay Order Creation & Verification
+│       │   ├── NotificationController.php         # Database Notifications Manager
+│       │   ├── Public/
+│       │   │   ├── PublicExpertController.php   # Expert Profile & Session Booking API
+│       │   │   └── PublicCourseController.php   # Course Catalog API
+│       │   └── Student/
+│       │       ├── StudentOrderController.php   # Payment History & Total Spent API
+│       │       └── StudentProfileController.php # Student Profile & Resume Manager
+├── Models/                                     # Eloquent Models (Order, MentorBooking, Payment, User)
+├── Notifications/                              # Notification Classes (BookingConfirmedNotification)
+└── Services/
+    └── Payments/                               # Payment Gateway Interfaces & Implementations
+routes/
+└── api.php                                     # RESTful API Endpoints & Middleware Groups
+```
+
+---
+
+## ⚡ Getting Started
+
+### 1. Prerequisites
+- PHP >= 8.2 with OpenSSL, PDO, Mbstring, and Tokenizer extensions
+- Composer
+- MySQL Database
+
+### 2. Installation
 ```bash
+git clone https://github.com/samihavahora05/Backend_BB.git
+cd Backend_BB
 composer install
-npm install
 ```
 
-2. **Environment Setup:**
-Copy the example environment file and generate the application key.
+### 3. Environment Setup
+Create a `.env` file from `.env.example`:
+```env
+APP_NAME="Blueboxx DA API"
+APP_ENV=local
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=backend_bb
+DB_USERNAME=root
+DB_PASSWORD=
+
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+```
+
+### 4. Run Database Migrations & Seeders
 ```bash
-cp .env.example .env
 php artisan key:generate
-```
-Ensure your `.env` is configured with your MySQL database credentials.
-
-3. **Database Migration and Seeding:**
-```bash
 php artisan migrate --seed
 ```
 
-4. **Storage Links:**
-```bash
-php artisan storage:link
-```
-
-5. **Start the Development Server:**
+### 5. Start Local API Server
 ```bash
 php artisan serve
 ```
+API endpoints will be available at [http://localhost:8000/api](http://localhost:8000/api).
 
-## Testing
+---
 
-The project is configured to use an in-memory SQLite database for testing, ensuring fast test execution.
-A custom command has been added to generate tests for all models and controllers:
-
-1. **Generate all missing tests:**
-```bash
-php artisan make:comprehensive-tests
-```
-
-2. **Run the test suite:**
-```bash
-php artisan test
-```
-
-## Queue & Scheduler Setup
-
-For background jobs (emails, certificates, large exports) and scheduled tasks (daily backups, data synchronization), configure the queue worker and scheduler.
-
-**Start the queue worker:**
-```bash
-php artisan queue:work --tries=3 --timeout=90
-```
-
-**Run the scheduler:**
-Add the following Cron entry to your server:
-```
-* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
-```
-
-## API Overview
-
-The backend uses RESTful conventions and Sanctum for token-based authentication.
-
-- **Authentication:** `POST /api/login`, `POST /api/register`, `POST /api/verify-otp`
-- **Public API:** `GET /api/public/courses`, `GET /api/public/jobs`
-- **Student Portal:** `GET /api/student/dashboard`, `GET /api/student/courses`
-- **Admin Portal:** `GET /api/admin/dashboard/summary` (Requires `super_admin` or `admin` role)
-
-## Contribution Guidelines
-
-1. Ensure all new controllers and models have accompanying Feature/Unit tests.
-2. Avoid N+1 queries by using Eloquent's `with()` for eager loading.
-3. Validate all incoming API requests using FormRequests.
-4. Keep controllers thin; push complex business logic into Action classes or Services.
-5. Use Laravel resources for JSON responses.
+## 📜 License
+Privately developed for **Blueboxx DA Pvt. Ltd.** All rights reserved.
