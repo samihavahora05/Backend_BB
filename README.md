@@ -2,54 +2,111 @@
   <table>
     <tr>
       <td valign="center">
-        <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="130" />
+        <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="140" />
       </td>
       <td valign="center">
-        <h1 style="border-bottom: none; margin-bottom: 0;">Blueboxx DA Pvt. Ltd.</h1>
-        <p><b>Backend RESTful API Engine — Powering Authentication, Mentorship, & Payments</b></p>
+        <h1 style="border-bottom: none; margin-bottom: 0; font-size: 2.2em; color: #1B2A6B;">Blueboxx DA Pvt. Ltd.</h1>
+        <p style="font-size: 1.1em; color: #475569; margin-top: 4px;"><b>Enterprise RESTful API Engine — Laravel 11 Backend</b></p>
       </td>
     </tr>
   </table>
 
+  <br />
+
   <p>
-    <a href="https://laravel.com/"><img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel" alt="Laravel" /></a>
-    <a href="https://www.php.net/"><img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php" alt="PHP" /></a>
-    <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql" alt="MySQL" /></a>
-    <a href="https://razorpay.com/"><img src="https://img.shields.io/badge/Razorpay-Gateway-02042B?style=for-the-badge&logo=razorpay" alt="Razorpay" /></a>
+    <a href="https://laravel.com/"><img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel" /></a>
+    <a href="https://www.php.net/"><img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP" /></a>
+    <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" /></a>
+    <a href="https://razorpay.com/"><img src="https://img.shields.io/badge/Razorpay-Payment_Gateway-02042B?style=for-the-badge&logo=razorpay&logoColor=white" alt="Razorpay" /></a>
+    <a href="https://laravel.com/docs/sanctum"><img src="https://img.shields.io/badge/Auth-Laravel_Sanctum-F43F5E?style=for-the-badge&logo=laravel&logoColor=white" alt="Sanctum Auth" /></a>
   </p>
 </div>
 
 ---
 
-## 📖 Overview
-
-A robust, enterprise-grade RESTful API & Management Engine built with **Laravel 11** and **MySQL**. **Backend_BB** powers the core infrastructure for **Blueboxx DA**, managing authentication, expert session bookings, Razorpay payment verification, student learning analytics, company hiring portals, and database notifications.
+> ⚙️ **Backend_BB** is the core RESTful API infrastructure for **Blueboxx DA**, delivering high-concurrency database queries, payment verification, real-time notification queueing, and role-based authorization.
 
 ---
 
-## ✨ Key Features & Modules
+## 🔥 Key Core Modules & Features
 
-- 🔒 **Sanctum Authentication & RBAC**: Secure API token authentication supporting multi-role access control (`student`, `expert`, `company`, `college`, `admin`).
-- 👨‍🏫 **Expert Mentorship System**: Dynamic expert profile resolution, availability slot scheduling, booking verification, and notification dispatching.
-- 💳 **Razorpay Payment Gateway**: Order generation, HMAC-SHA256 signature verification, transaction logging, order items mapping, and payment history APIs (`/api/student/payments`).
-- 📚 **LMS & Course Management**: Course categories, video lesson progress, virtual live classes, quiz submissions, and certificate issuance records.
-- 💼 **Job & Internship Applications**: Comprehensive application workflows, status tracking (`Applied`, `Shortlisted`, `Selected`, `Rejected`), and hiring company seeders.
-- 🔔 **Notification Infrastructure**: Real-time database notification queueing (`BookingConfirmedNotification`, `PlatformNotification`), mark-as-read triggers, and email notifications.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔒 Sanctum Auth & RBAC</h3>
+      <ul>
+        <li>Multi-guard Bearer Token authentication</li>
+        <li>Role-based access: Student, Expert, Company, College, Admin</li>
+        <li>Password history & security policies</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>👨‍🏫 Expert Mentorship Engine</h3>
+      <ul>
+        <li>Dynamic expert profile & availability resolution</li>
+        <li>Booking verification & schedule collision checks</li>
+        <li>Automated notification dispatches</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>💳 Razorpay Payment API</h3>
+      <ul>
+        <li>Order creation & HMAC-SHA256 signature verification</li>
+        <li>Order items mapping (Courses & Mentorship)</li>
+        <li>Unified Payment History API (<code>/api/student/payments</code>)</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🔔 Notifications & Messaging</h3>
+      <ul>
+        <li>Real-time database notification queues</li>
+        <li>Unread counters & mark-as-read handlers</li>
+        <li>Formatted email notification dispatchers</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🏛️ Database & Service Architecture
+
+```text
+               ┌─────────────────────────────────────┐
+               │    Client App (Next.js / Axios)     │
+               └──────────────────┬──────────────────┘
+                                  │ (HTTP JSON API)
+                                  ▼
+ ┌──────────────────────────────────────────────────────────────────┐
+ │                   Laravel RESTful API Engine                     │
+ ├───────────────────┬──────────────────┬───────────────────────────┤
+ │  Auth Middleware  │  Route Controllers│   Eloquent ORM Layer      │
+ └─────────┬─────────┴────────┬─────────┴─────────────┬─────────────┘
+           │                  │                       │
+           ▼                  ▼                       ▼
+ ┌──────────────────┐ ┌────────────────┐   ┌──────────────────────┐
+ │ Sanctum Tokens   │ │ Razorpay SDK   │   │ MySQL Database       │
+ └──────────────────┘ └────────────────┘   └──────────────────────┘
+```
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Framework**: [Laravel 11.x](https://laravel.com/)
-- **Language**: PHP 8.2+
-- **Database**: [MySQL](https://www.mysql.com/) / MariaDB
-- **Authentication**: Laravel Sanctum (Bearer Token)
-- **Payment Gateway**: [Razorpay API SDK Integration](https://razorpay.com/docs/)
-- **Queue & Mailer**: Database Queue Driver & Blade Mail Templates
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Framework** | Laravel 11.x | PHP Web & API Framework |
+| **Language** | PHP 8.2+ | Modern Strong-Typed Scripting |
+| **Database** | MySQL 8.0 | Relational Storage & Indexing |
+| **Authentication** | Laravel Sanctum | API Token & Session Management |
+| **Payment Gateway** | Razorpay PHP SDK | Signature Validation & Transactions |
+| **Notification Engine** | Laravel Notifications | Database & Queue Notifications |
 
 ---
 
-## 📁 Key Architecture & Controllers
+## 📁 Key Controllers & Routes Structure
 
 ```text
 app/
@@ -57,39 +114,38 @@ app/
 │   └── Controllers/
 │       ├── Api/
 │       │   ├── CheckoutController.php           # Razorpay Order Creation & Verification
-│       │   ├── NotificationController.php         # Database Notifications Manager
+│       │   ├── NotificationController.php         # Real-time Notifications Manager
 │       │   ├── Public/
-│       │   │   ├── PublicExpertController.php   # Expert Profile & Session Booking API
-│       │   │   └── PublicCourseController.php   # Course Catalog API
+│       │   │   ├── PublicExpertController.php   # Expert Search & Session Booking API
+│       │   │   └── PublicCourseController.php   # Public Course Catalog API
 │       │   └── Student/
 │       │       ├── StudentOrderController.php   # Payment History & Total Spent API
 │       │       └── StudentProfileController.php # Student Profile & Resume Manager
 ├── Models/                                     # Eloquent Models (Order, MentorBooking, Payment, User)
 ├── Notifications/                              # Notification Classes (BookingConfirmedNotification)
 └── Services/
-    └── Payments/                               # Payment Gateway Interfaces & Implementations
+    └── Payments/                               # Payment Gateway Interfaces & Gateways
 routes/
 └── api.php                                     # RESTful API Endpoints & Middleware Groups
 ```
 
 ---
 
-## ⚡ Getting Started
+## ⚡ Quick Start Guide
 
 ### 1. Prerequisites
-- PHP >= 8.2 with OpenSSL, PDO, Mbstring, and Tokenizer extensions
+- PHP >= 8.2 (with OpenSSL, PDO, Mbstring)
 - Composer
 - MySQL Database
 
-### 2. Installation
+### 2. Installation & Setup
 ```bash
 git clone https://github.com/samihavahora05/Backend_BB.git
 cd Backend_BB
 composer install
 ```
 
-### 3. Environment Setup
-Create a `.env` file from `.env.example`:
+### 3. Environment Configuration (`.env`)
 ```env
 APP_NAME="Blueboxx DA API"
 APP_ENV=local
@@ -102,23 +158,20 @@ DB_DATABASE=backend_bb
 DB_USERNAME=root
 DB_PASSWORD=
 
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_secret
 ```
 
-### 4. Run Database Migrations & Seeders
+### 4. Run Migrations & Start Server
 ```bash
 php artisan key:generate
 php artisan migrate --seed
-```
-
-### 5. Start Local API Server
-```bash
 php artisan serve
 ```
-API endpoints will be available at [http://localhost:8000/api](http://localhost:8000/api).
+API endpoints will be live at **`http://localhost:8000/api`**.
 
 ---
 
-## 📜 License
-Privately developed for **Blueboxx DA Pvt. Ltd.** All rights reserved.
+<div align="center">
+  <p>Privately Developed for <b>Blueboxx DA Pvt. Ltd.</b> • All Rights Reserved</p>
+</div>
