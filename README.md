@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="260" />
+  <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="160" />
   <h2>⚙️ Blueboxx DA — Backend RESTful API Engine</h2>
   <p><b>Powering Authentication, Mentorship Bookings, and Razorpay Payments</b></p>
 
