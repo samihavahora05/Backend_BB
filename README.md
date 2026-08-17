@@ -1,6 +1,21 @@
-# ⚙️ Blueboxx DA - Backend RESTful API Engine
+<div align="center">
+  <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="260" />
+  <h2>⚙️ Blueboxx DA — Backend RESTful API Engine</h2>
+  <p><b>Powering Authentication, Mentorship Bookings, and Razorpay Payments</b></p>
 
-A robust, enterprise-grade RESTful API & Management Engine built with **Laravel (v11)** and **MySQL**. **Backend_BB** powers the core infrastructure for **Blueboxx DA**, managing authentication, expert session bookings, Razorpay payment verification, student learning analytics, company hiring portals, and database notifications.
+  <p>
+    <a href="https://laravel.com/"><img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel" alt="Laravel" /></a>
+    <a href="https://www.php.net/"><img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php" alt="PHP" /></a>
+    <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql" alt="MySQL" /></a>
+    <a href="https://razorpay.com/"><img src="https://img.shields.io/badge/Razorpay-Gateway-02042B?style=for-the-badge&logo=razorpay" alt="Razorpay" /></a>
+  </p>
+</div>
+
+---
+
+## 📖 Overview
+
+A robust, enterprise-grade RESTful API & Management Engine built with **Laravel 11** and **MySQL**. **Backend_BB** powers the core infrastructure for **Blueboxx DA**, managing authentication, expert session bookings, Razorpay payment verification, student learning analytics, company hiring portals, and database notifications.
 
 ---
 
