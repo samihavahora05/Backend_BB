@@ -1,7 +1,15 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="160" />
-  <h2>⚙️ Blueboxx DA — Backend RESTful API Engine</h2>
-  <p><b>Powering Authentication, Mentorship Bookings, and Razorpay Payments</b></p>
+<div align="left">
+  <table>
+    <tr>
+      <td valign="center">
+        <img src="https://raw.githubusercontent.com/samihavahora05/Frontend_BB/main/public/Boxxlogo.png" alt="Blueboxx DA Logo" width="130" />
+      </td>
+      <td valign="center">
+        <h1 style="border-bottom: none; margin-bottom: 0;">Blueboxx DA Pvt. Ltd.</h1>
+        <p><b>Backend RESTful API Engine — Powering Authentication, Mentorship, & Payments</b></p>
+      </td>
+    </tr>
+  </table>
 
   <p>
     <a href="https://laravel.com/"><img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel" alt="Laravel" /></a>
