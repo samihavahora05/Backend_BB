@@ -189,5 +189,57 @@ class ContestController extends Controller
             'data' => $registration
         ], 201);
     }
-}
 
+    public function adminRegistrations(\Illuminate\Http\Request $request)
+    {
+        $registrations = ContestRegistration::with(['user', 'contest'])
+            ->latest()
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id'           => (string)$r->id,
+                    'studentName'  => $r->user?->name ?? 'Participant',
+                    'studentEmail' => $r->user?->email ?? '',
+                    'phone'        => $r->phone ?? ($r->user?->phone ?? 'N/A'),
+                    'college'      => $r->college_name ?? 'N/A',
+                    'domainTrack'  => $r->domain_track ?? 'N/A',
+                    'teamName'     => $r->team_name ?? 'Solo',
+                    'teamMembers'  => $r->team_members ?? '',
+                    'contestTitle' => $r->contest?->title ?? 'Contest',
+                    'appliedDate'  => $r->created_at ? $r->created_at->format('Y-m-d H:i') : 'N/A',
+                    'status'       => ucfirst($r->status ?? 'registered'),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $registrations
+        ]);
+    }
+
+    public function adminSubmissions(\Illuminate\Http\Request $request)
+    {
+        $submissions = \App\Models\ContestSubmission::with(['registration.user', 'registration.contest'])
+            ->latest()
+            ->get()
+            ->map(function ($s) {
+                return [
+                    'id'           => (string)$s->id,
+                    'studentName'  => $s->registration?->user?->name ?? 'Participant',
+                    'taskTitle'    => $s->project_title ?? 'Project Submission',
+                    'contestTitle' => $s->registration?->contest?->title ?? 'Contest',
+                    'submittedAt'  => $s->created_at ? $s->created_at->format('Y-m-d H:i') : 'N/A',
+                    'status'       => $s->score !== null ? 'Graded' : 'Pending Review',
+                    'files'        => $s->repo_url ? [$s->repo_url] : [],
+                    'link'         => $s->demo_url ?? ($s->repo_url ?? ''),
+                    'score'        => $s->score,
+                    'totalMarks'   => 100,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $submissions
+        ]);
+    }
+}

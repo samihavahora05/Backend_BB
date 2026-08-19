@@ -46,7 +46,8 @@ class AdminCourseQAController extends Controller
                       $c->where('title', 'like', "%{$search}%");
                   })
                   ->orWhereHas('student', function($u) use ($search) {
-                      $u->where('name', 'like', "%{$search}%");
+                      $u->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%");
                   });
             });
         }

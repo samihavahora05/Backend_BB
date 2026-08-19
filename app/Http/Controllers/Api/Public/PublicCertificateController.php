@@ -4,78 +4,117 @@ namespace App\Http\Controllers\Api\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\IssuedCertificate;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\CertificatePdfService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Log;
 
 class PublicCertificateController extends Controller
 {
+    protected $pdfService;
+
+    public function __construct(CertificatePdfService $pdfService)
+    {
+        $this->pdfService = $pdfService;
+    }
+
     /**
-     * Verify a certificate by its unique number
+     * Verify a certificate by number or ID
      * GET /api/public/certificates/{certificate_number}/verify
      */
     public function verify($certificate_number)
     {
-        $cert = IssuedCertificate::with(['user', 'course'])
+        $numericId = is_numeric($certificate_number) ? (int)$certificate_number : (int)preg_replace('/[^0-9]/', '', $certificate_number);
+
+        $cert = IssuedCertificate::with(['user', 'course', 'template'])
             ->where('certificate_number', $certificate_number)
+            ->orWhere('id', $certificate_number)
+            ->orWhere('id', $numericId)
             ->first();
 
         if (!$cert) {
             return response()->json(['success' => false, 'message' => 'Certificate not found.'], 404);
         }
 
+        $studentName = $cert->student_name ?: ($cert->user ? $cert->user->name : 'Student');
+        $courseName  = $cert->course_title ?: ($cert->course ? $cert->course->title : 'Certificate of Completion');
+
         return response()->json([
             'success' => true,
             'data'    => [
-                'certificate_number' => $cert->certificate_number,
-                'student_name'       => $cert->user->name,
-                'course_name'        => $cert->course->title,
-                'issued_at'          => $cert->issued_at->format('F j, Y'),
+                'certificate_number' => $cert->certificate_number ?: ('CERT-' . $cert->id),
+                'student_name'       => $studentName,
+                'course_name'        => $courseName,
+                'template'           => $cert->template ? $cert->template->title : 'Standard Template',
+                'issued_at'          => $cert->issued_at ? $cert->issued_at->format('F j, Y') : date('F j, Y'),
                 'status'             => $cert->status,
-                'download_url'       => url("/api/public/certificates/{$certificate_number}/download")
+                'download_url'       => url("/api/public/certificates/" . ($cert->certificate_number ?: $cert->id) . "/download")
             ]
         ]);
     }
 
     /**
-     * Generate & Download the Certificate PDF
+     * Generate & Download Certificate PDF
      * GET /api/public/certificates/{certificate_number}/download
      */
     public function download($certificate_number)
     {
-        $cert = IssuedCertificate::with(['user', 'course'])->where('certificate_number', $certificate_number)->firstOrFail();
+        try {
+            $numericId = is_numeric($certificate_number) ? (int)$certificate_number : (int)preg_replace('/[^0-9]/', '', $certificate_number);
 
-        // High Performance UX: Check if the PDF already exists in storage to avoid re-generating
-        $pdfPath = 'certificates/' . $cert->certificate_number . '.pdf';
-        
-        if (Storage::disk('public')->exists($pdfPath)) {
-            return response()->file(storage_path('app/public/' . $pdfPath));
+            $cert = IssuedCertificate::with(['user', 'course', 'template'])
+                ->where('certificate_number', $certificate_number)
+                ->orWhere('id', $certificate_number)
+                ->orWhere('id', $numericId)
+                ->first();
+
+            if (!$cert) {
+                return response()->json(['success' => false, 'message' => 'Certificate not found'], 404);
+            }
+
+            $pdf = $this->pdfService->generate($cert);
+            return $pdf->download('Certificate_' . $cert->certificate_number . '.pdf');
+
+        } catch (\Throwable $e) {
+            Log::error('PublicCertificateController download error', [
+                'certificate_number' => $certificate_number,
+                'error'              => $e->getMessage(),
+                'file'               => $e->getFile(),
+                'line'               => $e->getLine()
+            ]);
+
+            if (config('app.debug')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'PDF generation failed: ' . $e->getMessage(),
+                    'file'    => $e->getFile(),
+                    'line'    => $e->getLine()
+                ], 500);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Failed to generate certificate PDF.'], 500);
+        }
+    }
+
+    public function templateBackground($filename)
+    {
+        $path = storage_path('app/public/certificates/templates/' . $filename);
+        if (!file_exists($path)) {
+            $path = public_path('storage/certificates/templates/' . $filename);
+        }
+        if (!file_exists($path)) {
+            return response()->json(['message' => 'File not found'], 404);
         }
 
-        // Generate QR Code containing the verification link
-        $verifyUrl = url("/verify-certificate/{$cert->certificate_number}");
-        $qrCode = base64_encode(QrCode::format('svg')->size(100)->generate($verifyUrl));
+        $mime = mime_content_type($path) ?: 'image/png';
+        if (str_ends_with($filename, '.svg')) {
+            $mime = 'image/svg+xml';
+        }
 
-        // Prepare data for the view
-        $data = [
-            'student_name' => $cert->user->name,
-            'course_name'  => $cert->course->title,
-            'date'         => $cert->issued_at->format('F j, Y'),
-            'cert_id'      => $cert->certificate_number,
-            'qr_code'      => $qrCode,
-            // Assuming there's a default background template, or pass a base64 encoded bg image for DomPDF
-        ];
-
-        // Ensure you have a 'resources/views/pdf/certificate.blade.php' file
-        // For performance, use setOptions to disable remote font loading if not needed
-        $pdf = Pdf::loadView('pdf.certificate', $data)
-                  ->setPaper('a4', 'landscape')
-                  ->setWarnings(false);
-        
-        // Save to storage for future instant access
-        Storage::disk('public')->put($pdfPath, $pdf->output());
-
-        return $pdf->download('Certificate_' . $cert->certificate_number . '.pdf');
+        return response()->file($path, [
+            'Access-Control-Allow-Origin'  => '*',
+            'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+            'Access-Control-Allow-Headers' => '*',
+            'Content-Type'                 => $mime,
+        ]);
     }
 }

@@ -20,17 +20,40 @@ class CertificateGeneratorService
     {
         $settings = CertificateSetting::first() ?? CertificateSetting::create([]);
         
-        $template = isset($data['template_id']) 
-            ? CertificateTemplate::findOrFail($data['template_id'])
-            : CertificateTemplate::findOrFail($settings->default_template_id);
+        $template = !empty($data['template_id']) ? CertificateTemplate::find($data['template_id']) : null;
+        if (!$template && $settings->default_template_id) {
+            $template = CertificateTemplate::find($settings->default_template_id);
+        }
+        if (!$template) {
+            $template = CertificateTemplate::first();
+        }
+        $templateId = $template ? $template->id : null;
+
+        $userId = $data['user_id'] ?? null;
+        if (!$userId && !empty($data['student_email'])) {
+            $existingUser = \App\Models\User::where('email', $data['student_email'])->first();
+            if ($existingUser) {
+                $userId = $existingUser->id;
+            } else if (!empty($data['student_name'])) {
+                $newUser = \App\Models\User::create([
+                    'name'     => $data['student_name'],
+                    'email'    => $data['student_email'],
+                    'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                ]);
+                $userId = $newUser->id;
+            }
+        }
+        if (!$userId) {
+            $userId = $adminId;
+        }
 
         $certNumber = $data['certificate_number'] ?? $this->generateUniqueNumber($settings);
         
         $certificate = IssuedCertificate::create([
             'certificate_number' => $certNumber,
-            'user_id' => $data['user_id'],
+            'user_id' => $userId,
             'course_id' => $data['course_id'] ?? null,
-            'template_id' => $template->id,
+            'template_id' => $templateId,
             'status' => 'Issued',
             'completion_percentage' => $data['completion_percentage'] ?? null,
             'grade' => $data['grade'] ?? null,

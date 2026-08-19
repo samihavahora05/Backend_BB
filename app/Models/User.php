@@ -20,6 +20,7 @@ class User extends Authenticatable
      * Strict assignment protection.
      */
     protected $fillable = [
+        'name',
         'first_name',
         'last_name',
         'email',
@@ -55,6 +56,18 @@ class User extends Authenticatable
     public function getNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    /**
+     * Set the user's full name, splitting into first_name and last_name.
+     */
+    public function setNameAttribute($value): void
+    {
+        if ($value !== null) {
+            $parts = explode(' ', trim($value), 2);
+            $this->attributes['first_name'] = $parts[0] ?? '';
+            $this->attributes['last_name'] = $parts[1] ?? '';
+        }
     }
 
     /**

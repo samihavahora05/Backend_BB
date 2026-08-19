@@ -153,6 +153,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     // ─── Certificates (Verification & Download) ───────────────────────────────
     Route::get('certificates/{certificate_number}/verify', [\App\Http\Controllers\Api\Public\PublicCertificateController::class, 'verify']);
     Route::get('certificates/{certificate_number}/download', [\App\Http\Controllers\Api\Public\PublicCertificateController::class, 'download']);
+    Route::get('templates/background/{filename}', [\App\Http\Controllers\Api\Public\PublicCertificateController::class, 'templateBackground']);
 
     // ─── Contests Platform (Hackathons) ───────────────────────────────────────
     Route::get('contests', [\App\Http\Controllers\Api\Public\PublicContestController::class, 'index']);
@@ -991,6 +992,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         
         // ----- Contests Management -----
         Route::prefix('contests')->group(function () {
+            Route::get('registrations', [\App\Http\Controllers\ContestController::class, 'adminRegistrations']);
+            Route::get('submissions', [\App\Http\Controllers\ContestController::class, 'adminSubmissions']);
             Route::get('/', [\App\Http\Controllers\ContestController::class, 'adminIndex']);
             Route::post('/', [\App\Http\Controllers\ContestController::class, 'store']);
             Route::get('/{id}', [\App\Http\Controllers\ContestController::class, 'show']);
@@ -1163,6 +1166,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         Route::get('certificates', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'index']);
         Route::post('certificates', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'store']);
+        Route::get('certificates/{id}/download', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'download']);
 
 
         Route::get('analytics/summary', [\App\Http\Controllers\Api\Admin\AdminAnalyticsController::class, 'summary']);

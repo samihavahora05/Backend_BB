@@ -18,15 +18,24 @@ class CertificateController extends Controller
 
     public function stats()
     {
+        $downloaded = 0;
+        $verified = 0;
+        try {
+            $downloaded = \App\Models\CertificateDownload::count();
+        } catch (\Throwable $e) {}
+        try {
+            $verified = \App\Models\CertificateVerification::where('verification_count', '>', 0)->count();
+        } catch (\Throwable $e) {}
+
         return response()->json([
             'success' => true,
             'data' => [
                 'total_issued' => IssuedCertificate::count(),
-                'pending' => IssuedCertificate::where('status', 'Pending')->count(),
-                'revoked' => IssuedCertificate::where('status', 'Revoked')->count(),
-                'downloaded' => \App\Models\CertificateDownload::count(),
-                'verified' => \App\Models\CertificateVerification::where('verification_count', '>', 0)->count(),
-                'expired' => IssuedCertificate::where('status', 'Expired')->count(),
+                'pending'      => IssuedCertificate::where('status', 'Pending')->count(),
+                'revoked'      => IssuedCertificate::where('status', 'Revoked')->count(),
+                'downloaded'   => $downloaded,
+                'verified'     => $verified,
+                'expired'      => IssuedCertificate::where('status', 'Expired')->count(),
             ]
         ]);
     }
@@ -59,12 +68,15 @@ class CertificateController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'course_id' => 'nullable|exists:courses,id',
-            'template_id' => 'nullable|exists:certificate_templates,id',
+            'student_name'       => 'required|string|max:255',
+            'student_email'      => 'nullable|string|max:255',
+            'course_title'       => 'nullable|string|max:255',
+            'user_id'            => 'nullable',
+            'course_id'          => 'nullable',
+            'template_id'        => 'nullable',
             'certificate_number' => 'nullable|string|unique:issued_certificates',
-            'issued_at' => 'nullable|date',
-            'expires_at' => 'nullable|date',
+            'issued_at'          => 'nullable|date',
+            'expires_at'         => 'nullable|date',
         ]);
 
         $certificate = $this->generator->issueCertificate($request->all(), $request->user()->id ?? 1);

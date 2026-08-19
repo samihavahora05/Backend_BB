@@ -2,125 +2,185 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Certificate of Completion</title>
+    <title>{{ $cert_title ?? 'Certificate of Completion' }}</title>
     <style>
         @page {
             margin: 0px;
+            size: A4 landscape;
         }
-        body {
+        html, body {
             margin: 0px;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-        }
-        .certificate-container {
+            padding: 0px;
             width: 100%;
             height: 100%;
-            padding: 50px;
-            box-sizing: border-box;
-            text-align: center;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            background-color: #ffffff;
+        }
+        .cert-stage {
             position: relative;
-            /* In production, add a background image here */
-            background: #ffffff;
-            border: 20px solid #1B2A6B; /* Blueboxx primary color */
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            box-sizing: border-box;
         }
-        .header {
-            margin-top: 50px;
+        .cert-bg-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
-        .header h1 {
-            font-size: 50px;
-            color: #1B2A6B;
-            margin: 0;
+        .cert-content-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        .cert-element {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+        
+        /* Fallback Classic Layout when no custom elements defined */
+        .classic-layout {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            text-align: center;
+        }
+        .classic-header {
+            padding-top: 130px;
+        }
+        .classic-title {
+            font-size: 38px;
+            font-weight: 800;
+            color: #0A192F;
             text-transform: uppercase;
             letter-spacing: 2px;
+            margin: 0;
         }
-        .subtitle {
-            font-size: 24px;
-            color: #666;
+        .classic-subtitle {
+            font-size: 18px;
+            color: #475569;
+            margin-top: 25px;
+        }
+        .classic-name {
+            font-size: 48px;
+            font-weight: 800;
+            color: #0F172A;
+            margin: 30px 0 20px 0;
+        }
+        .classic-course {
+            font-size: 20px;
+            color: #334155;
             margin-top: 10px;
         }
-        .student-name {
-            font-size: 48px;
-            font-weight: bold;
-            color: #222;
-            margin: 40px 0;
-            border-bottom: 2px solid #ddd;
-            display: inline-block;
-            padding-bottom: 5px;
-        }
-        .course-name {
-            font-size: 32px;
-            color: #1B2A6B;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-        .date-section {
-            margin-top: 50px;
-            font-size: 20px;
-            color: #555;
-        }
-        .footer {
+        .classic-footer {
             position: absolute;
-            bottom: 50px;
-            width: 90%;
-            left: 5%;
+            bottom: 60px;
+            width: 86%;
+            left: 7%;
+            font-size: 15px;
+            color: #64748b;
         }
-        .signature {
+        .classic-footer-left {
             float: left;
-            width: 30%;
-            text-align: center;
-            border-top: 1px solid #333;
-            padding-top: 10px;
-            margin-top: 50px;
+            text-align: left;
         }
-        .qr-code {
+        .classic-footer-right {
             float: right;
-            width: 100px;
-            height: 100px;
-        }
-        .cert-id {
-            clear: both;
-            margin-top: 120px;
-            font-size: 14px;
-            color: #888;
+            text-align: right;
         }
     </style>
 </head>
 <body>
-    <div class="certificate-container">
-        <div class="header">
-            <h1>Certificate of Completion</h1>
-            <div class="subtitle">This is to certify that</div>
-        </div>
+    <div class="cert-stage">
+        @if(!empty($template_bg))
+            <img src="{{ $template_bg }}" class="cert-bg-img" alt="Certificate Background" />
+        @endif
 
-        <div class="student-name">
-            {{ $student_name }}
-        </div>
+        @if(!empty($elements) && is_array($elements) && count($elements) > 0)
+            <div class="cert-content-layer">
+                @foreach($elements as $el)
+                    @if(isset($el['enabled']) && !$el['enabled'])
+                        @continue
+                    @endif
 
-        <div class="subtitle">has successfully completed the course</div>
+                    @php
+                        $rawContent = $el['content'] ?? '';
+                        $content = str_replace(
+                            ['{student_name}', '{course_title}', '{course_name}', '{issue_date}', '{date}', '{certificate_id}', '{cert_id}', '{verification_id}'],
+                            [$student_name, $course_name, $course_name, $date, $date, $cert_id, $cert_id, $cert_id],
+                            $rawContent
+                        );
 
-        <div class="course-name">
-            {{ $course_name }}
-        </div>
+                        $transform = strtolower($el['textTransform'] ?? 'none');
+                        if ($transform === 'uppercase') {
+                            $content = mb_strtoupper($content);
+                        } elseif ($transform === 'lowercase') {
+                            $content = mb_strtolower($content);
+                        } elseif ($transform === 'capitalize') {
+                            $content = ucwords($content);
+                        }
 
-        <div class="date-section">
-            Issued on: {{ $date }}
-        </div>
+                        $posX = floatval($el['positionX'] ?? 50);
+                        $posY = floatval($el['positionY'] ?? 50);
+                        $width = floatval($el['width'] ?? 80);
 
-        <div class="footer">
-            <div class="signature">
-                Director, Blueboxx
+                        $fontSize = intval($el['fontSize'] ?? 24);
+                        $fontWeight = $el['fontWeight'] ?? 'normal';
+                        $fontStyle = $el['fontStyle'] ?? 'normal';
+                        $fontColor = $el['fontColor'] ?? '#0f172a';
+                        $align = $el['textAlignment'] ?? 'center';
+                        $letterSpacing = intval($el['letterSpacing'] ?? 0);
+                    @endphp
+
+                    <div class="cert-element" style="left: {{ $posX }}%; top: {{ $posY }}%; width: {{ $width }}%; text-align: {{ $align }}; font-size: {{ $fontSize }}px; font-weight: {{ $fontWeight }}; font-style: {{ $fontStyle }}; color: {{ $fontColor }}; {{ $letterSpacing > 0 ? 'letter-spacing: '.$letterSpacing.'px;' : '' }}">
+                        {{ $content }}
+                    </div>
+                @endforeach
             </div>
-            
-            <div class="qr-code">
-                <img src="data:image/svg+xml;base64,{{ $qr_code }}" alt="QR Code" width="100" height="100">
-            </div>
+        @else
+            <!-- Standard Overlay layout if template has no custom elements defined -->
+            <div class="classic-layout">
+                <div class="classic-header">
+                    @if(!isset($show_title) || $show_title)
+                        <h1 class="classic-title">{{ $cert_title ?? 'Certificate of Completion' }}</h1>
+                    @endif
+                    <div class="classic-subtitle">This certificate is proudly presented to</div>
+                </div>
 
-            <div class="cert-id">
-                Certificate ID: {{ $cert_id }} <br>
-                Verify at: {{ url('/verify-certificate/'.$cert_id) }}
+                <div class="classic-name">
+                    {{ $student_name }}
+                </div>
+
+                <div class="classic-course">
+                    for successfully completing <strong>{{ $course_name }}</strong>
+                </div>
+
+                <div class="classic-footer">
+                    <div class="classic-footer-left">
+                        Issued: {{ $date }}
+                    </div>
+                    <div class="classic-footer-right">
+                        Verification ID: {{ $cert_id }}
+                        @if(!empty($qr_code))
+                            <span style="vertical-align: middle; margin-left: 10px;">
+                                <img src="data:image/svg+xml;base64,{{ $qr_code }}" width="50" height="50" alt="QR" />
+                            </span>
+                        @endif
+                    </div>
+                </div>
             </div>
-        </div>
+        @endif
     </div>
 </body>
 </html>
