@@ -141,7 +141,7 @@ class AuthController extends Controller
         elseif ($user->hasRole('company')) $user->load('companyProfile');
         elseif ($user->hasRole('college')) $user->load('collegeProfile');
         elseif ($user->hasRole('intern')) $user->load('internProfile');
-        elseif ($user->hasRole('job-seeker')) $user->load('jobSeekerProfile');
+        elseif ($user->hasRole('job-seeker') || $user->hasRole('jobseeker')) $user->load('jobSeekerProfile');
 
         return response()->json($user);
     }
