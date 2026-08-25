@@ -40,15 +40,20 @@ class CompanyJobController extends Controller
                     $salaryFormatted = '₹' . ($job->salary_min >= 100000 ? round($job->salary_min/100000, 1) . ' LPA' : $job->salary_min);
                 }
 
+                $remoteType = $job->remote_type ?: ($job->location === 'Remote' ? 'Remote' : 'On-site');
+                $location = $job->location ?: $remoteType;
+
                 return [
                     'id' => $job->id,
                     'job_id' => $job->job_id_prefix ?: ('JOB-' . date('Y') . '-' . $job->id),
                     'title' => $job->title,
+                    'category' => $job->employment_type ?? 'Full-Time',
                     'employment_type' => $job->employment_type ?? 'Full-Time',
                     'status' => $displayStatus,
                     'raw_status' => $job->status,
-                    'remote_type' => $job->remote_type ?? 'Remote',
-                    'location' => $job->location ?? 'Remote',
+                    'type' => $remoteType,
+                    'remote_type' => $remoteType,
+                    'location' => $location,
                     'salary' => $salaryFormatted,
                     'salary_min' => $job->salary_min,
                     'salary_max' => $job->salary_max,
@@ -113,6 +118,9 @@ class CompanyJobController extends Controller
             $status = 'pending_approval'; // Enforce admin approval requirement
         }
 
+        $remoteType = $validated['remote_type'] ?? 'Onsite';
+        $location = !empty($validated['location']) ? $validated['location'] : ($remoteType === 'Remote' ? 'Remote' : 'On-site');
+
         $job = new Job();
         $job->company_id = $request->user()->id;
         $job->job_id_prefix = 'JOB-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
@@ -121,8 +129,8 @@ class CompanyJobController extends Controller
         $job->industry = $validated['industry'] ?? 'Technology';
         $job->employment_type = $validated['employment_type'];
         $job->experience_level = $validated['experience_level'] ?? 'Entry Level';
-        $job->remote_type = $validated['remote_type'] ?? 'Remote';
-        $job->location = $validated['location'] ?? 'Remote';
+        $job->remote_type = $remoteType;
+        $job->location = $location;
         $job->salary_min = $validated['salary_min'] ?? null;
         $job->salary_max = $validated['salary_max'] ?? null;
         $job->hide_salary = $validated['hide_salary'] ?? false;
