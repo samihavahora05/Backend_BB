@@ -35,8 +35,14 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Never trust a public registration request to select an elevated role.
-        $roleName = 'student';
+        $requestedRole = strtolower($request->input('role', 'student') ?? 'student');
+        if ($requestedRole === 'jobseeker') {
+            $requestedRole = 'job-seeker';
+        }
+
+        $allowedRoles = ['student', 'intern', 'job-seeker', 'company', 'college', 'expert'];
+        $roleName = in_array($requestedRole, $allowedRoles, true) ? $requestedRole : 'student';
+
         $role = \Spatie\Permission\Models\Role::firstOrCreate([
             'name' => $roleName,
             'guard_name' => 'web'
@@ -51,7 +57,7 @@ class AuthController extends Controller
             'college' => $user->collegeProfile()->create(),
             'intern' => $user->internProfile()->create(),
             'job-seeker' => $user->jobSeekerProfile()->create(),
-            default => null,
+            default => $user->studentProfile()->create(),
         };
 
         // Student registration does not require email/SMTP.

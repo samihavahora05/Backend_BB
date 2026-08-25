@@ -29,9 +29,7 @@ class RegisterRequest extends FormRequest
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'nullable|string|max:20',
             'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
-            // Public registration always creates a student account.
-            // Elevated roles must be assigned by authorized admin workflows.
-            'role' => 'sometimes|in:student'
+            'role' => 'nullable|string|in:student,intern,job-seeker,jobseeker,company,college,expert'
         ];
     }
 }
