@@ -19,8 +19,7 @@ class PublicJobController extends Controller
     {
         $query = Job::query()->with('company.companyProfile')
             ->where(function($q) {
-                $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'open', 'Open', 'OPEN', 'published', 'Published', 'PUBLISHED'])
-                  ->orWhereNull('status');
+                $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'open', 'Open', 'OPEN', 'published', 'Published', 'PUBLISHED']);
             });
 
         // Search

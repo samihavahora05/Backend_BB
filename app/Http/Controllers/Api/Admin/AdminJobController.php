@@ -13,9 +13,9 @@ class AdminJobController extends Controller
     public function dashboardMetrics()
     {
         return response()->json([
-            'active_jobs'        => Job::where('status', 'active')->count(),
-            'pending_jobs'       => Job::where('status', 'pending_approval')->count(),
-            'expired_jobs'       => Job::where('status', 'expired')->count(),
+            'active_jobs'        => Job::whereIn('status', ['active', 'open', 'published'])->count(),
+            'pending_jobs'       => Job::whereIn('status', ['pending', 'pending_approval'])->count(),
+            'expired_jobs'       => Job::whereIn('status', ['expired', 'closed'])->count(),
             'total_applications' => JobApplication::count(),
         ]);
     }
@@ -31,34 +31,42 @@ class AdminJobController extends Controller
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhereHas('company', function ($q2) use ($search) {
                       $q2->where('first_name', 'like', "%{$search}%")
-                         ->orWhere('last_name', 'like', "%{$search}%");
+                         ->orWhere('last_name', 'like', "%{$search}%")
+                         ->orWhere('name', 'like', "%{$search}%");
                   });
             });
         }
 
-        if ($request->filled('status') && $request->status !== 'All') {
-            $query->where('status', strtolower($request->status));
+        if ($request->filled('status') && strtolower($request->status) !== 'all') {
+            $st = strtolower($request->status);
+            if (in_array($st, ['pending', 'pending_approval'])) {
+                $query->whereIn('status', ['pending', 'pending_approval']);
+            } else {
+                $query->where('status', $st);
+            }
         }
 
         $jobs = $query->latest()->paginate($request->input('per_page', 15));
 
         // Transform so frontend always gets a consistent shape
         $jobs->getCollection()->transform(function ($job) {
+            $compName = $job->company?->name 
+                ?: (trim(($job->company?->first_name ?? '') . ' ' . ($job->company?->last_name ?? '')))
+                ?: ($job->company?->companyProfile?->company_name ?: 'Company');
+
             return [
                 'id'                 => $job->id,
                 'title'              => $job->title,
-                'job_id_prefix'      => 'JOB-' . $job->created_at->format('Y') . '-' . $job->id,
+                'job_id_prefix'      => $job->job_id_prefix ?: ('JOB-' . $job->created_at->format('Y') . '-' . $job->id),
                 'company'            => [
-                    'name' => $job->company
-                        ? trim(($job->company->first_name ?? '') . ' ' . ($job->company->last_name ?? ''))
-                        : 'BlueBoxx',
+                    'name' => $compName,
                     'id' => $job->company_id,
                 ],
                 'employment_type'    => $job->employment_type ?? $job->job_type ?? 'Full-time',
                 'location'           => $job->location ?? 'Remote',
                 'applications_count' => $job->applications_count ?? 0,
                 'views_count'        => $job->views_count ?? 0,
-                'status'             => $job->status ?? 'active',
+                'status'             => $job->status ?? 'pending_approval',
                 'created_at'         => $job->created_at,
             ];
         });
