@@ -19,9 +19,25 @@ class JobseekerProfileController extends Controller
             ['status' => 'active', 'profile_completion' => 10]
         );
 
+        // Fallback to StudentDocument if resume_path is empty on JobSeekerProfile
+        if (empty($profile->resume_path)) {
+            $studentDoc = \App\Models\StudentDocument::where('user_id', $user->id)
+                ->where('type', 'resume')
+                ->latest()
+                ->first();
+            if ($studentDoc && $studentDoc->file_path) {
+                $profile->update(['resume_path' => $studentDoc->file_path]);
+            }
+        }
+
         $education = StudentEducation::where('user_id', $user->id)->get();
-        // The JobSeekerProfile has a json 'skills' field, we can use that or StudentSkill. 
-        // Let's stick to the JobSeekerProfile fields.
+
+        $profileArray = $profile->toArray();
+        if ($profile->resume_path) {
+            $profileArray['resume_url'] = str_starts_with($profile->resume_path, 'http')
+                ? $profile->resume_path
+                : asset('storage/' . $profile->resume_path);
+        }
 
         return response()->json([
             'success' => true,
@@ -33,7 +49,7 @@ class JobseekerProfileController extends Controller
                     'email' => $user->email,
                     'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null
                 ],
-                'profile' => $profile,
+                'profile' => $profileArray,
                 'education' => $education
             ]
         ]);
@@ -93,16 +109,25 @@ class JobseekerProfileController extends Controller
             $path = $request->file('resume')->store('resumes', 'public');
             $profile->update(['resume_path' => $path]);
             
+            // Sync with StudentDocument
+            \App\Models\StudentDocument::updateOrCreate(
+                ['user_id' => $user->id, 'type' => 'resume'],
+                ['file_path' => $path, 'title' => 'Resume', 'updated_at' => now()]
+            );
+
             // Increment profile completion if it's the first time
             if ($profile->profile_completion < 50) {
                 $profile->increment('profile_completion', 20);
             }
         }
 
+        $resumeUrl = asset('storage/' . $profile->resume_path);
+
         return response()->json([
             'success' => true,
             'message' => 'Resume uploaded successfully',
-            'resume_path' => asset('storage/' . $profile->resume_path)
+            'resume_path' => $resumeUrl,
+            'resume_url' => $resumeUrl,
         ]);
     }
 }
