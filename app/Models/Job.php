@@ -12,6 +12,15 @@ class Job extends Model
 
     protected $guarded = ['id'];
 
+    protected static function booted()
+    {
+        static::creating(function ($job) {
+            if (empty($job->job_id_prefix)) {
+                $job->job_id_prefix = 'JOB-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
+            }
+        });
+    }
+
     protected $casts = [
         'responsibilities' => 'array',
         'requirements' => 'array',

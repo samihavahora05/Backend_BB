@@ -640,6 +640,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::delete('/companies/{id}', [\App\Http\Controllers\Api\College\CollegeCompanyController::class, 'destroy']);
         
         // Student Management
+        Route::post('/students', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'storeStudent']);
+        Route::delete('/students/{id}', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'destroyStudent']);
         Route::get('/students/export', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'exportStudents']);
         Route::post('/students/import', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'importStudents']);
         

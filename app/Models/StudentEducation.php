@@ -11,6 +11,18 @@ class StudentEducation extends Model
 
     protected $table = 'student_education';
     protected $guarded = ['id'];
+    protected $fillable = [
+        'user_id',
+        'college_id',
+        'college_name',
+        'university',
+        'course',
+        'specialization',
+        'semester',
+        'start_year',
+        'end_year',
+        'cgpa',
+    ];
 
     public function user()
     {
