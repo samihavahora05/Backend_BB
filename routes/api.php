@@ -40,6 +40,17 @@ use App\Http\Controllers\PaymentController;
 
 Route::get('/health', [HealthController::class, 'health']);
 
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Config, cache, route, and view caches have been cleared successfully!'
+    ]);
+});
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);

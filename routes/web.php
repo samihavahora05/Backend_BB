@@ -56,3 +56,14 @@ Route::get('/scrape-colleges', function () {
         'images' => $all_images
     ]);
 });
+
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Config, cache, route, and view caches have been cleared successfully!'
+    ]);
+});

@@ -19,13 +19,15 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:3000', 
-        'http://127.0.0.1:3000', 
-        'http://localhost:3001', 
-        'http://127.0.0.1:3001',
-        env('FRONTEND_URL', 'https://blueboxx.in')
-    ],
+   'allowed_origins' => [
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000', 
+    'https://sarvakshetra.com',
+    'https://www.sarvakshetra.com',
+    'https://blueboxx.in',
+    'https://www.blueboxx.in',
+],
+
 
     'allowed_headers' => ['*'],
 
