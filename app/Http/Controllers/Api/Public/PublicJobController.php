@@ -63,21 +63,39 @@ class PublicJobController extends Controller
         $perPage = min((int)$request->query('per_page', 15), 50);
         $jobs = $query->paginate($perPage);
 
-        $data = $jobs->through(fn($j) => [
-            'id'               => $j->id,
-            'title'            => $j->title,
-            'company_name'     => $j->company_name,
-            'company_logo'     => $j->company_logo ? asset('storage/' . $j->company_logo) : null,
-            'location'         => $j->location,
-            'job_type'         => $j->employment_type,
-            'experience_level' => $j->experience_level,
-            'salary_min'       => $j->hide_salary ? null : $j->salary_min,
-            'salary_max'       => $j->hide_salary ? null : $j->salary_max,
-            'hide_salary'      => $j->hide_salary,
-            'is_featured'      => $j->is_featured,
-            'application_deadline' => $j->application_deadline?->format('M d, Y'),
-            'posted_at'        => $j->created_at->diffForHumans(),
-        ]);
+        $data = $jobs->through(function($j) {
+            $loc = $j->location ?: ($j->remote_type ?: 'On-site');
+            $remoteType = $j->remote_type ?: ($loc === 'Remote' ? 'Remote' : 'On-site');
+
+            $salaryFormatted = 'Best in Industry';
+            if (!$j->hide_salary) {
+                if ($j->salary_min && $j->salary_max) {
+                    $salaryFormatted = '₹' . ($j->salary_min >= 100000 ? round($j->salary_min/100000, 1) . ' - ₹' . round($j->salary_max/100000, 1) . ' LPA' : $j->salary_min . ' - ' . $j->salary_max);
+                } elseif ($j->salary_min) {
+                    $salaryFormatted = '₹' . ($j->salary_min >= 100000 ? round($j->salary_min/100000, 1) . ' LPA+' : $j->salary_min);
+                }
+            }
+
+            return [
+                'id'               => $j->id,
+                'title'            => $j->title,
+                'company_name'     => $j->company_name,
+                'company_logo'     => $j->company_logo ? asset('storage/' . $j->company_logo) : null,
+                'location'         => $loc,
+                'remote_type'      => $remoteType,
+                'workplace_type'   => $remoteType,
+                'job_type'         => $j->employment_type ?? 'Full-Time',
+                'employment_type'  => $j->employment_type ?? 'Full-Time',
+                'experience_level' => $j->experience_level,
+                'salary'           => $salaryFormatted,
+                'salary_min'       => $j->hide_salary ? null : $j->salary_min,
+                'salary_max'       => $j->hide_salary ? null : $j->salary_max,
+                'hide_salary'      => $j->hide_salary,
+                'is_featured'      => $j->is_featured,
+                'application_deadline' => $j->application_deadline?->format('M d, Y'),
+                'posted_at'        => $j->created_at ? $j->created_at->diffForHumans() : 'Recently',
+            ];
+        });
 
         return response()->json([
             'success' => true,
@@ -113,6 +131,9 @@ class PublicJobController extends Controller
             $hasApplied = JobApplication::where('job_id', $job->id)->where('user_id', $request->user()->id)->exists();
         }
 
+        $loc = $job->location ?: ($job->remote_type ?: 'On-site');
+        $remoteType = $job->remote_type ?: ($loc === 'Remote' ? 'Remote' : 'On-site');
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -121,8 +142,11 @@ class PublicJobController extends Controller
                 'company_name'         => $job->company_name,
                 'company_logo'         => $job->company_logo ? asset('storage/' . $job->company_logo) : null,
                 'company_description'  => $job->company_description ?? null,
-                'location'             => $job->location,
-                'job_type'             => $job->employment_type,
+                'location'             => $loc,
+                'remote_type'          => $remoteType,
+                'workplace_type'       => $remoteType,
+                'job_type'             => $job->employment_type ?? 'Full-Time',
+                'employment_type'      => $job->employment_type ?? 'Full-Time',
                 'experience_level'     => $job->experience_level,
                 'education_level'      => $job->education_level ?? null,
                 'salary_min'           => $job->hide_salary ? null : $job->salary_min,
@@ -138,7 +162,7 @@ class PublicJobController extends Controller
                 'application_count'    => $job->applications()->count(),
                 'is_bookmarked'        => $isBookmarked,
                 'has_applied'          => $hasApplied,
-                'posted_at'            => $job->created_at->diffForHumans(),
+                'posted_at'            => $job->created_at ? $job->created_at->diffForHumans() : 'Recently',
             ]
         ]);
     }
