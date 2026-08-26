@@ -36,24 +36,51 @@ class GenerateBackupJob implements ShouldQueue
 
         try {
             if ($backup->type == 'Database' || $backup->type == 'Complete') {
-                $dbUser = env('DB_USERNAME', 'root');
-                $dbPass = env('DB_PASSWORD', '');
-                $dbHost = env('DB_HOST', '127.0.0.1');
-                $dbName = env('DB_DATABASE', 'blueboxx_db');
-                
+                $driver = config('database.default', 'sqlite');
                 $sqlPath = $backup->type == 'Complete' ? storage_path('app/backups/temp_db.sql') : $fullPath;
-                
-                $passStr = $dbPass ? "--password=\"{$dbPass}\"" : "";
-                $cmd = "mysqldump --user=\"{$dbUser}\" {$passStr} --host=\"{$dbHost}\" \"{$dbName}\" > \"{$sqlPath}\"";
-                exec($cmd, $output, $returnVar);
-                
-                if ($returnVar !== 0) {
-                    $cmd = "C:\\xampp\\mysql\\bin\\mysqldump.exe --user=\"{$dbUser}\" {$passStr} --host=\"{$dbHost}\" \"{$dbName}\" > \"{$sqlPath}\"";
+
+                if ($driver === 'sqlite') {
+                    $sqlitePath = config('database.connections.sqlite.database', database_path('database.sqlite'));
+                    if (file_exists($sqlitePath)) {
+                        copy($sqlitePath, $sqlPath);
+                    } else {
+                        touch($sqlPath);
+                    }
+                } else {
+                    $dbUser = config('database.connections.mysql.username', 'root');
+                    $dbPass = config('database.connections.mysql.password', '');
+                    $dbHost = config('database.connections.mysql.host', '127.0.0.1');
+                    $dbPort = config('database.connections.mysql.port', '3306');
+                    $dbName = config('database.connections.mysql.database', 'laravel');
+
+                    $passArg = ($dbPass !== null && $dbPass !== '') ? '--password=' . escapeshellarg($dbPass) : '';
+                    $cmd = sprintf(
+                        'mysqldump --user=%s %s --host=%s --port=%s %s > %s',
+                        escapeshellarg($dbUser),
+                        $passArg,
+                        escapeshellarg($dbHost),
+                        escapeshellarg($dbPort),
+                        escapeshellarg($dbName),
+                        escapeshellarg($sqlPath)
+                    );
                     exec($cmd, $output, $returnVar);
-                }
-                
-                if ($returnVar !== 0) {
-                    throw new \Exception('Failed to generate database backup. Ensure mysqldump is installed.');
+
+                    if ($returnVar !== 0 && file_exists('C:\\xampp\\mysql\\bin\\mysqldump.exe')) {
+                        $cmd = sprintf(
+                            'C:\\xampp\\mysql\\bin\\mysqldump.exe --user=%s %s --host=%s --port=%s %s > %s',
+                            escapeshellarg($dbUser),
+                            $passArg,
+                            escapeshellarg($dbHost),
+                            escapeshellarg($dbPort),
+                            escapeshellarg($dbName),
+                            escapeshellarg($sqlPath)
+                        );
+                        exec($cmd, $output, $returnVar);
+                    }
+
+                    if ($returnVar !== 0) {
+                        throw new \Exception('Failed to generate database backup. Ensure mysqldump is installed and accessible.');
+                    }
                 }
             }
 

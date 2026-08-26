@@ -14,6 +14,10 @@ class PasswordHistory extends Model
         'created_at',
     ];
 
+    protected $hidden = [
+        'password_hash',
+    ];
+
     protected $casts = [
         'created_at' => 'datetime',
     ];

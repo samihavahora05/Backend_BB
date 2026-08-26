@@ -14,6 +14,20 @@ class ZoomSetting extends Model
     ];
 
     /**
+     * The attributes that should be hidden for serialization.
+     */
+    protected $hidden = [
+        'client_secret',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     */
+    protected $casts = [
+        'client_secret' => 'encrypted',
+    ];
+
+    /**
      * Get the singleton settings row (creates a default if none exists).
      */
     public static function getSettings(): self

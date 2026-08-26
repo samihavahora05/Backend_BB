@@ -55,11 +55,8 @@ class RestoreBackupJob implements ShouldQueue
             $sqlPath = storage_path('app/' . $backup->file_path);
 
             if ($backup->type == 'Database' || $backup->type == 'Complete') {
-                $dbUser = env('DB_USERNAME', 'root');
-                $dbPass = env('DB_PASSWORD', '');
-                $dbHost = env('DB_HOST', '127.0.0.1');
-                $dbName = env('DB_DATABASE', 'blueboxx_db');
-                
+                $driver = config('database.default', 'sqlite');
+
                 if ($backup->type == 'Complete') {
                     $addLog('Extracting database.sql from zip...');
                     $zip = new \ZipArchive();
@@ -73,22 +70,55 @@ class RestoreBackupJob implements ShouldQueue
                     }
                 }
 
-                $addLog('Starting database import via mysql CLI...');
-                $passStr = $dbPass ? "--password=\"{$dbPass}\"" : "";
-                $cmd = "mysql --user=\"{$dbUser}\" {$passStr} --host=\"{$dbHost}\" \"{$dbName}\" < \"{$sqlPath}\"";
-                exec($cmd, $output, $returnVar);
-                
-                if ($returnVar !== 0) {
-                    $addLog('mysql CLI failed, falling back to XAMPP binary...');
-                    $cmd = "C:\\xampp\\mysql\\bin\\mysql.exe --user=\"{$dbUser}\" {$passStr} --host=\"{$dbHost}\" \"{$dbName}\" < \"{$sqlPath}\"";
+                if ($driver === 'sqlite') {
+                    $addLog('Restoring SQLite database file...');
+                    $sqlitePath = config('database.connections.sqlite.database', database_path('database.sqlite'));
+                    if (file_exists($sqlPath)) {
+                        copy($sqlPath, $sqlitePath);
+                        $addLog('SQLite database restored successfully.');
+                    } else {
+                        throw new \Exception('SQLite backup source file not found.');
+                    }
+                } else {
+                    $dbUser = config('database.connections.mysql.username', 'root');
+                    $dbPass = config('database.connections.mysql.password', '');
+                    $dbHost = config('database.connections.mysql.host', '127.0.0.1');
+                    $dbPort = config('database.connections.mysql.port', '3306');
+                    $dbName = config('database.connections.mysql.database', 'laravel');
+
+                    $addLog('Starting database import via mysql CLI...');
+                    $passArg = ($dbPass !== null && $dbPass !== '') ? '--password=' . escapeshellarg($dbPass) : '';
+                    $cmd = sprintf(
+                        'mysql --user=%s %s --host=%s --port=%s %s < %s',
+                        escapeshellarg($dbUser),
+                        $passArg,
+                        escapeshellarg($dbHost),
+                        escapeshellarg($dbPort),
+                        escapeshellarg($dbName),
+                        escapeshellarg($sqlPath)
+                    );
                     exec($cmd, $output, $returnVar);
+
+                    if ($returnVar !== 0 && file_exists('C:\\xampp\\mysql\\bin\\mysql.exe')) {
+                        $addLog('mysql CLI failed, falling back to XAMPP binary...');
+                        $cmd = sprintf(
+                            'C:\\xampp\\mysql\\bin\\mysql.exe --user=%s %s --host=%s --port=%s %s < %s',
+                            escapeshellarg($dbUser),
+                            $passArg,
+                            escapeshellarg($dbHost),
+                            escapeshellarg($dbPort),
+                            escapeshellarg($dbName),
+                            escapeshellarg($sqlPath)
+                        );
+                        exec($cmd, $output, $returnVar);
+                    }
+
+                    if ($returnVar !== 0) {
+                        throw new \Exception('Failed to import database. Check mysql CLI tools.');
+                    }
+                    $addLog('Database imported successfully.');
                 }
-                
-                if ($returnVar !== 0) {
-                    throw new \Exception('Failed to import database. Check mysql CLI tools.');
-                }
-                $addLog('Database imported successfully.');
-                
+
                 if ($backup->type == 'Complete' && file_exists(storage_path('app/backups/database.sql'))) {
                     unlink(storage_path('app/backups/database.sql'));
                 }

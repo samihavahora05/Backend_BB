@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class ContestRegistration extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'contest_id',
+        'team_name',
+        'status',
+        'score',
+        'rank',
+    ];
 
     public function contest()
     {

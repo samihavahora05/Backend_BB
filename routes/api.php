@@ -40,16 +40,6 @@ use App\Http\Controllers\PaymentController;
 
 Route::get('/health', [HealthController::class, 'health']);
 
-Route::get('/clear-cache', function () {
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
-    \Illuminate\Support\Facades\Artisan::call('cache:clear');
-    \Illuminate\Support\Facades\Artisan::call('route:clear');
-    \Illuminate\Support\Facades\Artisan::call('view:clear');
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Config, cache, route, and view caches have been cleared successfully!'
-    ]);
-});
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -1193,34 +1183,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('zoom-settings', [\App\Http\Controllers\Api\Admin\ZoomSettingsController::class, 'update']);
         Route::post('zoom-settings/test-connection', [\App\Http\Controllers\Api\Admin\ZoomSettingsController::class, 'testConnection']);
 
-        // ----- Media Manager APIs (COMMENTED OUT TO PREVENT CONFLICT WITH PHASE 3 AdminMediaController) -----
-        /*
-        Route::prefix('media')->group(function () {
-            // Statistics
-            Route::get('statistics', [\App\Http\Controllers\Api\Admin\MediaActionController::class, 'statistics']);
-            
-            // Trash
-            Route::get('trash', [\App\Http\Controllers\Api\Admin\MediaActionController::class, 'trash']);
-            Route::post('trash/files/{id}/restore', [\App\Http\Controllers\Api\Admin\MediaActionController::class, 'restoreFile']);
-            Route::post('trash/folders/{id}/restore', [\App\Http\Controllers\Api\Admin\MediaActionController::class, 'restoreFolder']);
-            Route::delete('trash/files/{id}/force', [\App\Http\Controllers\Api\Admin\MediaActionController::class, 'forceDeleteFile']);
-            
-            // Files
-            Route::get('files', [\App\Http\Controllers\Api\Admin\MediaFileController::class, 'index']);
-            Route::post('files/upload', [\App\Http\Controllers\Api\Admin\MediaFileController::class, 'upload']);
-            Route::post('files/upload/chunk', [\App\Http\Controllers\Api\Admin\MediaFileController::class, 'uploadChunk']);
-            Route::post('files/{file}/webp', [\App\Http\Controllers\Api\Admin\MediaFileController::class, 'convertToWebp']);
-            Route::put('files/{file}', [\App\Http\Controllers\Api\Admin\MediaFileController::class, 'update']);
-            Route::delete('files/{file}', [\App\Http\Controllers\Api\Admin\MediaFileController::class, 'destroy']);
-            
-            // Folders
-            Route::get('folders', [\App\Http\Controllers\Api\Admin\MediaFolderController::class, 'index']);
-            Route::post('folders', [\App\Http\Controllers\Api\Admin\MediaFolderController::class, 'store']);
-            Route::put('folders/{folder}', [\App\Http\Controllers\Api\Admin\MediaFolderController::class, 'update']);
-            Route::delete('folders/{folder}', [\App\Http\Controllers\Api\Admin\MediaFolderController::class, 'destroy']);
-            Route::post('folders/{folder}/move', [\App\Http\Controllers\Api\Admin\MediaFolderController::class, 'move']);
-        });
-        */
+        
     });
 
     // EdTech API

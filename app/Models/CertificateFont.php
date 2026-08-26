@@ -5,5 +5,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CertificateFont extends Model {
     use SoftDeletes;
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'file_path',
+        'is_active',
+    ];
 }

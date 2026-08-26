@@ -6,7 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Wishlist extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'course_id',
+    ];
 
     public function course()
     {

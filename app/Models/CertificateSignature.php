@@ -5,5 +5,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CertificateSignature extends Model {
     use SoftDeletes;
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'image_path',
+        'is_active',
+    ];
 }

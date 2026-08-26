@@ -17,11 +17,14 @@ class ZoomSettingsController extends Controller
 
         // Mask the client secret for display
         $display = $settings->toArray();
-        if (!empty($display['client_secret'])) {
-            $display['client_secret_masked'] = str_repeat('*', 8) . substr($display['client_secret'], -4);
+        unset($display['client_secret']);
+
+        if (!empty($settings->client_secret)) {
+            $display['client_secret_masked'] = str_repeat('*', 8) . substr($settings->client_secret, -4);
             $display['has_credentials']      = true;
         } else {
-            $display['has_credentials'] = false;
+            $display['client_secret_masked'] = null;
+            $display['has_credentials']      = false;
         }
 
         return response()->json(['success' => true, 'data' => $display]);
@@ -54,10 +57,21 @@ class ZoomSettingsController extends Controller
         $settings = ZoomSetting::getSettings();
         $settings->update($validated);
 
+        $display = $settings->fresh()->toArray();
+        unset($display['client_secret']);
+
+        if (!empty($settings->client_secret)) {
+            $display['client_secret_masked'] = str_repeat('*', 8) . substr($settings->client_secret, -4);
+            $display['has_credentials']      = true;
+        } else {
+            $display['client_secret_masked'] = null;
+            $display['has_credentials']      = false;
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Zoom settings updated successfully',
-            'data'    => $settings->fresh(),
+            'data'    => $display,
         ]);
     }
 

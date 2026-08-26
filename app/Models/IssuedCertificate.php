@@ -5,7 +5,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class IssuedCertificate extends Model {
     use SoftDeletes;
-    protected $guarded = [];
+    protected $fillable = [
+        'certificate_number',
+        'user_id',
+        'course_id',
+        'template_id',
+        'status',
+        'completion_percentage',
+        'grade',
+        'remarks',
+        'pdf_path',
+        'issued_at',
+        'expires_at',
+    ];
     
     protected $casts = [
         'issued_at' => 'datetime',
