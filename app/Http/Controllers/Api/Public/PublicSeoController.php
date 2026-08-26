@@ -16,13 +16,17 @@ class PublicSeoController extends Controller
             return response()->json(['error' => 'Path parameter is required'], 400);
         }
 
-        // Exact match or wildcard fallback logic could go here
-        $seo = SeoMetadata::where('url_path', $path)->first();
+        // Normalize path: check both exact path and trimmed path
+        $normalized = '/' . trim($path, '/');
+        $seo = SeoMetadata::where('url_path', $path)
+            ->orWhere('url_path', $normalized)
+            ->orWhere('url_path', $normalized . '/')
+            ->first();
 
         if ($seo) {
-            return response()->json($seo);
+            return response()->json($seo, 200);
         }
 
-        return response()->json(['message' => 'No custom SEO metadata found for this route'], 404);
+        return response()->json(null, 200);
     }
 }

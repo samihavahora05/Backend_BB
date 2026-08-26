@@ -198,7 +198,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Student Portal Integration
-    Route::middleware('role:student,sanctum')->prefix('student')->name('student.')->group(function () {
+    Route::prefix('student')->name('student.')->group(function () {
         Route::get('/courses', [\App\Http\Controllers\Api\Student\StudentCourseController::class, 'index']);
         Route::post('/courses/{course_id}/lessons/{lesson_id}/complete', [\App\Http\Controllers\Api\Student\StudentCourseController::class, 'markLessonComplete']);
         Route::get('/dashboard', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
@@ -252,7 +252,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Company Portal Integration (Old / Deprecated prefix? Kept for safety)
-    Route::middleware('role:company,sanctum')->prefix('company')->name('company_old.')->group(function () {
+    Route::middleware('role:company')->prefix('company')->name('company_old.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'index']);
         Route::get('/analytics', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'analytics']);
         
@@ -283,7 +283,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
 
     // Expert Portal Integration (Old / Deprecated prefix?)
-    Route::middleware('role:expert,sanctum')->prefix('expert')->name('expert_old.')->group(function () {
+    Route::middleware('role:expert')->prefix('expert')->name('expert_old.')->group(function () {
         Route::get('/metrics', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'metrics']);
         Route::get('/sessions/upcoming', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'upcomingSessions']);
         Route::put('/sessions/{id}/meeting-link', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'updateMeetingLink']);
@@ -598,7 +598,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
     
     // College Portal API (Placement Cell)
-    Route::middleware('role:college,sanctum')->prefix('college')->name('college.')->group(function () {
+    Route::middleware('role:college')->prefix('college')->name('college.')->group(function () {
         // Dashboard & Students
         Route::get('/dashboard', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'index']);
         Route::get('/students', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'students']);
@@ -726,7 +726,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::post('/reviews', [ReviewController::class, 'store']);
     
     // Admin API
-    Route::middleware(['auth:sanctum', 'role:super_admin|admin,sanctum'])->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware(['auth:sanctum', 'role:super_admin|admin'])->prefix('admin')->name('admin.')->group(function () {
         // --- CMS Ecosystem (Admin) ---
         Route::get('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getCompanies']);
         Route::post('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storeCompany']);
