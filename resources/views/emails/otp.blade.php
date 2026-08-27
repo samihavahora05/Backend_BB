@@ -6,6 +6,6 @@
     <div style="text-align: center;">
         <span class="otp-code">{{ $otp }}</span>
     </div>
-    <p>This OTP is valid for <strong>10 minutes</strong>. For security reasons, please do not share this OTP with anyone.</p>
+    <p>This OTP is valid for <strong>30 minutes</strong>. For security reasons, please do not share this OTP with anyone.</p>
     <p>If you did not request this, please change your password immediately.</p>
 @endsection

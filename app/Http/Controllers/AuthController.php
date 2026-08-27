@@ -184,7 +184,7 @@ class AuthController extends Controller
         
         $otp = rand(100000, 999999);
         // Using password_reset_ prefix
-        Cache::put('password_reset_' . $user->email, $otp, now()->addMinutes(15));
+        Cache::put('password_reset_' . $user->email, $otp, now()->addMinutes(30));
         
         SendQueuedEmailJob::dispatch(
             $user->email,
@@ -256,7 +256,7 @@ class AuthController extends Controller
         }
 
         $otp = rand(100000, 999999);
-        Cache::put('login_otp_' . $user->phone, $otp, now()->addMinutes(5));
+        Cache::put('login_otp_' . $user->phone, $otp, now()->addMinutes(30));
         Cache::put($cooldownKey, true, now()->addSeconds(30));
 
         \App\Jobs\SendSmsOtpJob::dispatch($user->phone, $otp);

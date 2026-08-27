@@ -26,7 +26,7 @@ class SendSmsOtpJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            $message = "Your Blueboxx DA verification code is: {$this->otp}. Valid for 5 minutes.";
+            $message = "Your Blueboxx DA verification code is: {$this->otp}. Valid for 30 minutes.";
             
             $gateway = SmsGatewayManager::resolve();
             $success = $gateway->send($this->phone, $message);
