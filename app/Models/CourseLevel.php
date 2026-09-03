@@ -21,6 +21,11 @@ class CourseLevel extends Model
         'updated_by',
     ];
 
+    public function getNameAttribute(): string
+    {
+        return $this->title ?? '';
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -67,6 +67,14 @@ Route::get('/reviews', [ReviewController::class, 'index']);
 Route::apiResource('placement-partners', PlacementPartnerController::class)->only(['index', 'show']);
 Route::apiResource('success-stories', SuccessStoryController::class)->only(['index', 'show']);
 
+// Public CMS Ecosystem Routes (Accessible via /api/cms/* and /api/*)
+Route::get('/cms/companies', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCompanies']);
+Route::get('/companies', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCompanies']);
+Route::get('/cms/placement-partners', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPlacementPartners']);
+Route::get('/cms/colleges', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getColleges']);
+Route::get('/cms/colleges/{slug}', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCollegeBySlug']);
+Route::get('/cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
+
 // ─── PUBLIC Course Catalog & Career APIs ─────────────────────────────────────
 Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     // Course Catalog
@@ -120,9 +128,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('internships/{id}/apply', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'apply']);
         Route::get('internships/my-applications', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'myApplications']);
 
-        // Expert Bookings
+        // Expert Bookings & Reviews
         Route::post('experts/sessions/{session_id}/book', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'bookSession']);
         Route::post('experts/bookings/{booking_id}/verify', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'verifyBooking']);
+        Route::post('experts/{id}/reviews', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'storeReview']);
 
         // Contests
         Route::post('contests/{id}/register', [\App\Http\Controllers\Api\Public\PublicContestController::class, 'register']);
@@ -150,6 +159,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     // ─── Experts & Mentorship Platform ────────────────────────────────────────
     Route::get('experts', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'index']);
     Route::get('experts/{id}', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'show'])->where('id', '[0-9]+');
+    Route::get('experts/{id}/reviews', [\App\Http\Controllers\Api\Public\PublicExpertController::class, 'getReviews']);
 
     // ─── Certificates (Verification & Download) ───────────────────────────────
     Route::get('certificates/{certificate_number}/verify', [\App\Http\Controllers\Api\Public\PublicCertificateController::class, 'verify']);
@@ -251,50 +261,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('/resume/upload', [\App\Http\Controllers\Api\Student\StudentResumeController::class, 'upload']);
     });
 
-    // Company Portal Integration (Old / Deprecated prefix? Kept for safety)
-    Route::middleware('role:company')->prefix('company')->name('company_old.')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'index']);
-        Route::get('/analytics', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'analytics']);
-        
-        // Jobs
-        Route::get('/jobs', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'index']);
-        Route::post('/jobs', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'store']);
-        Route::get('/jobs/{id}', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'show']);
-        Route::put('/jobs/{id}', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'update']);
-        Route::put('/jobs/{id}/status', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'updateStatus']);
-        Route::delete('/jobs/{id}', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'destroy']);
-        
-        // Internships
-        Route::get('/internships', [\App\Http\Controllers\Api\Company\CompanyInternshipController::class, 'index']);
-        
-        // Applicants
-        Route::get('/applicants', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'index']);
-        Route::get('/applicants/{id}', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'show']);
-        Route::post('/applicants/{id}/status', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'updateStatus']);
-        
-        // Interviews
-        Route::get('/interviews', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'index']);
-        Route::post('/interviews', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'store']);
-        Route::put('/interviews/{id}', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'update']);
-        
-        // Offers
-        Route::get('/offers', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'index']);
-        Route::post('/offers', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'store']);
-    });
-
-    // Expert Portal Integration (Old / Deprecated prefix?)
-    Route::middleware('role:expert')->prefix('expert')->name('expert_old.')->group(function () {
-        Route::get('/metrics', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'metrics']);
-        Route::get('/sessions/upcoming', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'upcomingSessions']);
-        Route::put('/sessions/{id}/meeting-link', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'updateMeetingLink']);
-        Route::get('/earnings/chart', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'earningsChart']);
-        Route::get('/mentees/requests', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'menteeRequests']);
-        Route::post('/mentees/requests/{id}/accept', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'acceptRequest']);
-        Route::post('/mentees/requests/{id}/decline', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'declineRequest']);
-        Route::get('/transactions', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'transactions']);
-        Route::get('/mentees', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'mentees']);
-        Route::get('/schedule', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'schedule']);
-    });
+    // ─────────────────────────────────────────────────────────────────────────────
 
     // Company Portal Integration
     Route::middleware(['auth:sanctum', 'role:company'])->prefix('company')->name('company.')->group(function () {
@@ -459,7 +426,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/mentor-sessions', function (\Illuminate\Http\Request $r) {
             $userId = $r->user()->id;
             
-            $sessions = \App\Models\MentorSession::with(['expert.user', 'expertProfile.user'])
+            $sessions = \App\Models\MentorSession::with(['expert', 'expertProfile.user'])
                 ->where('student_id', $userId)
                 ->get()
                 ->map(function ($s) {
@@ -587,7 +554,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     });
     
     // Expert Dashboard API
-    Route::prefix('expert')->name('expert.')->group(function () {
+    Route::middleware('role:expert')->prefix('expert')->name('expert.')->group(function () {
         Route::get('/metrics', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'metrics']);
         Route::get('/sessions/upcoming', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'upcomingSessions']);
         Route::get('/earnings/chart', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'earningsChart']);
@@ -927,9 +894,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('dashboard-metrics', [\App\Http\Controllers\Api\Admin\AdminJobDashboardController::class, 'getMetrics']);
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'duplicate']);
             
-            // Applications
             Route::get('{id}/applications', [\App\Http\Controllers\Api\Admin\AdminJobApplicationController::class, 'index']);
+            Route::match(['put', 'patch', 'post'], '{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus']);
         });
+        Route::match(['put', 'patch', 'post'], 'jobs/{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus']);
         Route::apiResource('jobs', \App\Http\Controllers\Api\Admin\AdminJobController::class);
 
         // College Placement Drives
@@ -965,6 +933,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::post('{id}/courses', [\App\Http\Controllers\Api\Admin\AdminInstructorAssignmentController::class, 'assignCourse']);
             Route::get('{id}/metrics', [\App\Http\Controllers\Api\Admin\AdminInstructorDashboardController::class, 'getInstructorMetrics']);
         });
+        Route::match(['put', 'patch', 'post'], 'instructors/{id}', [\App\Http\Controllers\Api\Admin\AdminInstructorController::class, 'update']);
         Route::apiResource('instructors', \App\Http\Controllers\Api\Admin\AdminInstructorController::class);
         
         // ----- Enterprise Internship Management -----

@@ -41,17 +41,15 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         
         $exceptions->render(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, \Illuminate\Http\Request $request) {
-            if ($request->is('api/*')) {
+            if ($request->is('api/*') || $request->wantsJson()) {
                 $user = $request->user();
-                $data = [
-                    'message' => $e->getMessage(),
-                    'user_id' => $user ? $user->id : null,
-                    'user_email' => $user ? $user->email : null,
-                    'roles' => $user ? $user->roles()->get()->toArray() : [],
-                    'hasAnyRoleCompany' => $user ? $user->hasAnyRole(['company']) : false,
-                ];
-                \Illuminate\Support\Facades\Log::error('403 Unauthorized Details', $data);
-                return response()->json($data, 403);
+                if (!$user) {
+                    return response()->json(['message' => 'Unauthenticated.', 'success' => false], 401);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden. You do not have permission to access this resource.',
+                ], 403);
             }
         });
 

@@ -43,12 +43,9 @@ class JobController extends Controller
             'description' => $request->description,
             'job_type' => $request->job_type,
             'location' => $request->location,
-            'salary_range' => $request->salary_range,
             'requirements' => $request->requirements,
-            'status' => $request->status ?? 'open',
+            'status' => ($request->user() && method_exists($request->user(), 'hasRole') && $request->user()->hasRole('admin')) ? ($request->status ?? 'active') : 'pending_approval',
         ]);
-
-        // Send notifications to all students/job-seekers
         $students = User::role(['student', 'job-seeker'])->get();
         foreach ($students as $student) {
             $student->notify(new PlatformNotification(

@@ -19,12 +19,27 @@ class CmsPublicController extends Controller
             }
         } catch (\Throwable $e) {}
 
-        return response()->json(
-            CmsCompany::with('industry')
-                ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
-                ->orderBy('display_order')
-                ->get()
-        );
+        $companies = CmsCompany::with('industry')
+            ->where(function ($q) {
+                $q->whereNull('status')
+                  ->orWhereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE']);
+            })
+            ->orderBy('display_order')
+            ->get()
+            ->map(function ($company) {
+                if ($company->logo_url && !str_starts_with($company->logo_url, 'http') && !str_starts_with($company->logo_url, '/')) {
+                    $company->logo_url = '/' . $company->logo_url;
+                }
+                if ($company->logo_url && !str_starts_with($company->logo_url, 'http')) {
+                    $frontendPath = base_path('../Frontend_BB_fixed_v4/public' . urldecode($company->logo_url));
+                    if (!file_exists($frontendPath)) {
+                        $company->logo_url = 'https://ui-avatars.com/api/?name=' . urlencode($company->name) . '&background=1B2A6B&color=fff&bold=true&format=svg';
+                    }
+                }
+                return $company;
+            });
+
+        return response()->json($companies);
     }
 
     public function getPlacementPartners()

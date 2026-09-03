@@ -29,6 +29,8 @@ class AdminJobController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('company_name', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
                   ->orWhereHas('company', function ($q2) use ($search) {
                       $q2->where('first_name', 'like', "%{$search}%")
                          ->orWhere('last_name', 'like', "%{$search}%")
@@ -50,9 +52,11 @@ class AdminJobController extends Controller
 
         // Transform so frontend always gets a consistent shape
         $jobs->getCollection()->transform(function ($job) {
-            $compName = $job->company?->name 
+            $compName = $job->company_name
+                ?: ($job->company?->companyProfile?->company_name)
+                ?: ($job->company?->name)
                 ?: (trim(($job->company?->first_name ?? '') . ' ' . ($job->company?->last_name ?? '')))
-                ?: ($job->company?->companyProfile?->company_name ?: 'Company');
+                ?: 'Company';
 
             return [
                 'id'                 => $job->id,
@@ -192,5 +196,19 @@ class AdminJobController extends Controller
         return response($csvData)
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', 'attachment; filename="jobs-export.csv"');
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $job = Job::findOrFail($id);
+        $status = strtolower($request->input('status', 'active'));
+        $job->status = $status;
+        $job->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Job marked as {$status}",
+            'data' => $job
+        ]);
     }
 }

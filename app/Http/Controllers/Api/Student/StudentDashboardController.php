@@ -130,7 +130,7 @@ class StudentDashboardController extends Controller
             ->values();
 
         // 6. Upcoming classes / mentor sessions
-        $upcomingSessions = MentorSession::with('expert.user')
+        $upcomingSessions = MentorSession::with(['expert', 'expertProfile.user'])
             ->where('student_id', $user->id)
             ->where('status', 'scheduled')
             ->where('scheduled_at', '>=', now())
@@ -138,12 +138,13 @@ class StudentDashboardController extends Controller
             ->take(2)
             ->get()
             ->map(function ($session) {
+                $mentorName = $session->expertProfile?->user?->name ?? $session->expert?->name ?? 'Mentor';
                 return [
-                    'title' => 'Mentor Session: ' . ($session->expert?->user?->first_name ?? 'Mentor'),
+                    'title' => 'Mentor Session: ' . $mentorName,
                     'course' => '1-on-1 Mentorship',
                     'date' => \Carbon\Carbon::parse($session->scheduled_at)->format('M d'),
                     'time' => \Carbon\Carbon::parse($session->scheduled_at)->format('g:i A'),
-                    'join_url' => $session->meeting_link
+                    'join_url' => $session->meeting_url ?? $session->meeting_link
                 ];
             });
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\JobBookmark;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,16 +18,16 @@ class PublicJobController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Job::query()->with('company.companyProfile')
-            ->where(function($q) {
-                $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'open', 'Open', 'OPEN', 'published', 'Published', 'PUBLISHED']);
-            });
+        $query = Job::query()->with('company.companyProfile');
 
         // Search
         if ($s = $request->query('search')) {
             $query->where(function ($q) use ($s) {
                 $q->where('title', 'like', "%{$s}%")
+                  ->orWhere('company_name', 'like', "%{$s}%")
                   ->orWhere('location', 'like', "%{$s}%")
+                  ->orWhere('department', 'like', "%{$s}%")
+                  ->orWhere('industry', 'like', "%{$s}%")
                   ->orWhereHas('company.companyProfile', function($query) use ($s) {
                       $query->where('company_name', 'like', "%{$s}%");
                   });
@@ -68,31 +69,51 @@ class PublicJobController extends Controller
             $remoteType = $j->remote_type ?: ($loc === 'Remote' ? 'Remote' : 'On-site');
 
             $salaryFormatted = 'Best in Industry';
-            if (!$j->hide_salary) {
+            if (!empty($j->display_salary)) {
+                $salaryFormatted = $j->display_salary;
+                if (is_numeric(str_replace(',', '', $salaryFormatted))) {
+                    $salaryFormatted = '₹' . number_format((float)str_replace(',', '', $salaryFormatted)) . '/mo';
+                }
+            } elseif (!$j->hide_salary) {
                 if ($j->salary_min && $j->salary_max) {
-                    $salaryFormatted = '₹' . ($j->salary_min >= 100000 ? round($j->salary_min/100000, 1) . ' - ₹' . round($j->salary_max/100000, 1) . ' LPA' : $j->salary_min . ' - ' . $j->salary_max);
+                    $salaryFormatted = ($j->salary_min >= 100000)
+                        ? ('₹' . round($j->salary_min/100000, 1) . ' - ₹' . round($j->salary_max/100000, 1) . ' LPA')
+                        : ('₹' . number_format($j->salary_min) . ($j->salary_min != $j->salary_max ? ' - ₹' . number_format($j->salary_max) : '') . '/mo');
                 } elseif ($j->salary_min) {
-                    $salaryFormatted = '₹' . ($j->salary_min >= 100000 ? round($j->salary_min/100000, 1) . ' LPA+' : $j->salary_min);
+                    $salaryFormatted = ($j->salary_min >= 100000)
+                        ? ('₹' . round($j->salary_min/100000, 1) . ' LPA+')
+                        : ('₹' . number_format($j->salary_min) . '/mo');
                 }
             }
 
             return [
                 'id'               => $j->id,
+                'job_id_prefix'    => $j->job_id_prefix,
                 'title'            => $j->title,
-                'company_name'     => $j->company_name,
-                'company_logo'     => $j->company_logo ? asset('storage/' . $j->company_logo) : null,
+                'company_name'     => $j->company_name ?: ($j->company?->companyProfile?->company_name ?? 'BlueBoxx Partner'),
+                'company_logo'     => $j->company_logo ? (str_starts_with($j->company_logo, 'http') ? $j->company_logo : asset('storage/' . $j->company_logo)) : null,
                 'location'         => $loc,
+                'state'            => $j->state,
+                'area'             => $j->area,
                 'remote_type'      => $remoteType,
                 'workplace_type'   => $remoteType,
                 'job_type'         => $j->employment_type ?? 'Full-Time',
                 'employment_type'  => $j->employment_type ?? 'Full-Time',
                 'experience_level' => $j->experience_level,
+                'education_qualification' => $j->education_qualification,
                 'salary'           => $salaryFormatted,
                 'salary_min'       => $j->hide_salary ? null : $j->salary_min,
                 'salary_max'       => $j->hide_salary ? null : $j->salary_max,
                 'hide_salary'      => $j->hide_salary,
-                'is_featured'      => $j->is_featured,
-                'application_deadline' => $j->application_deadline?->format('M d, Y'),
+                'vacancies'        => $j->vacancies ?? 1,
+                'shift_timings'    => $j->shift_timings,
+                'industry'         => $j->industry,
+                'department'       => $j->department,
+                'required_skills'  => is_array($j->required_skills) ? $j->required_skills : (is_string($j->required_skills) ? json_decode($j->required_skills, true) : []),
+                'contact_name'     => $j->contact_name,
+                'contact_phone'    => $j->contact_phone,
+                'is_featured'      => (bool)$j->is_featured,
+                'application_deadline' => $j->application_deadline ? Carbon::parse($j->application_deadline)->format('M d, Y') : null,
                 'posted_at'        => $j->created_at ? $j->created_at->diffForHumans() : 'Recently',
             ];
         });
@@ -115,7 +136,7 @@ class PublicJobController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $job = Job::with('company.companyProfile')->whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED', 'open', 'Open', 'OPEN'])->findOrFail($id);
+        $job = Job::with('company.companyProfile')->findOrFail($id);
 
         // Track view
         \DB::table('job_views')->insertOrIgnore([
@@ -173,7 +194,7 @@ class PublicJobController extends Controller
      */
     public function apply(Request $request, $id)
     {
-        $job = Job::whereIn('status', ['active', 'Active', 'ACTIVE', 'published', 'Published', 'PUBLISHED', 'open', 'Open', 'OPEN'])->findOrFail($id);
+        $job = Job::findOrFail($id);
 
         // Check deadline
         if ($job->application_deadline && $job->application_deadline->isPast()) {

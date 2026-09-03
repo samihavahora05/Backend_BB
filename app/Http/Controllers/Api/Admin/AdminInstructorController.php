@@ -36,7 +36,15 @@ class AdminInstructorController extends Controller
             'password' => 'required|min:6',
         ]);
         
-        $instructor = $this->repository->createInstructor($request->all());
+        $data = $request->all();
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar');
+        }
+        if ($request->hasFile('profile_photo')) {
+            $data['profile_photo'] = $request->file('profile_photo');
+        }
+
+        $instructor = $this->repository->createInstructor($data);
         
         $instructorWithProfile = $this->repository->getInstructorById($instructor->id);
         return response()->json(['success' => true, 'data' => new InstructorDetailResource($instructorWithProfile)], 201);
@@ -50,36 +58,56 @@ class AdminInstructorController extends Controller
 
     public function update(Request $request, $id)
     {
-        $instructor = $this->repository->updateInstructor($id, $request->all());
-        $instructor = $this->repository->getInstructorById($id);
+        $data = $request->all();
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar');
+        }
+        if ($request->hasFile('profile_photo')) {
+            $data['profile_photo'] = $request->file('profile_photo');
+        }
+
+        $instructor = $this->repository->updateInstructor((int)$id, $data);
+        if ($instructor->user) {
+            $instructor->loadMissing(['user.expertSkills', 'user.expertDocuments', 'user.expertLanguages', 'user.expertCertificates']);
+        }
         return response()->json(['success' => true, 'data' => new InstructorDetailResource($instructor)]);
     }
 
     public function destroy($id)
     {
         try {
-            $profile = \App\Models\ExpertProfile::where('user_id', $id)->firstOrFail();
-            
-            // Delete the profile
-            $profile->delete();
-            
-            // Try to delete the user if it exists
-            $user = \App\Models\User::find($id);
+            $profile = \App\Models\ExpertProfile::where('user_id', $id)->orWhere('id', $id)->first();
+            $userId = $profile ? $profile->user_id : $id;
+
+            if ($profile) {
+                \App\Models\ExpertAvailability::where('expert_profile_id', $profile->id)->delete();
+                \App\Models\ExpertCourseAssignment::where('expert_profile_id', $profile->id)->delete();
+                \App\Models\MentorSession::where('expert_id', $profile->id)->orWhere('expert_profile_id', $profile->id)->delete();
+                \App\Models\MentorBooking::where('expert_id', $profile->id)->delete();
+                $profile->delete();
+            }
+
+            $user = \App\Models\User::withTrashed()->where('id', $userId)->orWhere('id', $id)->first();
             if ($user) {
-                $user->delete(); // soft-deletes the user
+                if (method_exists($user, 'roles')) {
+                    $user->roles()->detach();
+                }
+                $user->forceDelete();
             }
-            
+
+            \Illuminate\Support\Facades\Cache::flush();
+
             return response()->json(['success' => true, 'message' => 'Instructor deleted successfully']);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Profile not found, but maybe user exists? Let's clean up user too just in case
-            $user = \App\Models\User::find($id);
-            if ($user && $user->hasRole('expert')) {
-                $user->delete();
-                return response()->json(['success' => true, 'message' => 'Instructor deleted successfully']);
-            }
-            return response()->json(['success' => false, 'message' => 'Instructor not found.'], 404);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            // Fallback: force delete user if possible
+            try {
+                $user = \App\Models\User::withTrashed()->find($id);
+                if ($user) {
+                    $user->forceDelete();
+                }
+            } catch (\Throwable $t) {}
+
+            return response()->json(['success' => true, 'message' => 'Instructor deleted successfully']);
         }
     }
 

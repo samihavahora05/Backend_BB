@@ -9,14 +9,44 @@ class InstructorDetailResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $firstName = $this->user?->first_name ?? '';
+        $lastName = $this->user?->last_name ?? '';
+        $fullName = trim($firstName . ' ' . $lastName);
+
+        $rawPhoto = $this->profile_photo;
+        $avatarUrl = null;
+        if ($rawPhoto) {
+            if (str_starts_with($rawPhoto, 'http://') || str_starts_with($rawPhoto, 'https://') || str_starts_with($rawPhoto, 'data:')) {
+                $avatarUrl = $rawPhoto;
+            } elseif (str_starts_with($rawPhoto, '/uploads/') || str_starts_with($rawPhoto, 'uploads/')) {
+                $avatarUrl = str_starts_with($rawPhoto, '/') ? $rawPhoto : '/' . $rawPhoto;
+            } elseif (str_starts_with($rawPhoto, 'storage/') || str_starts_with($rawPhoto, '/storage/')) {
+                $avatarUrl = '/' . ltrim($rawPhoto, '/');
+            } else {
+                $avatarUrl = '/storage/' . ltrim($rawPhoto, '/');
+            }
+        }
+
         return [
-            'id' => $this->user_id,
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+            'first_name' => $firstName ?: 'Expert',
+            'last_name' => $lastName,
+            'name' => !empty($fullName) ? $fullName : 'Expert User',
+            'email' => $this->user?->email ?? '',
+            'phone' => $this->user?->phone ?? '',
+            'profile_photo' => $avatarUrl,
+            'avatar' => $avatarUrl,
+            'designation' => $this->designation ?? 'Expert',
+            'company' => $this->company ?? 'Independent',
+            'specialization' => $this->specialization ?? 'Career & Technical Mentorship',
+            'hourly_rate' => (float)($this->hourly_rate ?? 1500),
             'user' => [
-                'first_name' => $this->user->first_name,
-                'last_name' => $this->user->last_name,
-                'email' => $this->user->email,
-                'phone' => $this->user->phone,
-                'profile_photo' => $this->user->profile_photo,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $this->user?->email ?? '',
+                'phone' => $this->user?->phone ?? '',
+                'profile_photo' => $avatarUrl,
             ],
             'professional_details' => [
                 'designation' => $this->designation,
@@ -27,8 +57,8 @@ class InstructorDetailResource extends JsonResource
                 'specialization' => $this->specialization,
             ],
             'financials' => [
-                'hourly_rate' => $this->hourly_rate,
-                'is_available' => $this->is_available,
+                'hourly_rate' => (float)($this->hourly_rate ?? 1500),
+                'is_available' => (bool)($this->is_available ?? true),
             ],
             'social_links' => [
                 'linkedin' => $this->linkedin_url,

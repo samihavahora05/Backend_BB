@@ -39,39 +39,78 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        // Admin creating a user via the user manager panel
         $request->validate([
-            'name'  => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'role'  => 'required|string|exists:roles,name',
-            'password' => 'required|min:6',
+            'role'  => 'sometimes|string',
+            'password' => 'nullable|min:6',
         ]);
 
+        $role = $request->role ?: 'expert';
+
+        $firstName = $request->first_name ?: (explode(' ', $request->name ?? '')[0] ?? 'User');
+        $lastName = $request->last_name ?: (implode(' ', array_slice(explode(' ', $request->name ?? ''), 1)) ?: '');
+        $fullName = trim($firstName . ' ' . $lastName) ?: ($request->name ?: 'User');
+
         $user = User::create([
-            'first_name' => explode(' ', $request->name)[0],
-            'last_name'  => implode(' ', array_slice(explode(' ', $request->name), 1)) ?: '',
-            'email'      => $request->email,
-            'password'   => \Illuminate\Support\Facades\Hash::make($request->password),
+            'first_name' => $firstName,
+            'last_name'  => $lastName,
+            'name'       => $fullName,
+            'email'      => strtolower(trim($request->email)),
+            'phone'      => $request->phone ?? null,
+            'password'   => \Illuminate\Support\Facades\Hash::make($request->password ?? 'Password@123'),
             'status'     => 'active',
         ]);
 
-        $user->assignRole($request->role);
+        try {
+            $roleObj = \Spatie\Permission\Models\Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+            $user->assignRole($roleObj);
+        } catch (\Throwable $e) {}
 
         // Auto-create basic profile based on role so they appear in public listings immediately
-        if ($request->role === 'expert') {
+        if ($role === 'expert') {
+            $photoUrl = null;
+            if ($request->hasFile('avatar')) {
+                $path = $request->file('avatar')->store('avatars', 'public');
+                $photoUrl = '/storage/' . $path;
+            } elseif ($request->hasFile('profile_photo')) {
+                $path = $request->file('profile_photo')->store('avatars', 'public');
+                $photoUrl = '/storage/' . $path;
+            } else {
+                $avatarStr = $request->input('avatar') ?: $request->input('profile_photo');
+                if ($avatarStr && strpos($avatarStr, 'data:image') === 0) {
+                    $imageParts = explode(';base64,', $avatarStr);
+                    if (count($imageParts) === 2) {
+                        $imageType = explode('/', $imageParts[0])[1] ?? 'png';
+                        if (str_contains($imageType, ';')) $imageType = explode(';', $imageType)[0];
+                        $imageDecoded = base64_decode($imageParts[1]);
+                        $fileName = 'avatars/' . uniqid() . '.' . $imageType;
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, $imageDecoded);
+                        $photoUrl = '/storage/' . $fileName;
+                    }
+                } elseif ($avatarStr && (str_starts_with($avatarStr, 'http') || str_starts_with($avatarStr, '/'))) {
+                    $photoUrl = $avatarStr;
+                }
+            }
+
             \App\Models\ExpertProfile::create([
-                'user_id' => $user->id,
-                'designation' => 'Expert',
-                'company' => 'Independent',
-                'hourly_rate' => 0,
-                'is_available' => true,
-                'is_verified' => false
+                'user_id'        => $user->id,
+                'designation'    => $request->designation ?: 'Expert',
+                'company'        => $request->company ?: 'Independent',
+                'specialization' => $request->specialization ?: 'Career & Technical Mentorship',
+                'hourly_rate'    => !empty($request->hourly_rate) ? (float)$request->hourly_rate : 1500.0,
+                'profile_photo'  => $photoUrl,
+                'is_available'   => true,
+                'is_verified'    => true,
+                'approval_status'=> 'approved',
+                'average_rating' => 5.0,
+                'total_reviews'  => 0,
             ]);
-        } elseif ($request->role === 'student') {
+            \Illuminate\Support\Facades\Cache::flush();
+        } elseif ($role === 'student') {
             \App\Models\StudentProfile::create([
                 'user_id' => $user->id,
             ]);
-        } elseif ($request->role === 'company') {
+        } elseif ($role === 'company') {
             \App\Models\CompanyProfile::create([
                 'user_id' => $user->id,
                 'company_name' => 'Pending Name'
@@ -81,7 +120,6 @@ class UserController extends Controller
         return response()->json(['success' => true, 'data' => $user->load('roles')], 201);
     }
 
-
     public function show(string $id)
     {
         $user = User::with('roles')->findOrFail($id);
@@ -90,11 +128,9 @@ class UserController extends Controller
         $role = $user->roles()->first()?->name;
         $profileRelation = match($role) {
             'student' => 'studentProfile',
-            'expert' => 'expertProfile',
             'company' => 'companyProfile',
             'college' => 'collegeProfile',
-            'intern' => 'internProfile',
-            'job-seeker' => 'jobSeekerProfile',
+            'expert' => 'expertProfile',
             default => null
         };
 
@@ -107,20 +143,68 @@ class UserController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'role' => 'sometimes|string|exists:roles,name'
-        ]);
-
         $user = User::findOrFail($id);
         
-        if ($request->has('name')) {
+        if ($request->filled('first_name') || $request->filled('last_name')) {
+            $user->first_name = $request->first_name ?: $user->first_name;
+            $user->last_name = $request->last_name ?: $user->last_name;
+            $user->name = trim($user->first_name . ' ' . $user->last_name);
+        } elseif ($request->filled('name')) {
             $user->name = $request->name;
-            $user->save();
         }
 
-        if ($request->has('role')) {
+        if ($request->filled('phone')) {
+            $user->phone = $request->phone;
+        }
+
+        if ($request->filled('email')) {
+            $user->email = strtolower(trim($request->email));
+        }
+
+        $user->save();
+
+        if ($request->filled('role')) {
             $user->syncRoles([$request->role]);
+        }
+
+        // Handle expert profile updates if present
+        $profile = \App\Models\ExpertProfile::where('user_id', $user->id)->first();
+        if ($profile) {
+            $photoUrl = null;
+            if ($request->hasFile('avatar')) {
+                $path = $request->file('avatar')->store('avatars', 'public');
+                $photoUrl = '/storage/' . $path;
+            } elseif ($request->hasFile('profile_photo')) {
+                $path = $request->file('profile_photo')->store('avatars', 'public');
+                $photoUrl = '/storage/' . $path;
+            } else {
+                $avatarStr = $request->input('avatar') ?: $request->input('profile_photo');
+                if ($avatarStr && strpos($avatarStr, 'data:image') === 0) {
+                    $imageParts = explode(';base64,', $avatarStr);
+                    if (count($imageParts) === 2) {
+                        $imageType = explode('/', $imageParts[0])[1] ?? 'png';
+                        if (str_contains($imageType, ';')) $imageType = explode(';', $imageType)[0];
+                        $imageDecoded = base64_decode($imageParts[1]);
+                        $fileName = 'avatars/' . uniqid() . '.' . $imageType;
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, $imageDecoded);
+                        $photoUrl = '/storage/' . $fileName;
+                    }
+                } elseif ($avatarStr && (str_starts_with($avatarStr, 'http') || str_starts_with($avatarStr, '/'))) {
+                    $photoUrl = $avatarStr;
+                }
+            }
+
+            $updateData = [];
+            if ($request->filled('designation')) $updateData['designation'] = $request->designation;
+            if ($request->filled('company')) $updateData['company'] = $request->company;
+            if ($request->filled('specialization')) $updateData['specialization'] = $request->specialization;
+            if ($request->filled('hourly_rate')) $updateData['hourly_rate'] = (float)$request->hourly_rate;
+            if ($photoUrl) $updateData['profile_photo'] = $photoUrl;
+
+            if (!empty($updateData)) {
+                $profile->update($updateData);
+            }
+            \Illuminate\Support\Facades\Cache::flush();
         }
 
         return response()->json([
@@ -131,10 +215,24 @@ class UserController extends Controller
 
     public function destroy(string $id)
     {
-        $user = User::findOrFail($id);
-        $user->delete();
+        $user = User::withTrashed()->find($id);
+        if ($user) {
+            $profile = \App\Models\ExpertProfile::where('user_id', $user->id)->first();
+            if ($profile) {
+                \App\Models\ExpertAvailability::where('expert_profile_id', $profile->id)->delete();
+                \App\Models\ExpertCourseAssignment::where('expert_profile_id', $profile->id)->delete();
+                \App\Models\MentorSession::where('expert_id', $profile->id)->orWhere('expert_profile_id', $profile->id)->delete();
+                \App\Models\MentorBooking::where('expert_id', $profile->id)->delete();
+                $profile->delete();
+            }
+            if (method_exists($user, 'roles')) {
+                $user->roles()->detach();
+            }
+            $user->forceDelete();
+            \Illuminate\Support\Facades\Cache::flush();
+        }
 
-        return response()->json(['message' => 'User soft deleted successfully']);
+        return response()->json(['message' => 'User deleted successfully']);
     }
 
     public function verifyProfile(Request $request, string $id)

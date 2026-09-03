@@ -16,7 +16,23 @@ class CmsEcosystemController extends Controller
     // === COMPANIES ===
     public function getCompanies()
     {
-        return response()->json(CmsCompany::with('industry')->orderBy('display_order')->get());
+        $companies = CmsCompany::with('industry')
+            ->orderBy('display_order')
+            ->get()
+            ->map(function ($company) {
+                if ($company->logo_url && !str_starts_with($company->logo_url, 'http') && !str_starts_with($company->logo_url, '/')) {
+                    $company->logo_url = '/' . $company->logo_url;
+                }
+                if ($company->logo_url && !str_starts_with($company->logo_url, 'http')) {
+                    $frontendPath = base_path('../Frontend_BB_fixed_v4/public' . urldecode($company->logo_url));
+                    if (!file_exists($frontendPath)) {
+                        $company->logo_url = 'https://ui-avatars.com/api/?name=' . urlencode($company->name) . '&background=1B2A6B&color=fff&bold=true&format=svg';
+                    }
+                }
+                return $company;
+            });
+
+        return response()->json($companies);
     }
 
     public function storeCompany(Request $request)
@@ -25,13 +41,28 @@ class CmsEcosystemController extends Controller
             'name' => 'required|string',
             'logo_url' => 'nullable|string',
             'industry_id' => 'nullable|exists:cms_industries,id',
+            'industry' => 'nullable|string',
+            'website_url' => 'nullable|string',
             'status' => 'nullable|in:published,draft,archived',
             'is_featured' => 'boolean'
         ]);
 
+        if (empty($validated['industry_id']) && !empty($request->input('industry'))) {
+            $ind = CmsIndustry::firstOrCreate(
+                ['name' => trim($request->input('industry'))],
+                ['slug' => Str::slug($request->input('industry'))]
+            );
+            $validated['industry_id'] = $ind->id;
+        }
+        unset($validated['industry']);
+
+        if (!empty($validated['logo_url']) && !str_starts_with($validated['logo_url'], 'http') && !str_starts_with($validated['logo_url'], '/')) {
+            $validated['logo_url'] = '/' . $validated['logo_url'];
+        }
+
         $validated['slug'] = Str::slug($validated['name']) . '-' . time();
         $company = CmsCompany::create($validated);
-        return response()->json($company, 201);
+        return response()->json($company->load('industry'), 201);
     }
 
     public function updateCompany(Request $request, $id)
@@ -41,16 +72,31 @@ class CmsEcosystemController extends Controller
             'name' => 'sometimes|string',
             'logo_url' => 'nullable|string',
             'industry_id' => 'nullable|exists:cms_industries,id',
+            'industry' => 'nullable|string',
+            'website_url' => 'nullable|string',
             'status' => 'nullable|in:published,draft,archived',
             'is_featured' => 'boolean'
         ]);
+
+        if (empty($validated['industry_id']) && !empty($request->input('industry'))) {
+            $ind = CmsIndustry::firstOrCreate(
+                ['name' => trim($request->input('industry'))],
+                ['slug' => Str::slug($request->input('industry'))]
+            );
+            $validated['industry_id'] = $ind->id;
+        }
+        unset($validated['industry']);
+
+        if (!empty($validated['logo_url']) && !str_starts_with($validated['logo_url'], 'http') && !str_starts_with($validated['logo_url'], '/')) {
+            $validated['logo_url'] = '/' . $validated['logo_url'];
+        }
 
         if (isset($validated['name']) && $validated['name'] !== $company->name) {
             $validated['slug'] = Str::slug($validated['name']) . '-' . time();
         }
 
         $company->update($validated);
-        return response()->json($company);
+        return response()->json($company->load('industry'));
     }
 
     public function deleteCompany($id)

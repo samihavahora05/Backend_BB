@@ -39,6 +39,28 @@ class MentorBooking extends Model
         return $this->belongsTo(User::class, 'student_id');
     }
 
+    public function setStartTimeAttribute($value)
+    {
+        if (!empty($value)) {
+            try {
+                $this->attributes['start_time'] = \Carbon\Carbon::parse($value)->format('H:i:s');
+                return;
+            } catch (\Exception $e) {}
+        }
+        $this->attributes['start_time'] = $value;
+    }
+
+    public function setEndTimeAttribute($value)
+    {
+        if (!empty($value)) {
+            try {
+                $this->attributes['end_time'] = \Carbon\Carbon::parse($value)->format('H:i:s');
+                return;
+            } catch (\Exception $e) {}
+        }
+        $this->attributes['end_time'] = $value;
+    }
+
     public function expert(): BelongsTo
     {
         return $this->belongsTo(ExpertProfile::class, 'expert_id');

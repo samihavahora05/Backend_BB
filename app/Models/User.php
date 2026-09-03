@@ -55,7 +55,9 @@ class User extends Authenticatable
      */
     public function getNameAttribute(): string
     {
-        return trim("{$this->first_name} {$this->last_name}");
+        $first = $this->attributes['first_name'] ?? '';
+        $last = $this->attributes['last_name'] ?? '';
+        return trim("{$first} {$last}");
     }
 
     /**
