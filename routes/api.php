@@ -888,19 +888,21 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::apiResource('students', \App\Http\Controllers\Api\Admin\AdminStudentController::class);
         
         // ----- Enterprise ATS Jobs Management -----
+        Route::post('jobs/import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
+        Route::get('jobs/sample-csv', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'sampleCsv']);
         Route::prefix('jobs')->group(function () {
             Route::post('import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
             Route::get('sample-csv', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'sampleCsv']);
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'bulkDelete']);
             Route::get('export', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'export']);
             Route::get('dashboard-metrics', [\App\Http\Controllers\Api\Admin\AdminJobDashboardController::class, 'getMetrics']);
-            Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'duplicate']);
+            Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'duplicate'])->where('id', '[0-9]+');
             
-            Route::get('{id}/applications', [\App\Http\Controllers\Api\Admin\AdminJobApplicationController::class, 'index']);
-            Route::match(['put', 'patch', 'post'], '{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus']);
+            Route::get('{id}/applications', [\App\Http\Controllers\Api\Admin\AdminJobApplicationController::class, 'index'])->where('id', '[0-9]+');
+            Route::match(['put', 'patch', 'post'], '{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus'])->where('id', '[0-9]+');
         });
-        Route::match(['put', 'patch', 'post'], 'jobs/{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus']);
-        Route::apiResource('jobs', \App\Http\Controllers\Api\Admin\AdminJobController::class);
+        Route::match(['put', 'patch', 'post'], 'jobs/{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus'])->where('id', '[0-9]+');
+        Route::apiResource('jobs', \App\Http\Controllers\Api\Admin\AdminJobController::class)->where(['job' => '[0-9]+']);
 
         // College Placement Drives
         Route::get('placement-drives', [\App\Http\Controllers\Api\Admin\AdminPlacementDriveController::class, 'index']);
