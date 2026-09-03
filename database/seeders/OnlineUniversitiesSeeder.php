@@ -156,36 +156,38 @@ class OnlineUniversitiesSeeder extends Seeder
         $dummyPlacement = "Dedicated Career Services Cell that provides placement assistance to all eligible students. Activities include resume building workshops, interview preparation, mock interviews, and virtual career fairs with top recruiting companies in India and globally.";
 
         foreach ($universities as $index => $uni) {
-            DB::table('cms_colleges')->insert([
-                'name' => $uni['name'],
-                'slug' => Str::slug($uni['name']) . '-' . time() . '-' . $index,
-                'location' => $uni['location'],
-                'website_url' => $uni['website_url'],
-                
-                'is_ugc_approved' => $uni['is_ugc_approved'],
-                'naac_grade' => $uni['naac_grade'],
-                'nirf_ranking' => $uni['nirf_ranking'],
-                'is_wes_approved' => $uni['is_wes_approved'],
-                
-                'degree_types' => json_encode($uni['degree_types']),
-                'popular_courses' => json_encode($uni['popular_courses']),
-                
-                'short_description' => "UGC-approved online degree programs from " . $uni['name'] . " with industry-aligned curriculum.",
-                'full_description' => $dummyFullDesc,
-                'admission_process' => $dummyAdmission,
-                'placement_support' => $dummyPlacement,
-                
-                'duration' => '2 - 3 Years',
-                'eligibility' => '10+2 / Graduation (depends on program)',
-                'is_featured' => ($index < 4) ? 1 : 0, // Feature top 4
-                'status' => 'published',
-                
-                // Fetch logos using clearbit
-                'logo_url' => 'https://logo.clearbit.com/' . parse_url($uni['website_url'], PHP_URL_HOST),
-                
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now()
-            ]);
+            DB::table('cms_colleges')->updateOrInsert(
+                ['name' => $uni['name']],
+                [
+                    'slug' => Str::slug($uni['name']),
+                    'location' => $uni['location'],
+                    'website_url' => $uni['website_url'],
+                    
+                    'is_ugc_approved' => $uni['is_ugc_approved'],
+                    'naac_grade' => $uni['naac_grade'],
+                    'nirf_ranking' => $uni['nirf_ranking'],
+                    'is_wes_approved' => $uni['is_wes_approved'],
+                    
+                    'degree_types' => json_encode($uni['degree_types']),
+                    'popular_courses' => json_encode($uni['popular_courses']),
+                    
+                    'short_description' => "UGC-approved online degree programs from " . $uni['name'] . " with industry-aligned curriculum.",
+                    'full_description' => $dummyFullDesc,
+                    'admission_process' => $dummyAdmission,
+                    'placement_support' => $dummyPlacement,
+                    
+                    'duration' => '2 - 3 Years',
+                    'eligibility' => '10+2 / Graduation (depends on program)',
+                    'is_featured' => ($index < 4) ? 1 : 0, // Feature top 4
+                    'status' => 'published',
+                    
+                    // Fetch logos using clearbit
+                    'logo_url' => 'https://logo.clearbit.com/' . parse_url($uni['website_url'], PHP_URL_HOST),
+                    
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]
+            );
         }
     }
 }

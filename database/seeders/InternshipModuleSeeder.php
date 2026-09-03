@@ -46,7 +46,6 @@ class InternshipModuleSeeder extends Seeder
             [
                 'company_id' => $company->id,
                 'title' => 'Full Stack Web Developer Intern',
-                'company_name' => 'Blueboxx Tech Labs',
                 'department' => 'Engineering',
                 'location' => 'Bangalore, India',
                 'mode' => 'Hybrid',
@@ -68,7 +67,6 @@ class InternshipModuleSeeder extends Seeder
             [
                 'company_id' => $company->id,
                 'title' => 'UI/UX Product Design Intern',
-                'company_name' => 'Blueboxx Creative Studio',
                 'department' => 'Design',
                 'location' => 'Remote',
                 'mode' => 'Remote',
@@ -90,7 +88,6 @@ class InternshipModuleSeeder extends Seeder
             [
                 'company_id' => $company->id,
                 'title' => 'Data Analytics & Insights Intern',
-                'company_name' => 'Blueboxx Analytics',
                 'department' => 'Data Science',
                 'location' => 'Mumbai, India',
                 'mode' => 'Onsite',
@@ -112,7 +109,6 @@ class InternshipModuleSeeder extends Seeder
             [
                 'company_id' => $company->id,
                 'title' => 'Digital Marketing & Growth Intern',
-                'company_name' => 'Blueboxx Media',
                 'department' => 'Marketing',
                 'location' => 'Remote',
                 'mode' => 'Remote',
@@ -134,7 +130,6 @@ class InternshipModuleSeeder extends Seeder
             [
                 'company_id' => $company->id,
                 'title' => 'Flutter Mobile App Developer Intern',
-                'company_name' => 'Blueboxx Mobile Innovations',
                 'department' => 'Engineering',
                 'location' => 'Vadodara, India',
                 'mode' => 'Hybrid',
@@ -156,38 +151,44 @@ class InternshipModuleSeeder extends Seeder
         ];
 
         foreach ($internships as $data) {
-            $internship = Internship::create($data);
+            $internship = Internship::firstOrCreate(
+                ['title' => $data['title'], 'company_id' => $data['company_id']],
+                $data
+            );
 
             // 2. Create Application for first internship
-            if ($internship->title === 'Software Engineering Intern') {
-                $application = InternshipApplication::create([
-                    'internship_id' => $internship->id,
-                    'user_id' => $student->id,
-                    'status' => 'under_review',
-                    'resume_url' => 'https://example.com/resume.pdf',
-                    'cover_letter' => 'I am very passionate about Laravel.',
-                    'github_url' => 'https://github.com/johndoe',
-                ]);
+            if ($internship->title === 'Full Stack Web Developer Intern') {
+                $application = InternshipApplication::firstOrCreate(
+                    ['internship_id' => $internship->id, 'user_id' => $student->id],
+                    [
+                        'status' => 'under_review',
+                        'resume_url' => 'https://example.com/resume.pdf',
+                        'cover_letter' => 'I am very passionate about full stack development.',
+                        'github_url' => 'https://github.com/johndoe',
+                    ]
+                );
 
                 // 3. Create Tasks
-                $task = InternshipTask::create([
-                    'internship_id' => $internship->id,
-                    'admin_id' => $admin->id,
-                    'title' => 'Week 1: Environment Setup',
-                    'description' => 'Install Laravel, set up DB, and create basic CRUD.',
-                    'type' => 'weekly',
-                    'deadline' => Carbon::now()->addDays(7),
-                    'max_marks' => 100,
-                ]);
+                $task = InternshipTask::firstOrCreate(
+                    ['internship_id' => $internship->id, 'title' => 'Week 1: Environment Setup'],
+                    [
+                        'admin_id' => $admin->id,
+                        'description' => 'Install Laravel, set up DB, and create basic CRUD.',
+                        'type' => 'weekly',
+                        'deadline' => Carbon::now()->addDays(7),
+                        'max_marks' => 100,
+                    ]
+                );
 
                 // 4. Create Submission
-                InternshipSubmission::create([
-                    'task_id' => $task->id,
-                    'user_id' => $student->id,
-                    'submission_text' => 'I have completed the setup. Here is the github link.',
-                    'github_link' => 'https://github.com/johndoe/internship-task-1',
-                    'status' => 'pending',
-                ]);
+                InternshipSubmission::firstOrCreate(
+                    ['task_id' => $task->id, 'user_id' => $student->id],
+                    [
+                        'submission_text' => 'I have completed the setup. Here is the github link.',
+                        'github_link' => 'https://github.com/johndoe/internship-task-1',
+                        'status' => 'pending',
+                    ]
+                );
             }
         }
     }

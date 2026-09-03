@@ -81,6 +81,8 @@ class DatabaseSeeder extends Seeder
             StudentModuleSeeder::class,
             InstructorModuleSeeder::class,
             OnlineUniversitiesSeeder::class,
+            ImportCompaniesSeeder::class,
+            ImportCollegesSeeder::class,
             CmsEcosystemSeeder::class,
             CmsContentSeeder::class,
             PlatformSettingsSeeder::class,
