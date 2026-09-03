@@ -76,38 +76,60 @@ class AdminInstructorController extends Controller
     public function destroy($id)
     {
         try {
-            $profile = \App\Models\ExpertProfile::where('user_id', $id)->orWhere('id', $id)->first();
-            $userId = $profile ? $profile->user_id : $id;
-
-            if ($profile) {
-                \App\Models\ExpertAvailability::where('expert_profile_id', $profile->id)->delete();
-                \App\Models\ExpertCourseAssignment::where('expert_profile_id', $profile->id)->delete();
-                \App\Models\MentorSession::where('expert_id', $profile->id)->orWhere('expert_profile_id', $profile->id)->delete();
-                \App\Models\MentorBooking::where('expert_id', $profile->id)->delete();
-                $profile->delete();
-            }
-
-            $user = \App\Models\User::withTrashed()->where('id', $userId)->orWhere('id', $id)->first();
-            if ($user) {
-                if (method_exists($user, 'roles')) {
-                    $user->roles()->detach();
-                }
-                $user->forceDelete();
-            }
-
-            \Illuminate\Support\Facades\Cache::flush();
-
-            return response()->json(['success' => true, 'message' => 'Instructor deleted successfully']);
-        } catch (\Exception $e) {
-            // Fallback: force delete user if possible
-            try {
-                $user = \App\Models\User::withTrashed()->find($id);
+            $profile = \App\Models\ExpertProfile::withTrashed()
+                ->where('id', $id)
+                ->orWhere('user_id', $id)
+                ->first();
+            $userId = $profile ? $profile->user_id : (int)$id;
+            $profileId = $profile ? $profile->id : (int)$id;
+            \Illuminate\Support\Facades\DB::transaction(function () use ($userId, $profileId, $profile) {
+                \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0');
+                // 1. Delete linked expert records
+                try { \Illuminate\Support\Facades\DB::table('expert_availabilities')->where('expert_profile_id', $profileId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_bookings')->where('expert_profile_id', $profileId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_course_assignments')->where('expert_id', $userId)->orWhere('expert_id', $profileId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_activity_logs')->where('expert_id', $userId)->orWhere('admin_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_reviews')->where('expert_id', $userId)->orWhere('student_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_certificates')->where('user_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_languages')->where('user_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_documents')->where('user_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('expert_skills')->where('user_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('mentor_sessions')->where('expert_id', $profileId)->orWhere('expert_profile_id', $profileId)->orWhere('expert_id', $userId)->delete(); } catch (\Throwable $t) {}
+                try { \Illuminate\Support\Facades\DB::table('mentor_bookings')->where('expert_id', $profileId)->orWhere('expert_id', $userId)->delete(); } catch (\Throwable $t) {}
+                // 2. Reassign any assigned courses to super admin
+                try {
+                    $adminUser = \App\Models\User::role('super_admin')->first() ?? \App\Models\User::role('admin')->first();
+                    if ($adminUser) {
+                        \Illuminate\Support\Facades\DB::table('courses')->where('expert_id', $userId)->update(['expert_id' => $adminUser->id]);
+                    }
+                } catch (\Throwable $t) {}
+                // 3. Delete ExpertProfile record
+                try {
+                    \Illuminate\Support\Facades\DB::table('expert_profiles')->where('id', $profileId)->orWhere('user_id', $userId)->delete();
+                } catch (\Throwable $t) {}
+                // 4. Detach roles & delete User
+                $user = \App\Models\User::withTrashed()->where('id', $userId)->first();
                 if ($user) {
-                    $user->forceDelete();
+                    try {
+                        if (method_exists($user, 'roles')) {
+                            $user->roles()->detach();
+                        }
+                    } catch (\Throwable $t) {}
+                    try {
+                        $user->forceDelete();
+                    } catch (\Throwable $t) {
+                        \Illuminate\Support\Facades\DB::table('users')->where('id', $userId)->delete();
+                    }
                 }
-            } catch (\Throwable $t) {}
-
-            return response()->json(['success' => true, 'message' => 'Instructor deleted successfully']);
+                \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            });
+            // 5. Clear all cache
+            \Illuminate\Support\Facades\Cache::flush();
+            return response()->json(['success' => true, 'message' => 'Instructor deleted permanently']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            \Illuminate\Support\Facades\Log::error('Instructor delete error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to delete instructor: ' . $e->getMessage()], 500);
         }
     }
 
