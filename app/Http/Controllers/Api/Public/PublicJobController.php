@@ -24,7 +24,6 @@ class PublicJobController extends Controller
         if ($s = $request->query('search')) {
             $query->where(function ($q) use ($s) {
                 $q->where('title', 'like', "%{$s}%")
-                  ->orWhere('company_name', 'like', "%{$s}%")
                   ->orWhere('location', 'like', "%{$s}%")
                   ->orWhere('department', 'like', "%{$s}%")
                   ->orWhere('industry', 'like', "%{$s}%")
