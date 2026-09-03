@@ -85,16 +85,21 @@ class CRMAndSalesSeeder extends Seeder
                 ]
             );
 
+            $paymentData = [
+                'user_id' => $student->id,
+                'transaction_id' => 'TXN-' . strtoupper(Str::random(12)),
+                'amount' => $order->total_amount,
+                'status' => 'completed',
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('payments', 'payment_gateway')) {
+                $paymentData['payment_gateway'] = 'Razorpay';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('payments', 'payment_method')) {
+                $paymentData['payment_method'] = 'Razorpay';
+            }
             Payment::firstOrCreate(
                 ['order_id' => $order->id],
-                [
-                    'user_id' => $student->id,
-                    'transaction_id' => 'TXN-' . strtoupper(Str::random(12)),
-                    'amount' => $order->total_amount,
-                    'payment_gateway' => 'Razorpay',
-                    'payment_method' => 'Razorpay',
-                    'status' => 'completed',
-                ]
+                $paymentData
             );
         }
     }
