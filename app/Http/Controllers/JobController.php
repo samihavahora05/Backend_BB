@@ -16,7 +16,7 @@ class JobController extends Controller
     public function index(Request $request)
     {
         $query = Job::with('company')
-            ->where('status', 'open');
+            ->whereIn('status', ['open', 'active', 'published']);
 
         $paginated = $this->paginateWithMeta(
             $query,
