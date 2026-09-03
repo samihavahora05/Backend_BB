@@ -68,7 +68,7 @@ class CRMAndSalesSeeder extends Seeder
                 ['user_id' => $student->id, 'order_number' => 'ORD-' . strtoupper(Str::random(8))],
                 [
                     'total_amount' => $course->price ?? 4999.00,
-                    'status' => 'success',
+                    'status' => 'completed',
                 ]
             );
 
@@ -89,7 +89,7 @@ class CRMAndSalesSeeder extends Seeder
                 'user_id' => $student->id,
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(12)),
                 'amount' => $order->total_amount,
-                'status' => 'success',
+                'status' => 'completed',
             ];
             if (\Illuminate\Support\Facades\Schema::hasColumn('payments', 'payment_gateway')) {
                 $paymentData['payment_gateway'] = 'Razorpay';
