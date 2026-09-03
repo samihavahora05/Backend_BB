@@ -211,4 +211,232 @@ class AdminJobController extends Controller
             'data' => $job
         ]);
     }
+
+    /**
+     * Download a sample CSV template for Job Import
+     */
+    public function sampleCsv()
+    {
+        $headers = [
+            'title', 'company', 'department', 'industry', 
+            'employment_type', 'experience_level', 'remote_type', 'location', 
+            'salary_min', 'salary_max', 'vacancies', 'required_skills',
+            'description', 'requirements', 'responsibilities', 'benefits'
+        ];
+
+        $sampleRow = [
+            'Senior Full Stack Developer',
+            'TechCorp Global',
+            'Engineering',
+            'IT & Software',
+            'Full-Time',
+            'Senior',
+            'Remote',
+            'Bangalore, India',
+            '1200000',
+            '1800000',
+            '3',
+            'React, Next.js, Node.js, TypeScript, PostgreSQL',
+            'We are looking for an experienced Full Stack Developer to build scalable web apps.',
+            '5+ years experience with React and Node.js; Strong TypeScript and cloud knowledge',
+            'Design and architect microservices; Write clean reusable code; Mentor junior developers',
+            'Health Insurance, Annual Bonus, Flexible Working Hours, Learning Allowance'
+        ];
+
+        $sampleRow2 = [
+            'UI/UX Product Designer',
+            'DesignHub Studio',
+            'Design',
+            'Media & Design',
+            'Full-Time',
+            'Mid-Level',
+            'Hybrid',
+            'Mumbai, India',
+            '600000',
+            '900000',
+            '2',
+            'Figma, Design Systems, Wireframing, User Research, Adobe XD',
+            'Create delightful user experiences and high-fidelity prototypes for client platforms.',
+            '3+ years product design experience with a strong online portfolio',
+            'Conduct user interviews, design wireframes and prototypes, collaborate with engineering',
+            'Gym Membership, Remote Fridays, Stock Options'
+        ];
+
+        $csv = fopen('php://temp', 'r+');
+        fputcsv($csv, $headers);
+        fputcsv($csv, $sampleRow);
+        fputcsv($csv, $sampleRow2);
+
+        rewind($csv);
+        $csvData = stream_get_contents($csv);
+        fclose($csv);
+
+        return response($csvData)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="jobs-sample-template.csv"');
+    }
+
+    /**
+     * Import jobs from uploaded CSV file
+     * POST /api/admin/jobs/import
+     */
+    public function importCsv(Request $request)
+    {
+        $request->validate([
+            'file' => 'nullable|file|mimes:csv,txt',
+            'csv_file' => 'nullable|file|mimes:csv,txt',
+        ]);
+
+        $file = $request->file('file') ?? $request->file('csv_file');
+
+        if (!$file && !$request->has('csv_data')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide a valid CSV file.'
+            ], 422);
+        }
+
+        $filePath = $file ? $file->getRealPath() : null;
+        $csvString = $request->input('csv_data');
+
+        if ($filePath) {
+            $handle = fopen($filePath, 'r');
+        } elseif ($csvString) {
+            $handle = fopen('php://temp', 'r+');
+            fwrite($handle, $csvString);
+            rewind($handle);
+        } else {
+            return response()->json(['success' => false, 'message' => 'No CSV content found.'], 422);
+        }
+
+        // Default Company / Admin
+        $defaultCompany = \App\Models\User::role('company')->first() 
+            ?? \App\Models\User::role('admin')->first() 
+            ?? \App\Models\User::role('super_admin')->first()
+            ?? auth()->user();
+
+        $defaultCompanyId = $defaultCompany ? $defaultCompany->id : 1;
+
+        // Read and normalize headers
+        $rawHeaders = fgetcsv($handle);
+        if (!$rawHeaders) {
+            fclose($handle);
+            return response()->json(['success' => false, 'message' => 'CSV file is empty.'], 422);
+        }
+
+        // Strip UTF-8 BOM if present
+        $rawHeaders[0] = preg_replace('/^\xEF\xBB\xBF/', '', $rawHeaders[0]);
+
+        $headerMap = [];
+        foreach ($rawHeaders as $idx => $h) {
+            $cleaned = strtolower(trim(str_replace([' ', '_', '-'], '', $h)));
+            $headerMap[$cleaned] = $idx;
+        }
+
+        $imported = 0;
+        $errors = [];
+        $rowNum = 1;
+
+        $getVal = function ($row, $keys, $default = null) use ($headerMap) {
+            foreach ((array)$keys as $k) {
+                $cleaned = strtolower(trim(str_replace([' ', '_', '-'], '', $k)));
+                if (isset($headerMap[$cleaned]) && isset($row[$headerMap[$cleaned]])) {
+                    $val = trim($row[$headerMap[$cleaned]]);
+                    if ($val !== '') return $val;
+                }
+            }
+            return $default;
+        };
+
+        DB::beginTransaction();
+        try {
+            while (($row = fgetcsv($handle)) !== false) {
+                $rowNum++;
+                // Skip empty lines
+                if (count(array_filter($row)) === 0) continue;
+
+                $title = $getVal($row, ['title', 'jobtitle', 'role', 'position', 'name']);
+                if (empty($title)) {
+                    $errors[] = "Row {$rowNum}: Missing Job Title.";
+                    continue;
+                }
+
+                $companyName = $getVal($row, ['company', 'companyname', 'employer', 'organization'], 'BlueBoxx Partner');
+                $department = $getVal($row, ['department', 'dept', 'category'], 'Engineering');
+                $industry = $getVal($row, ['industry', 'sector'], 'Technology');
+                $employmentType = $getVal($row, ['employmenttype', 'jobtype', 'type'], 'Full-Time');
+                $experienceLevel = $getVal($row, ['experiencelevel', 'experience', 'explevel'], 'Entry-Level');
+                $remoteType = $getVal($row, ['remotetype', 'workplacetype', 'workplace', 'mode'], 'Onsite');
+                $location = $getVal($row, ['location', 'city', 'joblocation'], 'India');
+                $salaryMin = $getVal($row, ['salarymin', 'minsalary', 'salary', 'packagesalary'], null);
+                $salaryMax = $getVal($row, ['salarymax', 'maxsalary'], null);
+                $vacancies = (int)$getVal($row, ['vacancies', 'openings', 'positions'], 1);
+                $description = $getVal($row, ['description', 'jobdescription', 'desc'], "Join our team as a {$title}.");
+                $status = strtolower($getVal($row, ['status'], 'active'));
+                if (!in_array($status, ['active', 'draft', 'closed', 'expired'])) {
+                    $status = 'active';
+                }
+
+                // Parse arrays (comma/newline/bullet separated)
+                $parseList = function ($text) {
+                    if (!$text) return [];
+                    if (is_array($text)) return $text;
+                    $items = preg_split('/[,\n\r;|]+/', $text);
+                    return array_values(array_filter(array_map('trim', $items)));
+                };
+
+                $skills = $parseList($getVal($row, ['requiredskills', 'skills', 'keyskills'], ''));
+                $requirements = $parseList($getVal($row, ['requirements', 'qualifications'], ''));
+                $responsibilities = $parseList($getVal($row, ['responsibilities', 'rolesresponsibilities', 'duties'], ''));
+                $benefits = $parseList($getVal($row, ['benefits', 'perks'], ''));
+
+                $jobIdPrefix = 'JOB-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
+
+                Job::create([
+                    'job_id_prefix'      => $jobIdPrefix,
+                    'company_id'         => $defaultCompanyId,
+                    'title'              => $title,
+                    'department'         => $department,
+                    'industry'           => $industry,
+                    'employment_type'    => $employmentType,
+                    'experience_level'   => $experienceLevel,
+                    'remote_type'        => $remoteType,
+                    'location'           => $location,
+                    'salary_min'         => is_numeric($salaryMin) ? (float)$salaryMin : null,
+                    'salary_max'         => is_numeric($salaryMax) ? (float)$salaryMax : null,
+                    'hide_salary'        => false,
+                    'description'        => $description,
+                    'responsibilities'   => $responsibilities,
+                    'requirements'       => $requirements,
+                    'benefits'           => $benefits,
+                    'required_skills'    => $skills,
+                    'vacancies'          => max(1, $vacancies),
+                    'application_deadline' => now()->addDays(45),
+                    'is_featured'        => $imported < 5,
+                    'status'             => $status,
+                ]);
+
+                $imported++;
+            }
+
+            DB::commit();
+            fclose($handle);
+
+            return response()->json([
+                'success'        => true,
+                'message'        => "Successfully imported {$imported} jobs.",
+                'imported_count' => $imported,
+                'errors'         => $errors,
+            ]);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            if (is_resource($handle)) fclose($handle);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'CSV Import failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
