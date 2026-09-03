@@ -91,7 +91,6 @@ class CRMAndSalesSeeder extends Seeder
                     'user_id' => $student->id,
                     'transaction_id' => 'TXN-' . strtoupper(Str::random(12)),
                     'amount' => $order->total_amount,
-                    'gateway' => 'Razorpay',
                     'payment_gateway' => 'Razorpay',
                     'payment_method' => 'Razorpay',
                     'status' => 'completed',
