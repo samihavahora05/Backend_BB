@@ -117,6 +117,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
     // ─── Auth-required routes (jobs, internships, expert booking, etc) ────────
     Route::middleware('auth:sanctum')->group(function () {
+        // Job Import
+        Route::match(['post', 'get'], 'jobs/import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
+
         // Job Applications
         Route::post('jobs/{id}/apply', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'apply']);
         Route::post('jobs/{id}/bookmark', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'toggleBookmark']);
@@ -888,10 +891,12 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::apiResource('students', \App\Http\Controllers\Api\Admin\AdminStudentController::class);
         
         // ----- Enterprise ATS Jobs Management -----
-        Route::post('jobs/import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
+        Route::match(['post', 'get'], 'jobs/import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
+        Route::match(['post', 'get'], 'jobs-import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
+        Route::match(['post', 'get'], 'import-jobs', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
         Route::get('jobs/sample-csv', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'sampleCsv']);
         Route::prefix('jobs')->group(function () {
-            Route::post('import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
+            Route::match(['post', 'get'], 'import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
             Route::get('sample-csv', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'sampleCsv']);
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'bulkDelete']);
             Route::get('export', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'export']);
