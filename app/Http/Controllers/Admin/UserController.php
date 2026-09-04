@@ -215,24 +215,41 @@ class UserController extends Controller
 
     public function destroy(string $id)
     {
-        $user = User::withTrashed()->find($id);
-        if ($user) {
-            $profile = \App\Models\ExpertProfile::where('user_id', $user->id)->first();
-            if ($profile) {
-                \App\Models\ExpertAvailability::where('expert_profile_id', $profile->id)->delete();
-                \App\Models\ExpertCourseAssignment::where('expert_profile_id', $profile->id)->delete();
-                \App\Models\MentorSession::where('expert_id', $profile->id)->orWhere('expert_profile_id', $profile->id)->delete();
-                \App\Models\MentorBooking::where('expert_id', $profile->id)->delete();
-                $profile->delete();
+        try {
+            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+            $user = User::withTrashed()->find($id);
+            if ($user) {
+                $profile = \App\Models\ExpertProfile::where('user_id', $user->id)->first();
+                if ($profile) {
+                    try { \Illuminate\Support\Facades\DB::table('expert_availabilities')->where('expert_profile_id', $profile->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_bookings')->where('expert_profile_id', $profile->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_course_assignments')->where('expert_id', $user->id)->orWhere('expert_profile_id', $profile->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_activity_logs')->where('expert_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_reviews')->where('expert_id', $user->id)->orWhere('student_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_certificates')->where('user_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_languages')->where('user_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_documents')->where('user_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('expert_skills')->where('user_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('mentor_sessions')->where('expert_id', $profile->id)->orWhere('expert_profile_id', $profile->id)->orWhere('expert_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    try { \Illuminate\Support\Facades\DB::table('mentor_bookings')->where('expert_id', $profile->id)->orWhere('expert_id', $user->id)->delete(); } catch (\Throwable $t) {}
+                    $profile->delete();
+                }
+                if (method_exists($user, 'roles')) {
+                    try { $user->roles()->detach(); } catch (\Throwable $t) {}
+                }
+                try {
+                    $user->forceDelete();
+                } catch (\Throwable $t) {
+                    \Illuminate\Support\Facades\DB::table('users')->where('id', $user->id)->delete();
+                }
+                \Illuminate\Support\Facades\Cache::flush();
             }
-            if (method_exists($user, 'roles')) {
-                $user->roles()->detach();
-            }
-            $user->forceDelete();
-            \Illuminate\Support\Facades\Cache::flush();
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+            return response()->json(['message' => 'User deleted successfully']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+            return response()->json(['message' => 'Failed to delete user: ' . $e->getMessage()], 500);
         }
-
-        return response()->json(['message' => 'User deleted successfully']);
     }
 
     public function verifyProfile(Request $request, string $id)

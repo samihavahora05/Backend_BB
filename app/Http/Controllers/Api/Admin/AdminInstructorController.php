@@ -81,8 +81,10 @@ class AdminInstructorController extends Controller
                 ->first();
             $userId = $profile ? $profile->user_id : (int)$id;
             $profileId = $profile ? $profile->id : (int)$id;
-            \Illuminate\Support\Facades\DB::transaction(function () use ($userId, $profileId, $profile) {
-                \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($userId, $profileId) {
                 // 1. Delete linked expert records
                 try { \Illuminate\Support\Facades\DB::table('expert_availabilities')->where('expert_profile_id', $profileId)->delete(); } catch (\Throwable $t) {}
                 try { \Illuminate\Support\Facades\DB::table('expert_bookings')->where('expert_profile_id', $profileId)->delete(); } catch (\Throwable $t) {}
@@ -95,18 +97,21 @@ class AdminInstructorController extends Controller
                 try { \Illuminate\Support\Facades\DB::table('expert_skills')->where('user_id', $userId)->delete(); } catch (\Throwable $t) {}
                 try { \Illuminate\Support\Facades\DB::table('mentor_sessions')->where('expert_id', $profileId)->orWhere('expert_profile_id', $profileId)->orWhere('expert_id', $userId)->delete(); } catch (\Throwable $t) {}
                 try { \Illuminate\Support\Facades\DB::table('mentor_bookings')->where('expert_id', $profileId)->orWhere('expert_id', $userId)->delete(); } catch (\Throwable $t) {}
+                
                 // 2. Reassign any assigned courses to super admin
                 try {
                     $adminUser = \App\Models\User::role('super_admin')->first() ?? \App\Models\User::role('admin')->first();
                     if ($adminUser) {
-                        \Illuminate\Support\Facades\DB::table('courses')->where('expert_id', $userId)->update(['expert_id' => $adminUser->id]);
+                        \Illuminate\Support\Facades\DB::table('courses')->where('expert_id', $userId)->orWhere('expert_id', $profileId)->update(['expert_id' => $adminUser->id]);
                     }
                 } catch (\Throwable $t) {}
+
                 // 3. Delete ExpertProfile record
                 try {
                     \Illuminate\Support\Facades\DB::table('expert_profiles')->where('id', $profileId)->orWhere('user_id', $userId)->delete();
                 } catch (\Throwable $t) {}
-                // 4. Detach roles & delete User
+
+                // 4. Detach roles & force delete User
                 $user = \App\Models\User::withTrashed()->where('id', $userId)->first();
                 if ($user) {
                     try {
@@ -120,13 +125,15 @@ class AdminInstructorController extends Controller
                         \Illuminate\Support\Facades\DB::table('users')->where('id', $userId)->delete();
                     }
                 }
-                \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1');
             });
+
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
             // 5. Clear all cache
             \Illuminate\Support\Facades\Cache::flush();
             return response()->json(['success' => true, 'message' => 'Instructor deleted permanently']);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
             \Illuminate\Support\Facades\Log::error('Instructor delete error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to delete instructor: ' . $e->getMessage()], 500);
         }
