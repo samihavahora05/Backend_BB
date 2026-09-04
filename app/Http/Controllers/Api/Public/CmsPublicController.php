@@ -8,17 +8,14 @@ use App\Models\CmsCompany;
 use App\Models\CmsPlacementPartner;
 use App\Models\CmsCollege;
 use App\Models\CmsPortfolio;
+use App\Models\StudentJobOffer;
+use App\Support\StorageHelper;
+use Illuminate\Support\Facades\DB;
 
 class CmsPublicController extends Controller
 {
     public function getCompanies()
     {
-        try {
-            if (\App\Models\CmsCompany::count() < 40) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            }
-        } catch (\Throwable $e) {}
-
         $companies = CmsCompany::with('industry')
             ->where(function ($q) {
                 $q->whereNull('status')
@@ -27,14 +24,8 @@ class CmsPublicController extends Controller
             ->orderBy('display_order')
             ->get()
             ->map(function ($company) {
-                if ($company->logo_url && !str_starts_with($company->logo_url, 'http') && !str_starts_with($company->logo_url, '/')) {
-                    $company->logo_url = '/' . $company->logo_url;
-                }
-                if ($company->logo_url && !str_starts_with($company->logo_url, 'http')) {
-                    $frontendPath = base_path('../Frontend_BB_fixed_v4/public' . urldecode($company->logo_url));
-                    if (!file_exists($frontendPath)) {
-                        $company->logo_url = 'https://ui-avatars.com/api/?name=' . urlencode($company->name) . '&background=1B2A6B&color=fff&bold=true&format=svg';
-                    }
+                if ($company->logo_url) {
+                    $company->logo_url = StorageHelper::url($company->logo_url);
                 }
                 return $company;
             });
@@ -50,7 +41,7 @@ class CmsPublicController extends Controller
                 ->orderBy('display_order')
                 ->get()
                 ->map(function ($partner) {
-                    $partner->logo_url = $partner->logo_url ? asset('storage/' . $partner->logo_url) : null;
+                    $partner->logo_url = $partner->logo_url ? StorageHelper::url($partner->logo_url) : null;
                     return $partner;
                 })
         );
@@ -62,6 +53,15 @@ class CmsPublicController extends Controller
             CmsCollege::whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                 ->orderBy('display_order')
                 ->get()
+                ->map(function ($college) {
+                    if ($college->logo_url) {
+                        $college->logo_url = StorageHelper::url($college->logo_url);
+                    }
+                    if ($college->banner_image) {
+                        $college->banner_image = StorageHelper::url($college->banner_image);
+                    }
+                    return $college;
+                })
         );
     }
 
@@ -70,6 +70,13 @@ class CmsPublicController extends Controller
         $college = CmsCollege::where('slug', $slug)
             ->whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
             ->firstOrFail();
+
+        if ($college->logo_url) {
+            $college->logo_url = StorageHelper::url($college->logo_url);
+        }
+        if ($college->banner_image) {
+            $college->banner_image = StorageHelper::url($college->banner_image);
+        }
             
         return response()->json($college);
     }
@@ -80,61 +87,74 @@ class CmsPublicController extends Controller
             CmsPortfolio::whereIn('status', ['published', 'Published', 'PUBLISHED', 'active', 'Active', 'ACTIVE'])
                 ->orderBy('display_order')
                 ->get()
+                ->map(function ($p) {
+                    if ($p->image_url) {
+                        $p->image_url = StorageHelper::url($p->image_url);
+                    }
+                    return $p;
+                })
         );
     }
 
     public function getJobOffers()
     {
+        $offers = StudentJobOffer::where('is_active', true)
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($offer) {
+                if ($offer->avatar_url) {
+                    $offer->avatar_url = StorageHelper::url($offer->avatar_url);
+                }
+                return $offer;
+            });
+
+        return response()->json($offers);
+    }
+
+    public function saveJobOffers(Request $request)
+    {
+        $students = $request->input('students', []);
+        if (!is_array($students) || empty($students)) {
+            return response()->json(['message' => 'No student records provided.'], 400);
+        }
+
+        DB::beginTransaction();
         try {
-            if (!\Illuminate\Support\Facades\Schema::hasTable('student_job_offers')) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            StudentJobOffer::truncate();
+
+            foreach ($students as $index => $st) {
+                $name = $st['student_name'] ?? $st['name'] ?? ('Student ' . ($index + 1));
+                $img = $st['image_url'] ?? $st['avatar_url'] ?? $st['image'] ?? null;
+
+                StudentJobOffer::create([
+                    'student_name' => $name,
+                    'degree'       => $st['degree'] ?? 'Alumni',
+                    'company_name' => $st['company_name'] ?? $st['company'] ?? 'Partner Enterprise',
+                    'role'         => $st['role'] ?? $st['designation'] ?? 'Graphic Design',
+                    'offered_on'   => $st['offered_on'] ?? now()->format('d M Y'),
+                    'package'      => $st['package'] ?? 'Best in Industry',
+                    'avatar_url'   => $img,
+                    'is_active'    => true,
+                ]);
             }
-            $offers = \App\Models\StudentJobOffer::where('is_active', true)
-                ->orderBy('id', 'asc')
-                ->get();
-            return response()->json($offers);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Student showcase saved successfully.']);
         } catch (\Throwable $e) {
-            // Fallback mock payload if migration is in progress
-            return response()->json([
-                [
-                    'id' => 1,
-                    'student_name' => 'Ananya Sharma',
-                    'degree'       => 'B.Tech - CSE',
-                    'company_name' => 'Infosys',
-                    'role'         => 'Software Engineer',
-                    'offered_on'   => '10 Mar 2025',
-                ],
-                [
-                    'id' => 2,
-                    'student_name' => 'Rahul Verma',
-                    'degree'       => 'MBA - Marketing',
-                    'company_name' => 'HDFC Bank',
-                    'role'         => 'Business Analyst',
-                    'offered_on'   => '25 Feb 2025',
-                ],
-                [
-                    'id' => 3,
-                    'student_name' => 'Priya Nair',
-                    'degree'       => 'B.Sc - Data Science',
-                    'company_name' => 'TCS',
-                    'role'         => 'Data Analyst',
-                    'offered_on'   => '05 Apr 2025',
-                ],
-            ]);
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to save student showcase: ' . $e->getMessage()], 500);
         }
     }
 
     public function getTestimonials()
     {
         try {
-            if (!\Illuminate\Support\Facades\Schema::hasTable('testimonials')) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            }
-            $testimonials = \Illuminate\Support\Facades\DB::table('testimonials')
+            $testimonials = DB::table('testimonials')
                 ->whereIn('status', ['active', 'Active', 'published', 'Published', 'PUBLISHED'])
                 ->orderBy('display_order', 'asc')
                 ->get()
                 ->map(function ($t) {
+                    $rawImg = $t->image_url ?? $t->photo_url ?? null;
                     return [
                         'id'          => $t->id,
                         'name'        => $t->name,
@@ -143,7 +163,7 @@ class CmsPublicController extends Controller
                         'review'      => $t->review ?? $t->content ?? '',
                         'content'     => $t->review ?? $t->content ?? '',
                         'rating'      => (int)($t->rating ?? 5),
-                        'image_url'   => $t->image_url ?? $t->photo_url ?? null,
+                        'image_url'   => $rawImg ? StorageHelper::url($rawImg) : null,
                         'type'        => $t->type ?? 'job'
                     ];
                 });

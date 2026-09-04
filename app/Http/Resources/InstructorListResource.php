@@ -14,18 +14,7 @@ class InstructorListResource extends JsonResource
         $fullName = trim($firstName . ' ' . $lastName);
 
         $rawPhoto = $this->profile_photo;
-        $avatarUrl = null;
-        if ($rawPhoto) {
-            if (str_starts_with($rawPhoto, 'http://') || str_starts_with($rawPhoto, 'https://') || str_starts_with($rawPhoto, 'data:')) {
-                $avatarUrl = $rawPhoto;
-            } elseif (str_starts_with($rawPhoto, '/uploads/') || str_starts_with($rawPhoto, 'uploads/')) {
-                $avatarUrl = str_starts_with($rawPhoto, '/') ? $rawPhoto : '/' . $rawPhoto;
-            } elseif (str_starts_with($rawPhoto, 'storage/') || str_starts_with($rawPhoto, '/storage/')) {
-                $avatarUrl = '/' . ltrim($rawPhoto, '/');
-            } else {
-                $avatarUrl = '/storage/' . ltrim($rawPhoto, '/');
-            }
-        }
+        $avatarUrl = $rawPhoto ? \App\Support\StorageHelper::url($rawPhoto) : null;
 
         return [
             'id' => $this->id,

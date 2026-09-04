@@ -19,14 +19,27 @@ return [
 
     'allowed_methods' => ['*'],
 
-   'allowed_origins' => [
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000', 
-    'https://sarvakshetra.com',
-    'https://www.sarvakshetra.com',
-    'https://blueboxx.in',
-    'https://www.blueboxx.in',
-],
+    'allowed_origins' => array_values(array_unique(array_filter(array_merge(
+        [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:3001',
+            'https://sarvakshetra.com',
+            'https://www.sarvakshetra.com',
+            'https://blueboxx.in',
+            'https://www.blueboxx.in',
+            'https://admin.blueboxx.in',
+            'https://app.blueboxx.in',
+        ],
+        explode(',', env('CORS_ALLOWED_ORIGINS', ''))
+    )))),
+
+    'allowed_origins_patterns' => [
+        '#^https?://.*\.blueboxx\.in$#i',
+        '#^https?://.*\.sarvakshetra\.com$#i',
+        '#^https?://.*\.vercel\.app$#i',
+    ],
 
 
     'allowed_headers' => ['*'],

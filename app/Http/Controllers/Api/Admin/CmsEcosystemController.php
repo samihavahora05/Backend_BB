@@ -9,7 +9,10 @@ use App\Models\CmsPlacementPartner;
 use App\Models\CmsCollege;
 use App\Models\CmsPortfolio;
 use App\Models\CmsIndustry;
+use App\Models\StudentJobOffer;
+use App\Support\StorageHelper;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class CmsEcosystemController extends Controller
 {
@@ -20,14 +23,8 @@ class CmsEcosystemController extends Controller
             ->orderBy('display_order')
             ->get()
             ->map(function ($company) {
-                if ($company->logo_url && !str_starts_with($company->logo_url, 'http') && !str_starts_with($company->logo_url, '/')) {
-                    $company->logo_url = '/' . $company->logo_url;
-                }
-                if ($company->logo_url && !str_starts_with($company->logo_url, 'http')) {
-                    $frontendPath = base_path('../Frontend_BB_fixed_v4/public' . urldecode($company->logo_url));
-                    if (!file_exists($frontendPath)) {
-                        $company->logo_url = 'https://ui-avatars.com/api/?name=' . urlencode($company->name) . '&background=1B2A6B&color=fff&bold=true&format=svg';
-                    }
+                if ($company->logo_url) {
+                    $company->logo_url = StorageHelper::url($company->logo_url);
                 }
                 return $company;
             });
@@ -40,12 +37,20 @@ class CmsEcosystemController extends Controller
         $validated = $request->validate([
             'name' => 'required|string',
             'logo_url' => 'nullable|string',
+            'logo' => 'nullable|file|max:10240',
             'industry_id' => 'nullable|exists:cms_industries,id',
             'industry' => 'nullable|string',
             'website_url' => 'nullable|string',
+            'location' => 'nullable|string',
             'status' => 'nullable|in:published,draft,archived',
-            'is_featured' => 'boolean'
+            'is_featured' => 'nullable|boolean'
         ]);
+
+        if ($request->hasFile('logo') || $request->hasFile('file') || $request->hasFile('image')) {
+            $file = $request->file('logo') ?? $request->file('file') ?? $request->file('image');
+            $path = $file->store('companies/logos', 'public');
+            $validated['logo_url'] = '/storage/' . $path;
+        }
 
         if (empty($validated['industry_id']) && !empty($request->input('industry'))) {
             $ind = CmsIndustry::firstOrCreate(
@@ -54,14 +59,12 @@ class CmsEcosystemController extends Controller
             );
             $validated['industry_id'] = $ind->id;
         }
-        unset($validated['industry']);
-
-        if (!empty($validated['logo_url']) && !str_starts_with($validated['logo_url'], 'http') && !str_starts_with($validated['logo_url'], '/')) {
-            $validated['logo_url'] = '/' . $validated['logo_url'];
-        }
+        unset($validated['industry'], $validated['logo']);
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . time();
         $company = CmsCompany::create($validated);
+        
+        $company->logo_url = StorageHelper::url($company->logo_url);
         return response()->json($company->load('industry'), 201);
     }
 
@@ -71,12 +74,20 @@ class CmsEcosystemController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'logo_url' => 'nullable|string',
+            'logo' => 'nullable|file|max:10240',
             'industry_id' => 'nullable|exists:cms_industries,id',
             'industry' => 'nullable|string',
             'website_url' => 'nullable|string',
+            'location' => 'nullable|string',
             'status' => 'nullable|in:published,draft,archived',
-            'is_featured' => 'boolean'
+            'is_featured' => 'nullable|boolean'
         ]);
+
+        if ($request->hasFile('logo') || $request->hasFile('file') || $request->hasFile('image')) {
+            $file = $request->file('logo') ?? $request->file('file') ?? $request->file('image');
+            $path = $file->store('companies/logos', 'public');
+            $validated['logo_url'] = '/storage/' . $path;
+        }
 
         if (empty($validated['industry_id']) && !empty($request->input('industry'))) {
             $ind = CmsIndustry::firstOrCreate(
@@ -85,17 +96,14 @@ class CmsEcosystemController extends Controller
             );
             $validated['industry_id'] = $ind->id;
         }
-        unset($validated['industry']);
-
-        if (!empty($validated['logo_url']) && !str_starts_with($validated['logo_url'], 'http') && !str_starts_with($validated['logo_url'], '/')) {
-            $validated['logo_url'] = '/' . $validated['logo_url'];
-        }
+        unset($validated['industry'], $validated['logo']);
 
         if (isset($validated['name']) && $validated['name'] !== $company->name) {
             $validated['slug'] = Str::slug($validated['name']) . '-' . time();
         }
 
         $company->update($validated);
+        $company->logo_url = StorageHelper::url($company->logo_url);
         return response()->json($company->load('industry'));
     }
 
@@ -108,7 +116,17 @@ class CmsEcosystemController extends Controller
     // === PLACEMENT PARTNERS ===
     public function getPlacementPartners()
     {
-        return response()->json(CmsPlacementPartner::with('industry')->orderBy('display_order')->get());
+        $partners = CmsPlacementPartner::with('industry')
+            ->orderBy('display_order')
+            ->get()
+            ->map(function ($partner) {
+                if ($partner->logo_url) {
+                    $partner->logo_url = StorageHelper::url($partner->logo_url);
+                }
+                return $partner;
+            });
+
+        return response()->json($partners);
     }
 
     public function storePlacementPartner(Request $request)
@@ -116,12 +134,21 @@ class CmsEcosystemController extends Controller
         $validated = $request->validate([
             'name' => 'required|string',
             'logo_url' => 'nullable|string',
+            'logo' => 'nullable|file|max:10240',
             'industry_id' => 'nullable|exists:cms_industries,id',
-            'is_featured' => 'boolean'
+            'is_featured' => 'nullable|boolean'
         ]);
+
+        if ($request->hasFile('logo') || $request->hasFile('file') || $request->hasFile('image')) {
+            $file = $request->file('logo') ?? $request->file('file') ?? $request->file('image');
+            $path = $file->store('partners/logos', 'public');
+            $validated['logo_url'] = '/storage/' . $path;
+        }
+        unset($validated['logo']);
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . time();
         $partner = CmsPlacementPartner::create($validated);
+        $partner->logo_url = StorageHelper::url($partner->logo_url);
         return response()->json($partner, 201);
     }
 
@@ -131,15 +158,24 @@ class CmsEcosystemController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'logo_url' => 'nullable|string',
+            'logo' => 'nullable|file|max:10240',
             'industry_id' => 'nullable|exists:cms_industries,id',
-            'is_featured' => 'boolean'
+            'is_featured' => 'nullable|boolean'
         ]);
+
+        if ($request->hasFile('logo') || $request->hasFile('file') || $request->hasFile('image')) {
+            $file = $request->file('logo') ?? $request->file('file') ?? $request->file('image');
+            $path = $file->store('partners/logos', 'public');
+            $validated['logo_url'] = '/storage/' . $path;
+        }
+        unset($validated['logo']);
 
         if (isset($validated['name']) && $validated['name'] !== $partner->name) {
             $validated['slug'] = Str::slug($validated['name']) . '-' . time();
         }
 
         $partner->update($validated);
+        $partner->logo_url = StorageHelper::url($partner->logo_url);
         return response()->json($partner);
     }
 
@@ -152,7 +188,17 @@ class CmsEcosystemController extends Controller
     // === COLLEGES ===
     public function getColleges()
     {
-        return response()->json(CmsCollege::orderBy('display_order')->get());
+        $colleges = CmsCollege::orderBy('display_order')->get()->map(function ($college) {
+            if ($college->logo_url) {
+                $college->logo_url = StorageHelper::url($college->logo_url);
+            }
+            if ($college->banner_image) {
+                $college->banner_image = StorageHelper::url($college->banner_image);
+            }
+            return $college;
+        });
+
+        return response()->json($colleges);
     }
 
     public function storeCollege(Request $request)
@@ -162,15 +208,15 @@ class CmsEcosystemController extends Controller
             'location' => 'nullable|string',
             'logo_url' => 'nullable|string',
             'banner_image' => 'nullable|string',
-            'is_featured' => 'boolean',
+            'is_featured' => 'nullable|boolean',
             'status' => 'nullable|in:published,draft,archived',
             'short_description' => 'nullable|string',
             'full_description' => 'nullable|string',
             'website_url' => 'nullable|string',
-            'is_ugc_approved' => 'boolean',
+            'is_ugc_approved' => 'nullable|boolean',
             'naac_grade' => 'nullable|string',
             'nirf_ranking' => 'nullable|string',
-            'is_wes_approved' => 'boolean',
+            'is_wes_approved' => 'nullable|boolean',
             'degree_types' => 'nullable|array',
             'popular_courses' => 'nullable|array',
             'duration' => 'nullable|string',
@@ -197,15 +243,15 @@ class CmsEcosystemController extends Controller
             'location' => 'nullable|string',
             'logo_url' => 'nullable|string',
             'banner_image' => 'nullable|string',
-            'is_featured' => 'boolean',
+            'is_featured' => 'nullable|boolean',
             'status' => 'nullable|in:published,draft,archived',
             'short_description' => 'nullable|string',
             'full_description' => 'nullable|string',
             'website_url' => 'nullable|string',
-            'is_ugc_approved' => 'boolean',
+            'is_ugc_approved' => 'nullable|boolean',
             'naac_grade' => 'nullable|string',
             'nirf_ranking' => 'nullable|string',
-            'is_wes_approved' => 'boolean',
+            'is_wes_approved' => 'nullable|boolean',
             'degree_types' => 'nullable|array',
             'popular_courses' => 'nullable|array',
             'duration' => 'nullable|string',
@@ -236,7 +282,14 @@ class CmsEcosystemController extends Controller
     // === PORTFOLIOS ===
     public function getPortfolios()
     {
-        return response()->json(CmsPortfolio::orderBy('display_order')->get());
+        $portfolios = CmsPortfolio::orderBy('display_order')->get()->map(function ($p) {
+            if ($p->image_url) {
+                $p->image_url = StorageHelper::url($p->image_url);
+            }
+            return $p;
+        });
+
+        return response()->json($portfolios);
     }
 
     public function storePortfolio(Request $request)
@@ -249,7 +302,7 @@ class CmsEcosystemController extends Controller
             'duration' => 'nullable|string',
             'deliverables' => 'nullable|string',
             'image_url' => 'nullable|string',
-            'tags' => 'nullable|string', // Comma separated from frontend
+            'tags' => 'nullable|string',
         ]);
 
         $validated['slug'] = Str::slug($validated['title']) . '-' . time();
@@ -265,7 +318,6 @@ class CmsEcosystemController extends Controller
     {
         $portfolio = CmsPortfolio::findOrFail($id);
         
-        // Tags can come as an array from frontend during edit
         $rules = [
             'title' => 'sometimes|string',
             'studio' => 'sometimes|string',
@@ -288,7 +340,7 @@ class CmsEcosystemController extends Controller
         } elseif (isset($validated['tags']) && is_array($validated['tags'])) {
             // keep as is
         } else {
-            $validated['tags'] = []; // default to empty if not provided
+            $validated['tags'] = [];
         }
 
         $portfolio->update($validated);
@@ -299,5 +351,57 @@ class CmsEcosystemController extends Controller
     {
         CmsPortfolio::findOrFail($id)->delete();
         return response()->json(['message' => 'Deleted']);
+    }
+
+    // === JOB OFFERS / STUDENT SHOWCASE PERSISTENCE ===
+    public function getJobOffers()
+    {
+        $offers = StudentJobOffer::where('is_active', true)
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($offer) {
+                if ($offer->avatar_url) {
+                    $offer->avatar_url = StorageHelper::url($offer->avatar_url);
+                }
+                return $offer;
+            });
+
+        return response()->json($offers);
+    }
+
+    public function saveJobOffers(Request $request)
+    {
+        $students = $request->input('students', []);
+        if (!is_array($students) || empty($students)) {
+            return response()->json(['message' => 'No student records provided.'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Clear existing records and replace with updated showcase list
+            StudentJobOffer::truncate();
+
+            foreach ($students as $index => $st) {
+                $name = $st['student_name'] ?? $st['name'] ?? ('Student ' . ($index + 1));
+                $img = $st['image_url'] ?? $st['avatar_url'] ?? $st['image'] ?? null;
+
+                StudentJobOffer::create([
+                    'student_name' => $name,
+                    'degree'       => $st['degree'] ?? 'Alumni',
+                    'company_name' => $st['company_name'] ?? $st['company'] ?? 'Partner Enterprise',
+                    'role'         => $st['role'] ?? $st['designation'] ?? 'Graphic Design',
+                    'offered_on'   => $st['offered_on'] ?? now()->format('d M Y'),
+                    'package'      => $st['package'] ?? 'Best in Industry',
+                    'avatar_url'   => $img,
+                    'is_active'    => true,
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Student showcase saved successfully.']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to save student showcase: ' . $e->getMessage()], 500);
+        }
     }
 }

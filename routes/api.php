@@ -103,7 +103,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('cms/colleges/{slug}', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCollegeBySlug']);
     Route::get('cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
     Route::get('cms/job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getJobOffers']);
+    Route::post('cms/job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'saveJobOffers']);
     Route::get('job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getJobOffers']);
+    Route::post('job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'saveJobOffers']);
     Route::get('cms/testimonials', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getTestimonials']);
     Route::get('testimonials', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getTestimonials']);
 
@@ -718,6 +720,11 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('cms/portfolios/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updatePortfolio']);
         Route::delete('cms/portfolios/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deletePortfolio']);
 
+        Route::get('cms/job-offers', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getJobOffers']);
+        Route::post('cms/job-offers', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'saveJobOffers']);
+        Route::get('job-offers', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getJobOffers']);
+        Route::post('job-offers', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'saveJobOffers']);
+
         // SEO Administration
         Route::apiResource('seo-metadata', \App\Http\Controllers\Api\Admin\AdminSeoController::class);
         // Notifications & Badges
@@ -1164,44 +1171,38 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         
     });
 
-    // EdTech API
-    Route::apiResource('course-categories', CourseCategoryController::class);
-    
-    // Require verified profile to modify courses/modules/lessons
-    Route::middleware('verified.profile')->group(function () {
-        Route::apiResource('courses', CourseController::class)->except(['index', 'show']);
-        Route::apiResource('modules', ModuleController::class)->except(['index', 'show']);
-        Route::apiResource('lessons', LessonController::class)->except(['index', 'show']);
-    });
-    // Public course viewing
-    Route::apiResource('courses', CourseController::class)->only(['index', 'show']);
-    Route::apiResource('modules', ModuleController::class)->only(['index', 'show']);
-    Route::apiResource('lessons', LessonController::class)->only(['index', 'show']);
-    
-    // Hiring API
-    Route::middleware('verified.profile')->group(function () {
-        Route::apiResource('jobs', JobController::class)->except(['index', 'show']);
-        Route::apiResource('internships', InternshipController::class)->except(['index', 'show']);
-    });
-    // Public viewing and applications
-    Route::apiResource('jobs', JobController::class)->only(['index', 'show']);
-    Route::apiResource('internships', InternshipController::class)->only(['index', 'show']);
+    // Protected User Hiring Applications
     Route::apiResource('job-applications', JobApplicationController::class);
     Route::apiResource('internship-applications', InternshipApplicationController::class);
-    
+
     // E-Commerce & Checkout API
     Route::apiResource('wishlist', WishlistController::class)->only(['index', 'store', 'destroy']);
     Route::apiResource('cart', CartController::class)->only(['index', 'store', 'destroy']);
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
-    
+
     // Core Course Checkout API (Gateway-Agnostic)
     Route::post('checkout/create-order', [\App\Http\Controllers\Api\CheckoutController::class, 'createOrder']);
     Route::post('checkout/verify', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
-    
-    // File Upload API
-    Route::post('upload', [UploadController::class, 'store']);
+
+    // Authenticated Profile-restricted modifications
+    Route::middleware('verified.profile')->group(function () {
+        Route::apiResource('courses', CourseController::class)->except(['index', 'show']);
+        Route::apiResource('modules', ModuleController::class)->except(['index', 'show']);
+        Route::apiResource('lessons', LessonController::class)->except(['index', 'show']);
+        Route::apiResource('jobs', JobController::class)->except(['index', 'show']);
+        Route::apiResource('internships', InternshipController::class)->except(['index', 'show']);
+    });
 });
+
+// ─── Public EdTech, Jobs, Internships & General Upload Endpoints ───────────────
+Route::apiResource('course-categories', CourseCategoryController::class);
+Route::apiResource('courses', CourseController::class)->only(['index', 'show']);
+Route::apiResource('modules', ModuleController::class)->only(['index', 'show']);
+Route::apiResource('lessons', LessonController::class)->only(['index', 'show']);
+Route::apiResource('jobs', JobController::class)->only(['index', 'show']);
+Route::apiResource('internships', InternshipController::class)->only(['index', 'show']);
+Route::post('upload', [UploadController::class, 'store']);
 
 Route::get('/qa-routes-map', function () {
     $scanData = [

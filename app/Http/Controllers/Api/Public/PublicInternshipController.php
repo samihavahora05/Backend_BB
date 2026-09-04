@@ -86,7 +86,7 @@ class PublicInternshipController extends Controller
             'id'           => $i->id,
             'title'        => $i->title,
             'company_name' => $i->company_name ?? ($i->company?->companyProfile?->company_name ?? $i->company?->name ?? 'Blueboxx Partner'),
-            'company_logo' => $i->company_logo ? asset('storage/' . $i->company_logo) : null,
+            'company_logo' => $i->company_logo ? \App\Support\StorageHelper::url($i->company_logo) : null,
             'location'     => $i->location ?? 'Remote',
             'type'         => $i->mode ?? 'Remote',
             'duration'     => $i->duration ?? ($i->duration_months ? $i->duration_months . ' Months' : '3 Months'),
@@ -135,7 +135,7 @@ class PublicInternshipController extends Controller
         return response()->json([
             'success' => true,
             'data'    => array_merge($internship->toArray(), [
-                'company_logo' => $internship->company_logo ? asset('storage/' . $internship->company_logo) : null,
+                'company_logo' => $internship->company_logo ? \App\Support\StorageHelper::url($internship->company_logo) : null,
                 'has_applied'  => $hasApplied,
                 'is_bookmarked'=> $isBookmarked,
                 'posted_at'    => $internship->created_at->diffForHumans(),

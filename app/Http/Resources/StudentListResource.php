@@ -17,7 +17,7 @@ class StudentListResource extends JsonResource
             'phone' => $this->phone,
             'status' => $this->status,
             'created_at' => $this->created_at,
-            'profile_photo' => $this->studentProfile?->profile_photo,
+            'profile_photo' => $this->studentProfile?->profile_photo ? \App\Support\StorageHelper::url($this->studentProfile->profile_photo) : null,
             'city' => $this->studentProfile?->city,
             'country' => $this->studentProfile?->country,
         ];
