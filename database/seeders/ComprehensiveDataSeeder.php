@@ -285,26 +285,34 @@ class ComprehensiveDataSeeder extends Seeder
 
         foreach ($coursesData as $cData) {
             $slug = Str::slug($cData['title']);
-            $course = Course::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'category_id'       => $cData['category_id'],
-                    'level_id'          => $cData['level_id'],
-                    'expert_id'         => $cData['expert_id'],
-                    'title'             => $cData['title'],
-                    'short_description' => $cData['short'],
-                    'description'       => $cData['desc'],
-                    'price'             => $cData['price'],
-                    'discount_price'    => $cData['discount'],
-                    'course_type'       => $cData['type'],
-                    'duration'          => $cData['duration'],
-                    'status'            => 'Published',
-                    'is_published'      => true,
-                    'is_featured'       => true,
-                    'is_archived'       => false,
-                    'language'          => 'English',
-                ]
-            );
+            $course = Course::withTrashed()->where('slug', $slug)->first();
+            $courseAttributes = [
+                'slug'              => $slug,
+                'category_id'       => $cData['category_id'],
+                'level_id'          => $cData['level_id'],
+                'expert_id'         => $cData['expert_id'],
+                'title'             => $cData['title'],
+                'short_description' => $cData['short'],
+                'description'       => $cData['desc'],
+                'price'             => $cData['price'],
+                'discount_price'    => $cData['discount'],
+                'course_type'       => $cData['type'],
+                'duration'          => $cData['duration'],
+                'status'            => 'Published',
+                'is_published'      => true,
+                'is_featured'       => true,
+                'is_archived'       => false,
+                'language'          => 'English',
+            ];
+
+            if ($course) {
+                if ($course->trashed()) {
+                    $course->restore();
+                }
+                $course->update($courseAttributes);
+            } else {
+                $course = Course::create($courseAttributes);
+            }
 
             // Create Modules & Lessons
             for ($m = 1; $m <= 3; $m++) {
