@@ -146,17 +146,6 @@ class ComprehensiveDataSeeder extends Seeder
                 'hourly_rate'=> 120.00,
                 'exp'        => 9,
             ],
-            [
-                'first_name' => 'Vikram',
-                'last_name'  => 'Verma',
-                'email'      => 'vikram.verma@blueboxx.in',
-                'title'      => 'Cloud Operations & DevOps Specialist',
-                'designation'=> 'DevOps Architect',
-                'company'    => 'AWS Tech Solutions',
-                'specialization' => 'Docker, Kubernetes & AWS Infrastructure',
-                'hourly_rate'=> 140.00,
-                'exp'        => 10,
-            ],
         ];
 
         $expertUsers = [];
@@ -272,7 +261,7 @@ class ComprehensiveDataSeeder extends Seeder
                 'title'       => 'Docker, Kubernetes & AWS DevOps Bootcamp',
                 'category_id' => $catCloud->id,
                 'level_id'    => $lvlAdvanced->id,
-                'expert_id'   => $expertUsers[2]->id, // Vikram
+                'expert_id'   => $expertUsers[0]->id, // Assigned to Rajesh
                 'price'       => 6999.00,
                 'discount'    => 3999.00,
                 'type'        => 'Paid',
