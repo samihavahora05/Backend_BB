@@ -64,7 +64,7 @@ class CmsEcosystemSeeder extends Seeder
         // 3. Companies
         $companies = [
             ['name' => '3D Studio', 'industry' => 'Game development services', 'logo_url' => '/logo/3D%20studio.png'],
-            ['name' => 'Asha Tours & Travels', 'industry' => 'SMEs & Startups', 'logo_url' => '/logo/Asha_tours&travels.jpeg'],
+            ['name' => 'Asha Tours & Travels', 'industry' => 'SMEs & Startups', 'logo_url' => '/logo/Asha_tours-travels.jpeg'],
             ['name' => 'Damyaa', 'industry' => 'SMEs & Startups', 'logo_url' => '/logo/Damyaa.png'],
             ['name' => 'Flammer Technologies', 'industry' => 'IT & Software Development', 'logo_url' => '/logo/Flammer-logo-horizontal.png'],
             ['name' => 'HS Structure', 'industry' => 'SMEs & Startups', 'logo_url' => '/logo/HS%20Structure.png'],
