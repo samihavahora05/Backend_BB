@@ -12,7 +12,7 @@ class CmsPlacementPartner extends Model
     protected $table = 'cms_placement_partners';
 
     protected $fillable = [
-        'name', 'slug', 'logo_url', 'industry_id', 'website_url', 
+        'name', 'slug', 'logo_url', 'industry_id', 'website_url', 'location',
         'is_featured', 'show_on_homepage', 'display_order', 'status',
         'seo_title', 'seo_description'
     ];
