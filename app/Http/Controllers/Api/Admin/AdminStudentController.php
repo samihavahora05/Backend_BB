@@ -33,9 +33,13 @@ class AdminStudentController extends Controller
     {
         $data = $request->validated();
         
-        if ($request->hasFile('profile_photo')) {
-            $data['profile_photo'] = $request->file('profile_photo')->store('students/avatars', 'public');
+        if ($request->hasFile('profile_photo') || $request->hasFile('avatar') || $request->hasFile('file') || $request->hasFile('image')) {
+            $file = $request->file('profile_photo') ?? $request->file('avatar') ?? $request->file('file') ?? $request->file('image');
+            $data['profile_photo'] = $file->store('students/avatars', 'public');
+        } elseif (!empty($request->input('avatar')) && empty($data['profile_photo'])) {
+            $data['profile_photo'] = $request->input('avatar');
         }
+
         if ($request->hasFile('resume')) {
             $data['resume'] = $request->file('resume')->store('students/resumes', 'public');
         }
@@ -55,9 +59,13 @@ class AdminStudentController extends Controller
     {
         $data = $request->validated();
 
-        if ($request->hasFile('profile_photo')) {
-            $data['profile_photo'] = $request->file('profile_photo')->store('students/avatars', 'public');
+        if ($request->hasFile('profile_photo') || $request->hasFile('avatar') || $request->hasFile('file') || $request->hasFile('image')) {
+            $file = $request->file('profile_photo') ?? $request->file('avatar') ?? $request->file('file') ?? $request->file('image');
+            $data['profile_photo'] = $file->store('students/avatars', 'public');
+        } elseif (!empty($request->input('avatar')) && empty($data['profile_photo'])) {
+            $data['profile_photo'] = $request->input('avatar');
         }
+
         if ($request->hasFile('resume')) {
             $data['resume'] = $request->file('resume')->store('students/resumes', 'public');
         }

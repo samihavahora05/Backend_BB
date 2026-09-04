@@ -50,8 +50,9 @@ class StoreStudentRequest extends FormRequest
             'skills' => 'nullable|string', // Will be JSON string or comma-separated from FormData
 
             // Files
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'resume' => 'nullable|mimes:pdf,doc,docx|max:5120',
+            'profile_photo' => 'nullable',
+            'avatar' => 'nullable',
+            'resume' => 'nullable',
         ];
     }
 }

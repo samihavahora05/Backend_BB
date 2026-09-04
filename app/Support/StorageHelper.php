@@ -54,7 +54,9 @@ class StorageHelper
             str_starts_with($trimmed, '/assets/') || str_starts_with($trimmed, 'assets/') ||
             str_starts_with($trimmed, '/testimonials photos/') || str_starts_with($trimmed, 'testimonials photos/')
         ) {
-            return str_starts_with($trimmed, '/') ? $trimmed : '/' . $trimmed;
+            $cleanStatic = ltrim(str_replace('\\', '/', $trimmed), '/');
+            $encodedSegments = array_map('rawurlencode', explode('/', $cleanStatic));
+            return '/' . implode('/', $encodedSegments);
         }
 
         // Clean up storage path (strip leading slashes and any duplicate "storage/" prefix)
@@ -67,9 +69,12 @@ class StorageHelper
             return null;
         }
 
+        $encodedSegments = array_map('rawurlencode', explode('/', $cleanPath));
+        $encodedPath = implode('/', $encodedSegments);
+
         // Generate URL from public disk or configured APP_URL
         $baseUrl = rtrim(config('app.url', env('APP_URL', 'http://localhost')), '/');
         
-        return $baseUrl . '/storage/' . $cleanPath;
+        return $baseUrl . '/storage/' . $encodedPath;
     }
 }

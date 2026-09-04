@@ -15,7 +15,11 @@ class StudentRepository implements StudentRepositoryInterface
 {
     public function getAllStudents(array $filters = [], int $perPage = 15)
     {
-        $query = User::role('student')->with(['studentProfile']);
+        $query = User::where(function ($q) {
+            $q->whereHas('roles', function ($r) {
+                $r->whereIn('name', ['student', 'intern', 'job-seeker']);
+            })->orWhereHas('studentProfile');
+        })->with(['studentProfile']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];

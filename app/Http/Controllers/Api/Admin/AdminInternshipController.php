@@ -135,20 +135,49 @@ class AdminInternshipController extends Controller
         ]);
     }
 
+    private function resolveCompanyId(Request $request, ?int $existingCompanyId = null): ?int
+    {
+        $companyId = $request->input('company_id');
+        $companyName = $request->input('company_name') ?? $request->input('companyName');
+
+        if (!empty($companyId) && \App\Models\User::where('id', $companyId)->exists()) {
+            return (int)$companyId;
+        }
+
+        if (!empty($companyName)) {
+            $matchedUser = \App\Models\User::where('name', 'like', "%{$companyName}%")
+                ->orWhere('first_name', 'like', "%{$companyName}%")
+                ->orWhereHas('companyProfile', function ($q) use ($companyName) {
+                    $q->where('company_name', 'like', "%{$companyName}%");
+                })
+                ->first();
+
+            if ($matchedUser) {
+                return $matchedUser->id;
+            }
+        }
+
+        if ($existingCompanyId) {
+            return $existingCompanyId;
+        }
+
+        // Default to first company account or auth user
+        $defaultCompany = \App\Models\User::role('company')->first();
+        return $defaultCompany ? $defaultCompany->id : (auth()->id() ?? 1);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validateInternship($request);
         
-        // Defaults and logic
-        if (!isset($data['company_id'])) {
-            $data['company_id'] = auth()->id();
-        }
+        $data['company_id'] = $this->resolveCompanyId($request);
+
         if (empty($data['openings'])) {
             $data['openings'] = 1;
         }
 
         $internship = Internship::create($data);
-        return response()->json(['success' => true, 'data' => $internship], 201);
+        return response()->json(['success' => true, 'data' => $internship->load('company')], 201);
     }
 
     public function update(Request $request, $id)
@@ -156,12 +185,15 @@ class AdminInternshipController extends Controller
         $internship = Internship::findOrFail($id);
         $data = $this->validateInternship($request);
 
+        // Preserve or properly resolve company relationship
+        $data['company_id'] = $this->resolveCompanyId($request, $internship->company_id);
+
         if (array_key_exists('openings', $data) && empty($data['openings'])) {
             $data['openings'] = 1;
         }
 
         $internship->update($data);
-        return response()->json(['success' => true, 'data' => $internship]);
+        return response()->json(['success' => true, 'data' => $internship->load('company'), 'message' => 'Internship updated successfully']);
     }
 
     public function destroy($id)

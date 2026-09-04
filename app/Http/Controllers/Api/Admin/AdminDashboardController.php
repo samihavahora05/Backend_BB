@@ -112,31 +112,41 @@ class AdminDashboardController extends Controller
 
     public function recentEnrollments()
     {
-        $enrollments = \App\Models\Order::with(['user', 'items.course'])
-            ->where('status', 'completed')
-            ->latest()
-            ->take(5)
-            ->get()
-            ->map(function ($order) {
-                return [
-                    'id' => $order->id,
-                    'user' => [
-                        'first_name' => $order->user->first_name ?? $order->user->name,
-                        'last_name' => $order->user->last_name ?? '',
-                    ],
-                    'items' => $order->items->map(function ($item) {
-                        return [
-                            'course' => [
-                                'title' => $item->course->title ?? 'Course',
-                            ]
-                        ];
-                    }),
-                    'payment_status' => $order->status,
-                    'created_at' => $order->created_at,
-                ];
-            });
+        try {
+            $enrollments = \App\Models\CourseEnrollment::with(['user', 'course'])
+                ->latest()
+                ->take(5)
+                ->get()
+                ->map(function ($enrollment) {
+                    $userName = $enrollment->user?->name ?? trim(($enrollment->user?->first_name ?? '') . ' ' . ($enrollment->user?->last_name ?? ''));
+                    if (empty($userName)) $userName = 'Student';
 
-        return response()->json(['success' => true, 'data' => $enrollments]);
+                    return [
+                        'id' => $enrollment->id,
+                        'user' => [
+                            'first_name' => $enrollment->user?->first_name ?? $userName,
+                            'last_name' => $enrollment->user?->last_name ?? '',
+                            'name' => $userName,
+                            'email' => $enrollment->user?->email ?? '',
+                        ],
+                        'items' => [
+                            [
+                                'course' => [
+                                    'title' => $enrollment->course?->title ?? 'Course',
+                                    'id' => $enrollment->course_id,
+                                ]
+                            ]
+                        ],
+                        'payment_status' => $enrollment->status ?? 'completed',
+                        'created_at' => $enrollment->created_at ? $enrollment->created_at->toISOString() : now()->toISOString(),
+                    ];
+                });
+
+            return response()->json(['success' => true, 'data' => $enrollments]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Dashboard recent enrollments error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'data' => []]);
+        }
     }
 
     public function feed()

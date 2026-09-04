@@ -76,8 +76,7 @@ class AdminInstructorController extends Controller
     public function destroy($id)
     {
         try {
-            $profile = \App\Models\ExpertProfile::withTrashed()
-                ->where('id', $id)
+            $profile = \App\Models\ExpertProfile::where('id', $id)
                 ->orWhere('user_id', $id)
                 ->first();
             $userId = $profile ? $profile->user_id : (int)$id;
