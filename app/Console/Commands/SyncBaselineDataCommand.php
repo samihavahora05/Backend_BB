@@ -188,7 +188,7 @@ class SyncBaselineDataCommand extends Command
     {
         $companies = [
             ["name" => "3D Studio", "industry" => "Game development services", "logoUrl" => "/logo/3D%20studio.png", "location" => "India"],
-            ["name" => "Asha Tours & Travels", "industry" => "SMEs & Startups", "logoUrl" => "/logo/Asha_tours&travels.jpeg", "location" => "India"],
+            ["name" => "Asha Tours & Travels", "industry" => "SMEs & Startups", "logoUrl" => "/logo/Asha_tours-travels.jpeg", "location" => "India"],
             ["name" => "Damyaa", "industry" => "SMEs & Startups", "logoUrl" => "/logo/Damyaa.png", "location" => "India"],
             ["name" => "Flammer Technologies", "industry" => "IT & Software Development", "logoUrl" => "/logo/Flammer-logo-horizontal.png", "location" => "India"],
             ["name" => "HS Structure", "industry" => "SMEs & Startups", "logoUrl" => "/logo/HS%20Structure.png", "location" => "India"],
@@ -218,7 +218,7 @@ class SyncBaselineDataCommand extends Command
             ["name" => "Manavta Hospital", "industry" => "SMEs & Startups", "logoUrl" => "/logo/manavta%20hospital.png", "location" => "India"],
             ["name" => "Mark Cafe", "industry" => "SMEs & Startups", "logoUrl" => "/logo/mark%20cafe.jpg", "location" => "India"],
             ["name" => "Office24", "industry" => "SMEs & Startups", "logoUrl" => "/logo/office24.webp", "location" => "India"],
-            ["name" => "Otto Valves & Rubers", "industry" => "SMEs & Startups", "logoUrl" => "/logo/otto%20valves%20&%20rubers.png", "location" => "India"],
+            ["name" => "Otto Valves & Rubers", "industry" => "SMEs & Startups", "logoUrl" => "/logo/otto-valves-rubers.png", "location" => "India"],
             ["name" => "Pandit Restaurant", "industry" => "SMEs & Startups", "logoUrl" => "/logo/pandit%20rasturant.jpg", "location" => "India"],
             ["name" => "Pranav Plastic", "industry" => "SMEs & Startups", "logoUrl" => "/logo/pranav%20plastic%20pvt.jpg", "location" => "India"],
             ["name" => "Primax Engineers", "industry" => "SMEs & Startups", "logoUrl" => "/logo/primax-engineers-private-limited-90x90.jpg", "location" => "India"],

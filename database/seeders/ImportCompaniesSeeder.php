@@ -13,7 +13,7 @@ class ImportCompaniesSeeder extends Seeder
     {
         $companies = [
   [ "name" => "3D Studio", "industry" => "Game development services", "logoUrl" => "/logo/3D%20studio.png" ],
-  [ "name" => "Asha Tours & Travels", "industry" => "SMEs & Startups", "logoUrl" => "/logo/Asha_tours&travels.jpeg" ],
+  [ "name" => "Asha Tours & Travels", "industry" => "SMEs & Startups", "logoUrl" => "/logo/Asha_tours-travels.jpeg" ],
   [ "name" => "Damyaa", "industry" => "SMEs & Startups", "logoUrl" => "/logo/Damyaa.png" ],
   [ "name" => "Flammer Technologies", "industry" => "IT & Software Development", "logoUrl" => "/logo/Flammer-logo-horizontal.png" ],
   [ "name" => "HS Structure", "industry" => "SMEs & Startups", "logoUrl" => "/logo/HS%20Structure.png" ],
@@ -43,7 +43,7 @@ class ImportCompaniesSeeder extends Seeder
   [ "name" => "Manavta Hospital", "industry" => "SMEs & Startups", "logoUrl" => "/logo/manavta%20hospital.png" ],
   [ "name" => "Mark Cafe", "industry" => "SMEs & Startups", "logoUrl" => "/logo/mark%20cafe.jpg" ],
   [ "name" => "Office24", "industry" => "SMEs & Startups", "logoUrl" => "/logo/office24.webp" ],
-  [ "name" => "Otto Valves & Rubers", "industry" => "SMEs & Startups", "logoUrl" => "/logo/otto%20valves%20&%20rubers.png" ],
+  [ "name" => "Otto Valves & Rubers", "industry" => "SMEs & Startups", "logoUrl" => "/logo/otto-valves-rubers.png" ],
   [ "name" => "Pandit Restaurant", "industry" => "SMEs & Startups", "logoUrl" => "/logo/pandit%20rasturant.jpg" ],
   [ "name" => "Pranav Plastic", "industry" => "SMEs & Startups", "logoUrl" => "/logo/pranav%20plastic%20pvt.jpg" ],
   [ "name" => "Primax Engineers", "industry" => "SMEs & Startups", "logoUrl" => "/logo/primax-engineers-private-limited-90x90.jpg" ],
