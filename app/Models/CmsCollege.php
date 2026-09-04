@@ -13,7 +13,7 @@ class CmsCollege extends Model
 
     protected $fillable = [
         'name', 'slug', 'logo_url', 'location', 
-        'is_featured', 'display_order', 'status',
+        'is_featured', 'show_on_homepage', 'display_order', 'status',
         'seo_title', 'seo_description',
         'banner_image', 'short_description', 'full_description', 'website_url',
         'is_ugc_approved', 'naac_grade', 'nirf_ranking', 'is_wes_approved',
@@ -24,6 +24,7 @@ class CmsCollege extends Model
 
     protected $casts = [
         'is_featured' => 'boolean',
+        'show_on_homepage' => 'boolean',
         'is_ugc_approved' => 'boolean',
         'is_wes_approved' => 'boolean',
         'degree_types' => 'array',
