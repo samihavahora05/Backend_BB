@@ -46,6 +46,19 @@ class AdminCourseController extends Controller
             }
         }
 
+        // Auto-resolve expert_id if an ExpertProfile ID was passed instead of User ID
+        if (!empty($inputs['expert_id'])) {
+            $userExists = \App\Models\User::where('id', $inputs['expert_id'])->exists();
+            if (!$userExists) {
+                $expertProfile = \App\Models\ExpertProfile::find($inputs['expert_id']);
+                if ($expertProfile && $expertProfile->user_id) {
+                    $inputs['expert_id'] = $expertProfile->user_id;
+                } else {
+                    $inputs['expert_id'] = auth()->id() ?? \App\Models\User::first()?->id ?? 1;
+                }
+            }
+        }
+
         // Convert empty numeric fields to null
         foreach (['price', 'discount_price', 'duration_hours'] as $field) {
             if (isset($inputs[$field]) && (trim((string)$inputs[$field]) === '' || $inputs[$field] === 'null')) {
