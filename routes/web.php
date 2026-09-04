@@ -14,11 +14,23 @@ Route::get('/storage/{path}', function (string $path) {
         $cleanPath = ltrim(substr($cleanPath, 8), '/');
     }
 
-    if (Storage::disk('public')->exists($cleanPath)) {
-        return Storage::disk('public')->response($cleanPath, null, [
-            'Cache-Control' => 'public, max-age=31536000',
-            'Access-Control-Allow-Origin' => '*',
-        ]);
+    $candidates = [
+        $cleanPath,
+        'uploads/' . $cleanPath,
+        'avatars/' . $cleanPath,
+        'courses/thumbnails/' . $cleanPath,
+        'courses/' . $cleanPath,
+        'resumes/' . $cleanPath,
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (Storage::disk('public')->exists($candidate)) {
+            return Storage::disk('public')->response($candidate, null, [
+                'Cache-Control' => 'public, max-age=31536000',
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+            ]);
+        }
     }
 
     abort(404, 'File not found in storage.');
