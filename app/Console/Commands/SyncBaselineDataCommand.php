@@ -302,7 +302,6 @@ class SyncBaselineDataCommand extends Command
                         'location' => $col['location'] ?? 'India',
                         'logo_url' => $col['logoUrl'],
                         'is_featured' => $idx < 6,
-                        'show_on_homepage' => true,
                         'display_order' => $idx + 1,
                         'status' => 'published',
                     ]
