@@ -58,21 +58,23 @@ class ImportCompaniesSeeder extends Seeder
 ];
 
         foreach ($companies as $c) {
-            if (!CmsCompany::where('name', $c['name'])->exists()) {
-                $industry = CmsIndustry::firstOrCreate([
-                    'name' => $c['industry'],
-                    'slug' => Str::slug($c['industry'])
-                ]);
+            $industry = CmsIndustry::firstOrCreate([
+                'slug' => Str::slug($c['industry'])
+            ], [
+                'name' => $c['industry']
+            ]);
 
-                CmsCompany::create([
+            CmsCompany::updateOrCreate(
+                ['slug' => Str::slug($c['name'])],
+                [
                     'name' => $c['name'],
-                    'slug' => Str::slug($c['name']),
                     'logo_url' => $c['logoUrl'],
                     'industry_id' => $industry->id,
                     'is_featured' => true,
-                    'show_on_homepage' => true
-                ]);
-            }
+                    'show_on_homepage' => true,
+                    'status' => 'published',
+                ]
+            );
         }
     }
 }

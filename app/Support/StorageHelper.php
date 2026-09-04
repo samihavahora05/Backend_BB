@@ -46,6 +46,14 @@ class StorageHelper
             }
         }
 
+        // Known static logo aliases with special characters
+        if (str_contains($trimmed, 'otto') && (str_contains($trimmed, 'valve') || str_contains($trimmed, 'ruber'))) {
+            return '/logo/otto-valves-rubers.png';
+        }
+        if (str_contains($trimmed, 'Asha_tours') || str_contains($trimmed, 'asha_tours')) {
+            return '/logo/Asha_tours-travels.jpeg';
+        }
+
         // Frontend static assets located in frontend public/ directory
         if (
             str_starts_with($trimmed, '/students/') || str_starts_with($trimmed, 'students/') ||
