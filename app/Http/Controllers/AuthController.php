@@ -115,12 +115,28 @@ class AuthController extends Controller
             }
         }
 
-        // Allow multiple sessions (do not delete all tokens on login)
-        // $user->tokens()->delete();
+        // Allow multiple logins / sessions across different devices (do not delete all existing tokens on login)
+        $deviceInfo = $this->getDeviceInfo($request);
+        $token = $user->createToken($deviceInfo['token_name'])->plainTextToken;
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Record admin session if user is admin / super_admin
+        if ($isAdmin) {
+            try {
+                \App\Models\AdminSession::create([
+                    'user_id' => $user->id,
+                    'login_at' => now(),
+                    'ip_address' => $request->ip(),
+                    'device' => $deviceInfo['device'],
+                    'browser' => $deviceInfo['browser'],
+                    'location' => 'Unknown',
+                    'status' => 'active',
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to record AdminSession: ' . $e->getMessage());
+            }
+        }
         
-        Log::info("Successful login for user ID: {$user->id} from IP: {$request->ip()}");
+        Log::info("Successful login for user ID: {$user->id} on {$deviceInfo['device']} ({$deviceInfo['browser']}) from IP: {$request->ip()}");
 
         return response()->json([
             'message' => 'Logged in successfully',
@@ -148,7 +164,24 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        if ($user) {
+            // Delete only current device's access token so other active devices remain logged in
+            $user->currentAccessToken()?->delete();
+
+            if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
+                try {
+                    \App\Models\AdminSession::where('user_id', $user->id)
+                        ->where('status', 'active')
+                        ->where('ip_address', $request->ip())
+                        ->latest('login_at')
+                        ->first()
+                        ?->update(['status' => 'logged_out', 'logout_at' => now()]);
+                } catch (\Exception $e) {
+                    // Ignore
+                }
+            }
+        }
         return response()->json(['message' => 'Logged out successfully']);
     }
 
@@ -294,13 +327,28 @@ class AuthController extends Controller
         RateLimiter::clear($throttleKey);
         Cache::forget('login_otp_' . $request->phone);
 
-        $user = User::where('phone', $request->phone)->first();
+        // Allow multiple logins / sessions across different devices
+        $isAdmin = $user->hasRole('admin') || $user->hasRole('super_admin');
+        $deviceInfo = $this->getDeviceInfo($request);
+        $token = $user->createToken($deviceInfo['token_name'])->plainTextToken;
 
-        // Allow multiple sessions (do not delete all tokens on login)
-        // $user->tokens()->delete();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        if ($isAdmin) {
+            try {
+                \App\Models\AdminSession::create([
+                    'user_id' => $user->id,
+                    'login_at' => now(),
+                    'ip_address' => $request->ip(),
+                    'device' => $deviceInfo['device'],
+                    'browser' => $deviceInfo['browser'],
+                    'location' => 'Unknown',
+                    'status' => 'active',
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to record AdminSession for OTP login: ' . $e->getMessage());
+            }
+        }
 
-        Log::info("Successful OTP login for user ID: {$user->id} from IP: {$request->ip()}");
+        Log::info("Successful OTP login for user ID: {$user->id} on {$deviceInfo['device']} ({$deviceInfo['browser']}) from IP: {$request->ip()}");
 
         return response()->json([
             'message' => 'Logged in successfully',
@@ -309,5 +357,38 @@ class AuthController extends Controller
         ]);
     }
 
-    // Duplicate method removed to fix fatal error
+    /**
+     * Parse User-Agent and Request to determine device type, browser, and token name.
+     */
+    private function getDeviceInfo(Request $request): array
+    {
+        $ua = strtolower((string)$request->userAgent());
+        $device = 'Desktop';
+        if (strpos($ua, 'mobile') !== false || strpos($ua, 'android') !== false || strpos($ua, 'iphone') !== false) {
+            $device = 'Mobile';
+        } elseif (strpos($ua, 'ipad') !== false || strpos($ua, 'tablet') !== false) {
+            $device = 'Tablet';
+        }
+
+        $browser = 'Browser';
+        if (strpos($ua, 'firefox') !== false) {
+            $browser = 'Firefox';
+        } elseif (strpos($ua, 'edge') !== false || strpos($ua, 'edg/') !== false) {
+            $browser = 'Edge';
+        } elseif (strpos($ua, 'chrome') !== false || strpos($ua, 'crios') !== false) {
+            $browser = 'Chrome';
+        } elseif (strpos($ua, 'safari') !== false) {
+            $browser = 'Safari';
+        } elseif (strpos($ua, 'opera') !== false || strpos($ua, 'opr/') !== false) {
+            $browser = 'Opera';
+        }
+
+        $tokenName = $request->input('device_name') ?: ($device . ' - ' . $browser . ' (' . ($request->ip() ?? 'Unknown IP') . ')');
+
+        return [
+            'device' => $device,
+            'browser' => $browser,
+            'token_name' => $tokenName,
+        ];
+    }
 }
