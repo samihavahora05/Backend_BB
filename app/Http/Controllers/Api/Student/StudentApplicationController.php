@@ -7,9 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\JobApplication;
 use App\Models\InternshipApplication;
 use App\Models\ScholarshipApplication;
-use App\Models\ContestRegistration;
-use App\Models\MentorSession;
-use App\Models\CourseEnrollment;
+use App\Models\AuditLog;
+use Illuminate\Support\Facades\Storage;
 
 class StudentApplicationController extends Controller
 {
@@ -27,28 +26,35 @@ class StudentApplicationController extends Controller
             ->get()
             ->map(function ($app) {
                 return [
-                    'id' => 'job_'.$app->id,
-                    'type' => 'Job',
-                    'title' => $app->job->title ?? 'N/A',
-                    'status' => $app->status,
+                    'id'         => 'job_'.$app->id,
+                    'type'       => 'Job',
+                    'title'      => $app->job->title ?? 'Job Application',
+                    'status'     => $app->status,
                     'applied_on' => $app->created_at,
-                    'link' => '/student/jobs'
+                    'link'       => '/student/jobs'
                 ];
             });
         $applications = $applications->concat($jobs);
 
-        // 2. Internship Applications
-        $internships = InternshipApplication::with('internship:id,title')
+        // 2. Internship Applications (enriched with T&C, signature, and appointment letter links)
+        $internships = InternshipApplication::with(['internship:id,title,company_name,location,duration,stipend', 'appointmentLetter'])
             ->where('user_id', $userId)
             ->get()
             ->map(function ($app) {
                 return [
-                    'id' => 'internship_'.$app->id,
-                    'type' => 'Internship',
-                    'title' => $app->internship->title ?? 'N/A',
-                    'status' => $app->status,
-                    'applied_on' => $app->created_at,
-                    'link' => '/student/internships'
+                    'id'                     => 'internship_'.$app->id,
+                    'raw_id'                 => $app->id,
+                    'type'                   => 'Internship',
+                    'title'                  => $app->internship->title ?? $app->application_type ?? 'Internship Application',
+                    'status'                 => $app->status,
+                    'terms_accepted'         => (bool)$app->terms_accepted,
+                    'terms_version'          => $app->terms_version,
+                    'signature_url'          => $app->signature_url,
+                    'rejection_reason'       => $app->rejection_reason,
+                    'appointment_letter_url' => $app->appointment_letter_url,
+                    'has_appointment_letter' => !empty($app->appointment_letter_path),
+                    'applied_on'             => $app->applied_at ?? $app->created_at,
+                    'link'                   => '/student/internships'
                 ];
             });
         $applications = $applications->concat($internships);
@@ -59,28 +65,68 @@ class StudentApplicationController extends Controller
             ->get()
             ->map(function ($app) {
                 return [
-                    'id' => 'scholarship_'.$app->id,
-                    'type' => 'Scholarship',
-                    'title' => $app->program->name ?? 'N/A',
-                    'status' => $app->status,
+                    'id'         => 'scholarship_'.$app->id,
+                    'type'       => 'Scholarship',
+                    'title'      => $app->program->name ?? 'Scholarship Program',
+                    'status'     => $app->status,
                     'applied_on' => $app->created_at,
-                    'link' => '/student/scholarships'
+                    'link'       => '/student/scholarships'
                 ];
             });
         $applications = $applications->concat($scholarships);
 
-        // Contests are managed separately on /student/contests
-
-
         // Sort by applied_on desc
         $sortedApplications = $applications->sortByDesc('applied_on')->values()->map(function ($app) {
-            $app['applied_on'] = $app['applied_on']->format('M d, Y');
+            $app['applied_on_formatted'] = $app['applied_on'] ? $app['applied_on']->format('M d, Y') : 'Just now';
             return $app;
         });
 
         return response()->json([
             'success' => true,
-            'data' => $sortedApplications
+            'data'    => $sortedApplications
+        ]);
+    }
+
+    /**
+     * Secure endpoint for applicant to download appointment letter (Strict IDOR protection)
+     * GET /api/student/applications/{id}/appointment-letter
+     */
+    public function downloadAppointmentLetter(Request $request, $id)
+    {
+        $user = $request->user();
+        $app = InternshipApplication::with('appointmentLetter')->findOrFail($id);
+
+        // IDOR Check
+        if ($app->user_id !== $user->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
+        }
+
+        if ($app->status !== 'approved' || empty($app->appointment_letter_path) || !Storage::disk('local')->exists($app->appointment_letter_path)) {
+            return response()->json(['success' => false, 'message' => 'Appointment Letter is not available.'], 404);
+        }
+
+        // Record Audit Log
+        AuditLog::create([
+            'user_id'    => $user->id,
+            'action'     => 'appointment_letter_downloaded_by_student',
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+            'user_agent' => $request->userAgent() ?? 'System',
+            'payload'    => [
+                'application_id'   => $app->id,
+                'reference_number' => $app->appointmentLetter?->reference_number,
+            ],
+        ]);
+
+        if ($app->appointmentLetter) {
+            $app->appointmentLetter->update(['downloaded_at' => now()]);
+        }
+
+        $path = Storage::disk('local')->path($app->appointment_letter_path);
+        $ref = $app->appointmentLetter?->reference_number ?? ('AL_' . $app->id);
+
+        return response()->file($path, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Appointment_Letter_' . $ref . '.pdf"',
         ]);
     }
 }

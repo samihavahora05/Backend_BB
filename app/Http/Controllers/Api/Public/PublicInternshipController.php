@@ -5,7 +5,14 @@ namespace App\Http\Controllers\Api\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Internship;
 use App\Models\InternshipApplication;
+use App\Models\AuditLog;
+use App\Models\User;
+use App\Mail\AdminNewInternshipApplicationMail;
+use App\Services\AppointmentLetterService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PublicInternshipController extends Controller
 {
@@ -15,7 +22,7 @@ class PublicInternshipController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Internship::query()->with('company.companyProfile')->whereIn('status', ['open', 'Open']);
+        $query = Internship::query()->with('company.companyProfile')->whereIn('status', ['open', 'Open', 'active', 'published']);
 
         if ($s = $request->query('search')) {
             $query->where(function ($q) use ($s) {
@@ -28,7 +35,7 @@ class PublicInternshipController extends Controller
         }
 
         if ($type = $request->query('type')) {
-            $query->where('mode', $type); // Remote, On-site, Hybrid
+            $query->where('mode', $type);
         }
         if ($domain = $request->query('domain')) {
             $query->where(function($q) use ($domain) {
@@ -37,11 +44,6 @@ class PublicInternshipController extends Controller
             });
         }
         if ($duration = $request->query('duration')) {
-            // Normalize "6 Months" / "1 Year" style filter labels into a month count
-            // and match against duration_months (reliable, numeric) instead of only
-            // fuzzy-matching the free-text `duration` column, which is inconsistently
-            // populated across seeders/imports and caused this filter to silently
-            // include/exclude the wrong rows.
             if (preg_match('/(\d+)\s*Year/i', $duration, $m)) {
                 $months = (int) $m[1] * 12;
             } elseif (preg_match('/(\d+)/', $duration, $m)) {
@@ -77,7 +79,7 @@ class PublicInternshipController extends Controller
         }
 
         if ($user) {
-            $appliedInternshipIds = \App\Models\InternshipApplication::where('user_id', $user->id)
+            $appliedInternshipIds = InternshipApplication::where('user_id', $user->id)
                 ->pluck('internship_id')
                 ->toArray();
         }
@@ -119,16 +121,24 @@ class PublicInternshipController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $internship = Internship::with('company.companyProfile')->whereIn('status', ['open', 'Open'])->findOrFail($id);
+        $internship = Internship::with('company.companyProfile')->whereIn('status', ['open', 'Open', 'active', 'published'])->findOrFail($id);
 
         $hasApplied = false;
         $isBookmarked = false;
-        if ($request->user()) {
+        $user = auth('sanctum')->user();
+        if (!$user && $token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            if ($accessToken && $accessToken->tokenable) {
+                $user = $accessToken->tokenable;
+            }
+        }
+
+        if ($user) {
             $hasApplied = InternshipApplication::where('internship_id', $internship->id)
-                ->where('user_id', $request->user()->id)
+                ->where('user_id', $user->id)
                 ->exists();
             $isBookmarked = \App\Models\SavedInternship::where('internship_id', $internship->id)
-                ->where('user_id', $request->user()->id)
+                ->where('user_id', $user->id)
                 ->exists();
         }
 
@@ -138,24 +148,53 @@ class PublicInternshipController extends Controller
                 'company_logo' => $internship->company_logo ? \App\Support\StorageHelper::url($internship->company_logo) : null,
                 'has_applied'  => $hasApplied,
                 'is_bookmarked'=> $isBookmarked,
-                'posted_at'    => $internship->created_at->diffForHumans(),
+                'posted_at'    => $internship->created_at ? $internship->created_at->diffForHumans() : 'Recently',
             ])
         ]);
     }
 
     /**
-     * Apply for an internship (requires auth)
-     * POST /api/public/internships/{id}/apply
+     * Helper to process digital signature upload / base64 string
      */
+    protected function saveDigitalSignature(Request $request): ?string
+    {
+        if ($request->hasFile('signature')) {
+            $file = $request->file('signature');
+            $filename = 'signature_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            return $file->storeAs('signatures', $filename, 'local');
+        }
+
+        $sigData = $request->input('signature');
+        if (!empty($sigData) && is_string($sigData) && str_starts_with($sigData, 'data:image')) {
+            // Base64 data URL
+            if (preg_match('/^data:image\/(\w+);base64,/', $sigData, $type)) {
+                $data = substr($sigData, strpos($sigData, ',') + 1);
+                $type = strtolower($type[1]);
+                if (!in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    $type = 'png';
+                }
+                $data = base64_decode($data);
+                if ($data === false) {
+                    return null;
+                }
+                $filename = 'signatures/signature_' . time() . '_' . Str::random(12) . '.' . $type;
+                Storage::disk('local')->put($filename, $data);
+                return $filename;
+            }
+        }
+
+        return null;
+    }
+
     /**
-     * Apply for an internship (supports auth or guest)
+     * Apply for an internship
      * POST /api/public/internships/{id}/apply
      */
     public function apply(Request $request, $id)
     {
         $internship = Internship::whereIn('status', ['open', 'Open', 'active', 'published'])->find($id);
 
-        $user = $request->user();
+        $user = auth('sanctum')->user();
         if (!$user && $token = $request->bearerToken()) {
             $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
             if ($accessToken && $accessToken->tokenable) {
@@ -191,7 +230,20 @@ class PublicInternshipController extends Controller
             'current_company'  => 'nullable|string|max:255',
             'available_from'   => 'nullable|string|max:100',
             'expected_stipend' => 'nullable|string|max:100',
+            // Mandatory T&C Agreement and Digital Signature
+            'terms_accepted'   => 'required|in:1,true,yes,on',
+            'terms_version'    => 'nullable|string|max:50',
+            'signature'        => 'required',
+        ], [
+            'terms_accepted.required' => 'You must agree to the Terms & Conditions before submitting.',
+            'terms_accepted.in'       => 'You must agree to the Terms & Conditions before submitting.',
+            'signature.required'      => 'A valid digital signature is mandatory to submit your application.',
         ]);
+
+        $signaturePath = $this->saveDigitalSignature($request);
+        if (!$signaturePath) {
+            return response()->json(['success' => false, 'message' => 'Please provide a valid digital signature on the canvas.'], 422);
+        }
 
         $resumePath = null;
         if ($request->hasFile('resume')) {
@@ -201,7 +253,7 @@ class PublicInternshipController extends Controller
         $application = InternshipApplication::create([
             'internship_id'    => $internship?->id,
             'user_id'          => $user?->id,
-            'status'           => 'applied',
+            'status'           => 'submitted',
             'first_name'       => $data['first_name'] ?? ($user?->first_name ?? null),
             'last_name'        => $data['last_name'] ?? ($user?->last_name ?? null),
             'email'            => $data['email'] ?? ($user?->email ?? null),
@@ -215,28 +267,61 @@ class PublicInternshipController extends Controller
             'github_url'       => $data['github_url'] ?? null,
             'linkedin_url'     => $data['linkedin_url'] ?? null,
             'application_type' => $data['application_type'] ?? ($internship?->title ?? 'Internship Application'),
-            'source_page'      => $data['source_page'] ?? 'Internship Page',
+            'source_page'      => $data['source_page'] ?? 'Dedicated Internship Apply Page',
             'experience_years' => $data['experience_years'] ?? null,
             'current_company'  => $data['current_company'] ?? null,
             'available_from'   => $data['available_from'] ?? null,
             'expected_stipend' => $data['expected_stipend'] ?? null,
+            'terms_accepted'   => true,
+            'terms_accepted_at'=> now(),
+            'terms_version'    => $data['terms_version'] ?? 'v1.0',
+            'signature_path'   => $signaturePath,
+            'signed_at'        => now(),
             'applied_at'       => now(),
         ]);
+
+        // Audit Trail
+        AuditLog::create([
+            'user_id'    => $user?->id,
+            'action'     => 'internship_application_submitted',
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+            'user_agent' => $request->userAgent() ?? 'System',
+            'payload'    => [
+                'application_id' => $application->id,
+                'internship_id'  => $internship?->id,
+                'applicant_name' => $application->applicant_name,
+                'terms_accepted' => true,
+                'terms_version'  => $application->terms_version,
+            ],
+        ]);
+
+        // Email Notification to Admin (Protected in try/catch to maintain transactional stability)
+        try {
+            $adminEmail = config('mail.from.address', 'info.blueboxx@gmail.com');
+            Mail::to($adminEmail)->send(new AdminNewInternshipApplicationMail($application));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Admin application notification email delivery failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Internship application submitted successfully!',
-            'data'    => ['application_id' => $application->id, 'status' => $application->status],
+            'data'    => [
+                'application_id' => $application->id,
+                'status'         => $application->status,
+                'terms_accepted' => $application->terms_accepted,
+                'signed_at'      => $application->signed_at,
+            ],
         ], 201);
     }
 
     /**
-     * General application endpoint for fast-track forms, scholarships, and general inquiries
+     * General application endpoint
      * POST /api/public/internships/apply-general
      */
     public function applyGeneral(Request $request)
     {
-        $user = $request->user();
+        $user = auth('sanctum')->user();
         if (!$user && $token = $request->bearerToken()) {
             $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
             if ($accessToken && $accessToken->tokenable) {
@@ -260,7 +345,18 @@ class PublicInternshipController extends Controller
             'application_type' => 'nullable|string|max:255',
             'source_page'      => 'nullable|string|max:255',
             'internship_id'    => 'nullable|integer',
+            'terms_accepted'   => 'required|in:1,true,yes,on',
+            'terms_version'    => 'nullable|string|max:50',
+            'signature'        => 'required',
+        ], [
+            'terms_accepted.required' => 'You must agree to the Terms & Conditions before submitting.',
+            'signature.required'      => 'A valid digital signature is mandatory to submit your application.',
         ]);
+
+        $signaturePath = $this->saveDigitalSignature($request);
+        if (!$signaturePath) {
+            return response()->json(['success' => false, 'message' => 'Please provide a valid digital signature.'], 422);
+        }
 
         $resumePath = null;
         if ($request->hasFile('resume')) {
@@ -270,7 +366,7 @@ class PublicInternshipController extends Controller
         $application = InternshipApplication::create([
             'internship_id'    => $data['internship_id'] ?? null,
             'user_id'          => $user?->id,
-            'status'           => 'applied',
+            'status'           => 'submitted',
             'first_name'       => $data['first_name'],
             'last_name'        => $data['last_name'] ?? null,
             'email'            => $data['email'],
@@ -285,14 +381,91 @@ class PublicInternshipController extends Controller
             'linkedin_url'     => $data['linkedin_url'] ?? null,
             'application_type' => $data['application_type'] ?? 'Fast Track Program Application',
             'source_page'      => $data['source_page'] ?? 'General Internship Form',
+            'terms_accepted'   => true,
+            'terms_accepted_at'=> now(),
+            'terms_version'    => $data['terms_version'] ?? 'v1.0',
+            'signature_path'   => $signaturePath,
+            'signed_at'        => now(),
             'applied_at'       => now(),
         ]);
 
+        AuditLog::create([
+            'user_id'    => $user?->id,
+            'action'     => 'internship_general_application_submitted',
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+            'user_agent' => $request->userAgent() ?? 'System',
+            'payload'    => [
+                'application_id' => $application->id,
+                'applicant_name' => $application->applicant_name,
+            ],
+        ]);
+
+        try {
+            $adminEmail = config('mail.from.address', 'info.blueboxx@gmail.com');
+            Mail::to($adminEmail)->send(new AdminNewInternshipApplicationMail($application));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Admin email delivery failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Application received successfully! Our team will contact you shortly.',
+            'message' => 'Application received successfully! Our team will review your submission.',
             'data'    => ['application_id' => $application->id, 'status' => $application->status],
         ], 201);
+    }
+
+    /**
+     * Download or view official Terms and Conditions PDF document
+     * GET /api/public/documents/terms-and-conditions
+     */
+    public function downloadTermsAndConditions(Request $request, AppointmentLetterService $service)
+    {
+        $filePath = $service->getTermsAndConditionsPdf();
+
+        if (!file_exists($filePath)) {
+            return response()->json(['success' => false, 'message' => 'Terms & Conditions document not found.'], 404);
+        }
+
+        return response()->file($filePath, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Blueboxx_Internship_Terms_and_Conditions.pdf"',
+        ]);
+    }
+
+    /**
+     * View/stream signature image safely
+     * GET /api/public/internships/applications/{id}/signature
+     */
+    public function signature(Request $request, $id)
+    {
+        $app = InternshipApplication::findOrFail($id);
+        $user = auth('sanctum')->user();
+        if (!$user && $token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            if ($accessToken && $accessToken->tokenable) {
+                $user = $accessToken->tokenable;
+            }
+        }
+
+        // Authorization: owner or admin
+        $isOwner = $user && ($user->id === $app->user_id);
+        $isAdmin = $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['admin', 'super_admin']);
+
+        if (!$isOwner && !$isAdmin) {
+            // For guest submissions, allow viewing during active submission flow if requested
+            if ($app->user_id !== null) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized signature access.'], 403);
+            }
+        }
+
+        if (empty($app->signature_path) || !Storage::disk('local')->exists($app->signature_path)) {
+            return response()->json(['success' => false, 'message' => 'Signature document not found.'], 404);
+        }
+
+        $path = Storage::disk('local')->path($app->signature_path);
+        return response()->file($path, [
+            'Content-Type' => 'image/png',
+        ]);
     }
 
     /**
@@ -301,17 +474,22 @@ class PublicInternshipController extends Controller
      */
     public function myApplications(Request $request)
     {
-        $applications = InternshipApplication::with(['internship'])
+        $applications = InternshipApplication::with(['internship', 'appointmentLetter'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(10);
 
         $data = $applications->through(fn($a) => [
-            'id'             => $a->id,
-            'internship'     => $a->internship?->title ?? $a->application_type,
-            'company'        => $a->internship?->company_name ?? 'Blueboxx DA',
-            'status'         => $a->status,
-            'applied_at'     => $a->applied_at?->format('M d, Y') ?? $a->created_at->format('M d, Y'),
+            'id'                     => $a->id,
+            'internship'             => $a->internship?->title ?? $a->application_type,
+            'company'                => $a->internship?->company_name ?? 'Blueboxx DA',
+            'status'                 => $a->status,
+            'terms_accepted'         => (bool)$a->terms_accepted,
+            'terms_version'          => $a->terms_version,
+            'signature_url'          => $a->signature_url,
+            'rejection_reason'       => $a->rejection_reason,
+            'appointment_letter_url' => $a->appointment_letter_url,
+            'applied_at'             => $a->applied_at?->format('M d, Y') ?? $a->created_at->format('M d, Y'),
         ]);
 
         return response()->json([

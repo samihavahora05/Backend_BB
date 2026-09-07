@@ -5,376 +5,395 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Internship;
 use App\Models\InternshipApplication;
-use App\Models\InternshipTask;
-use App\Models\InternshipSubmission; // I need to make sure this model exists, but if it doesn't I will rely on standard table if required or check later.
+use App\Models\AppointmentLetter;
+use App\Models\AuditLog;
+use App\Mail\InternshipApprovalMail;
+use App\Mail\InternshipRejectionMail;
+use App\Services\AppointmentLetterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AdminInternshipController extends Controller
 {
+    protected AppointmentLetterService $appointmentService;
+
+    public function __construct(AppointmentLetterService $appointmentService)
+    {
+        $this->appointmentService = $appointmentService;
+    }
+
+    private function getSignatureDataUri(?string $path): ?string
+    {
+        if (empty($path) || !Storage::disk('local')->exists($path)) {
+            return null;
+        }
+        $raw = Storage::disk('local')->get($path);
+        $mime = (str_ends_with(strtolower($path), '.jpg') || str_ends_with(strtolower($path), '.jpeg')) ? 'image/jpeg' : 'image/png';
+        return 'data:' . $mime . ';base64,' . base64_encode($raw);
+    }
+
+    /**
+     * Get platform statistics for internships and applications.
+     */
     public function stats()
     {
-        $total = Internship::count();
-        $open = Internship::where(function($q) {
-            $q->whereIn(DB::raw('LOWER(status)'), ['open', 'active', 'published'])
-              ->orWhereNull('status');
-        })->count();
-        $applications = InternshipApplication::count();
-        $pending = InternshipApplication::where('status', 'pending')->count();
-        $approved = InternshipApplication::where('status', 'approved')->count();
-        $submissions = class_exists('\App\Models\InternshipSubmission') ? \App\Models\InternshipSubmission::count() : 0;
+        $totalInternships = Internship::count();
+        $activeInternships = Internship::where('status', 'open')->count();
+        $totalApplications = InternshipApplication::count();
+        $approvedApplications = InternshipApplication::where('status', 'approved')->count();
+        $rejectedApplications = InternshipApplication::where('status', 'rejected')->count();
+        $underReviewApplications = InternshipApplication::whereIn('status', ['under_review', 'submitted', 'pending'])->count();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'total' => $total,
-                'open' => $open,
-                'applications' => $applications,
-                'pending' => $pending,
-                'approved' => $approved,
-                'submissions' => $submissions
+                'total_internships'         => $totalInternships,
+                'active_internships'        => $activeInternships,
+                'total_applications'       => $totalApplications,
+                'approved_applications'     => $approvedApplications,
+                'rejected_applications'     => $rejectedApplications,
+                'under_review_applications' => $underReviewApplications,
             ]
         ]);
     }
 
-    private function buildInternshipQuery(Request $request)
+    /**
+     * Get all internship applications across all internships.
+     */
+    public function allApplications(Request $request)
     {
-        $query = Internship::with(['company.companyProfile'])->withCount('applications');
+        $query = InternshipApplication::with(['user', 'internship', 'appointmentLetter', 'reviewer']);
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('department', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhereHas('company', function ($companyQuery) use ($search) {
-                      $companyQuery->where('first_name', 'like', "%{$search}%")
-                                   ->orWhere('last_name', 'like', "%{$search}%")
-                                   ->orWhere('name', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('degree', 'like', "%{$search}%")
+                  ->orWhereHas('internship', function($iq) use ($search) {
+                      $iq->where('title', 'like', "%{$search}%");
                   });
             });
         }
 
         if ($request->filled('status')) {
             $status = strtolower($request->status);
-            $query->where(function($q) use ($status) {
-                if ($status === 'open') {
-                    $q->whereIn(DB::raw('LOWER(status)'), ['open', 'active', 'published'])
-                      ->orWhereNull('status');
-                } else {
-                    $q->where(DB::raw('LOWER(status)'), $status);
-                }
-            });
-        }
-        if ($request->filled('mode')) {
-            $query->where('mode', $request->mode);
-        }
-        if ($request->filled('company_id')) {
-            $query->where('company_id', $request->company_id);
-        }
-
-        if ($request->filled('sort_by')) {
-            $sortDir = $request->input('sort_dir', 'desc');
-            $sortBy = $request->sort_by;
-            
-            if (in_array($sortBy, ['title', 'created_at', 'applications_count', 'status', 'start_date'])) {
-                $query->orderBy($sortBy, $sortDir);
-            } else {
-                $query->latest();
-            }
-        } else {
-            $query->latest();
-        }
-
-        return $query;
-    }
-
-    public function index(Request $request)
-    {
-        $query = $this->buildInternshipQuery($request);
-        $perPage = $request->input('per_page', 15);
-        $internships = $query->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'data' => $internships
-        ]);
-    }
-
-    public function show($id)
-    {
-        $internship = Internship::with('company')->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $internship]);
-    }
-
-    private function validateInternship(Request $request)
-    {
-        return $request->validate([
-            'title' => 'required|string|max:255',
-            'company_id' => 'nullable|exists:users,id',
-            'department' => 'nullable|string|max:255',
-            'location' => 'nullable|string|max:255',
-            'mode' => 'nullable|in:Remote,Hybrid,Onsite',
-            'duration_months' => 'nullable|integer|min:1',
-            'duration' => 'nullable|string|max:255',
-            'stipend' => 'nullable|numeric|min:0',
-            'skills_required' => 'nullable|array',
-            'eligibility' => 'nullable|string',
-            'description' => 'nullable|string',
-            'responsibilities' => 'nullable|string',
-            'learning_outcomes' => 'nullable|string',
-            'openings' => 'nullable|integer|min:1',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'application_deadline' => 'nullable|date',
-            'status' => 'nullable|in:open,closed,draft,archived',
-            'featured' => 'nullable|boolean',
-            'thumbnail' => 'nullable|string',
-            'preview_image' => 'nullable|string',
-            'attachments' => 'nullable|array',
-        ]);
-    }
-
-    private function resolveCompanyId(Request $request, ?int $existingCompanyId = null): ?int
-    {
-        $companyId = $request->input('company_id');
-        $companyName = $request->input('company_name') ?? $request->input('companyName');
-
-        if (!empty($companyId) && \App\Models\User::where('id', $companyId)->exists()) {
-            return (int)$companyId;
-        }
-
-        if (!empty($companyName)) {
-            $matchedUser = \App\Models\User::where('name', 'like', "%{$companyName}%")
-                ->orWhere('first_name', 'like', "%{$companyName}%")
-                ->orWhereHas('companyProfile', function ($q) use ($companyName) {
-                    $q->where('company_name', 'like', "%{$companyName}%");
-                })
-                ->first();
-
-            if ($matchedUser) {
-                return $matchedUser->id;
-            }
-        }
-
-        if ($existingCompanyId) {
-            return $existingCompanyId;
-        }
-
-        // Default to first company account or auth user
-        $defaultCompany = \App\Models\User::role('company')->first();
-        return $defaultCompany ? $defaultCompany->id : (auth()->id() ?? 1);
-    }
-
-    public function store(Request $request)
-    {
-        $data = $this->validateInternship($request);
-        
-        $data['company_id'] = $this->resolveCompanyId($request);
-
-        if (empty($data['openings'])) {
-            $data['openings'] = 1;
-        }
-
-        $internship = Internship::create($data);
-        return response()->json(['success' => true, 'data' => $internship->load('company')], 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $internship = Internship::findOrFail($id);
-        $data = $this->validateInternship($request);
-
-        // Preserve or properly resolve company relationship
-        $data['company_id'] = $this->resolveCompanyId($request, $internship->company_id);
-
-        if (array_key_exists('openings', $data) && empty($data['openings'])) {
-            $data['openings'] = 1;
-        }
-
-        $internship->update($data);
-        return response()->json(['success' => true, 'data' => $internship->load('company'), 'message' => 'Internship updated successfully']);
-    }
-
-    public function destroy($id)
-    {
-        Internship::findOrFail($id)->delete();
-        return response()->json(['success' => true]);
-    }
-
-    public function duplicate($id)
-    {
-        $internship = Internship::findOrFail($id);
-        $new = $internship->replicate();
-        $new->title = $new->title . ' (Copy)';
-        $new->save();
-        return response()->json(['success' => true, 'data' => $new]);
-    }
-
-    public function bulkUpdateStatus(Request $request)
-    {
-        Internship::whereIn('id', $request->ids)->update(['status' => $request->status]);
-        return response()->json(['success' => true]);
-    }
-
-    public function bulkDelete(Request $request)
-    {
-        Internship::whereIn('id', $request->ids)->delete();
-        return response()->json(['success' => true]);
-    }
-
-    public function export(Request $request)
-    {
-        $query = $this->buildInternshipQuery($request);
-        $internships = $query->get();
-        
-        $csv = "ID,Title,Company,Department,Mode,Location,Stipend,Openings,Status,Start Date,Created At\n";
-        foreach($internships as $i) {
-            $companyName = str_replace('"', '""', $i->company?->first_name . ' ' . $i->company?->last_name);
-            $title = str_replace('"', '""', $i->title);
-            $dept = str_replace('"', '""', $i->department);
-            $loc = str_replace('"', '""', $i->location);
-            $stipend = $i->stipend;
-            
-            $csv .= "{$i->id},\"{$title}\",\"{$companyName}\",\"{$dept}\",{$i->mode},\"{$loc}\",{$stipend},{$i->openings},{$i->status},{$i->start_date},{$i->created_at}\n";
-        }
-        
-        return response($csv)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="internships_export.csv"');
-    }
-
-    // Applications
-    public function allApplications(Request $request)
-    {
-        $query = InternshipApplication::with(['user', 'internship']);
-
-        if ($request->has('search') && !empty($request->search)) {
-            $s = $request->search;
-            $query->where(function($q) use ($s) {
-                $q->where('first_name', 'like', "%{$s}%")
-                  ->orWhere('last_name', 'like', "%{$s}%")
-                  ->orWhere('email', 'like', "%{$s}%")
-                  ->orWhere('phone', 'like', "%{$s}%")
-                  ->orWhere('degree', 'like', "%{$s}%")
-                  ->orWhere('application_type', 'like', "%{$s}%")
-                  ->orWhere('source_page', 'like', "%{$s}%")
-                  ->orWhereHas('user', function($userQ) use ($s) {
-                      $userQ->where('first_name', 'like', "%{$s}%")
-                            ->orWhere('last_name', 'like', "%{$s}%")
-                            ->orWhere('email', 'like', "%{$s}%");
-                  })
-                  ->orWhereHas('internship', function($intQ) use ($s) {
-                      $intQ->where('title', 'like', "%{$s}%");
-                  });
-            });
-        }
-        if ($request->has('status') && !empty($request->status)) {
-            $query->where('status', $request->status);
+            $query->where('status', $status);
         }
 
         $apps = $query->latest()->paginate($request->input('per_page', 15));
 
         $apps->through(function($app) {
-            $app->applicant_name  = $app->applicant_name;
-            $app->applicant_email = $app->applicant_email;
-            $app->applicant_phone = $app->applicant_phone;
-            $app->resume_download = $app->resume_url ? asset('storage/' . $app->resume_url) : null;
+            $app->applicant_name         = $app->applicant_name;
+            $app->applicant_email        = $app->applicant_email;
+            $app->applicant_phone        = $app->applicant_phone;
+            $app->resume_download        = $app->resume_url ? asset('storage/' . $app->resume_url) : null;
+            $app->signature_url          = $app->signature_url;
+            $app->signature_data         = $this->getSignatureDataUri($app->signature_path);
+            $app->appointment_letter_url = $app->appointment_letter_url;
             return $app;
         });
 
         return response()->json(['success' => true, 'data' => $apps]);
     }
 
+    /**
+     * Get applications for a specific internship.
+     */
+    public function applicationsByInternship(Request $request, $id)
+    {
+        $query = InternshipApplication::with(['user', 'appointmentLetter', 'reviewer'])
+            ->where('internship_id', $id);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', strtolower($request->status));
+        }
+
+        $apps = $query->latest()->paginate($request->input('per_page', 15));
+
+        $apps->through(function($app) {
+            $app->applicant_name         = $app->applicant_name;
+            $app->applicant_email        = $app->applicant_email;
+            $app->applicant_phone        = $app->applicant_phone;
+            $app->resume_download        = $app->resume_url ? asset('storage/' . $app->resume_url) : null;
+            $app->signature_url          = $app->signature_url;
+            $app->signature_data         = $this->getSignatureDataUri($app->signature_path);
+            $app->appointment_letter_url = $app->appointment_letter_url;
+            return $app;
+        });
+
+        return response()->json(['success' => true, 'data' => $apps]);
+    }
+
+    /**
+     * Show detailed application.
+     */
     public function showApplication($id)
     {
-        $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
-        
+        $app = InternshipApplication::with(['user', 'internship', 'appointmentLetter', 'reviewer'])->findOrFail($id);
+
         $data = array_merge($app->toArray(), [
-            'applicant_name'  => $app->applicant_name,
-            'applicant_email' => $app->applicant_email,
-            'applicant_phone' => $app->applicant_phone,
-            'resume_download' => $app->resume_url ? asset('storage/' . $app->resume_url) : null,
+            'applicant_name'         => $app->applicant_name,
+            'applicant_email'        => $app->applicant_email,
+            'applicant_phone'        => $app->applicant_phone,
+            'resume_download'        => $app->resume_url ? asset('storage/' . $app->resume_url) : null,
+            'signature_url'          => $app->signature_url,
+            'signature_data'         => $this->getSignatureDataUri($app->signature_path),
+            'appointment_letter_url' => $app->appointment_letter_url,
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $data
+            'data'    => $data
         ]);
     }
 
-    // Tasks
-    public function createTask(Request $request)
+    /**
+     * Save Appointment Details Draft.
+     * POST /api/admin/internships/applications/{id}/appointment-details
+     */
+    public function saveAppointmentDetails(Request $request, $id)
     {
-        $data = $request->validate([
-            'internship_id' => 'required|exists:internships,id',
-            'title' => 'required|string',
-            'description' => 'nullable|string',
-            'total_marks' => 'required|numeric',
-            'deadline' => 'nullable|date'
+        $app = InternshipApplication::findOrFail($id);
+
+        $options = $this->extractAppointmentOptions($request);
+
+        $record = AppointmentLetter::updateOrCreate(
+            ['application_id' => $app->id],
+            [
+                'user_id'          => $app->user_id,
+                'reference_number' => $options['reference_number'] ?? ('BB-AL-' . date('Y') . '-' . str_pad((string)$app->id, 4, '0', STR_PAD_LEFT) . '-' . strtoupper(Str::random(4))),
+                'file_path'        => $app->appointment_letter_path ?? '',
+                'document_version' => 'v2.1',
+                'generated_by'     => auth()->id(),
+                'generated_at'     => now(),
+                'metadata'         => $options,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data'    => $record,
+            'message' => 'Appointment details saved successfully.'
+        ]);
+    }
+
+    /**
+     * Approve an application, generate appointment letter atomically with dual signatures, and notify applicant.
+     */
+    public function approveApplication(Request $request, $id)
+    {
+        $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
+
+        return DB::transaction(function () use ($app, $request) {
+            $app->status = 'approved';
+            $app->approved_at = now();
+            $app->reviewed_by = auth()->id();
+            $app->reviewed_at = now();
+            $app->save();
+
+            $options = $this->extractAppointmentOptions($request);
+
+            // Generate appointment letter with dual signatures & DejaVu Sans Unicode support
+            $letter = $this->appointmentService->generate($app, auth()->id(), $options);
+
+            // Audit log
+            AuditLog::create([
+                'user_id'    => auth()->id(),
+                'action'     => 'internship_application_approved',
+                'ip_address' => $request->ip() ?? '127.0.0.1',
+                'user_agent' => $request->userAgent() ?? 'System',
+                'payload'    => [
+                    'application_id'   => $app->id,
+                    'reference_number' => $letter->reference_number,
+                    'signatory_name'   => $options['signatory_name'] ?? 'Authorized Signatory',
+                    'stipend'          => $options['stipend_amount'] ?? 18000,
+                ]
+            ]);
+
+            // Email Notification
+            try {
+                if ($app->user && $app->user->email) {
+                    Mail::to($app->user->email)->send(new InternshipApprovalMail($app, $letter));
+                } elseif ($app->email) {
+                    Mail::to($app->email)->send(new InternshipApprovalMail($app, $letter));
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Approval email delivery failed: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'data'    => $app->fresh(['appointmentLetter']),
+                'message' => 'Application approved and official Appointment Letter generated successfully.'
+            ]);
+        });
+    }
+
+    /**
+     * Extract structured appointment options from Request.
+     */
+    private function extractAppointmentOptions(Request $request): array
+    {
+        $adminSigPath = null;
+        $adminSigData = null;
+
+        if ($request->hasFile('admin_signature')) {
+            $file = $request->file('admin_signature');
+            $filename = 'admin_sig_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $adminSigPath = 'signatures/' . $filename;
+            Storage::disk('local')->put($adminSigPath, file_get_contents($file));
+        } elseif ($request->filled('admin_signature')) {
+            $rawSig = $request->input('admin_signature');
+            if (str_starts_with($rawSig, 'data:image')) {
+                $adminSigData = $rawSig;
+                $filename = 'admin_sig_' . time() . '_' . Str::random(10) . '.png';
+                $adminSigPath = 'signatures/' . $filename;
+                $base64Image = substr($rawSig, strpos($rawSig, ',') + 1);
+                Storage::disk('local')->put($adminSigPath, base64_decode($base64Image));
+            }
+        }
+
+        $workingDays = $request->input('working_days', 'Monday to Friday');
+        if (is_string($workingDays) && (str_starts_with($workingDays, '[') || str_contains($workingDays, ','))) {
+            $decoded = json_decode($workingDays, true);
+            if (is_array($decoded)) {
+                $workingDays = $decoded;
+            }
+        }
+
+        return [
+            'designation'           => $request->input('designation', 'Backend Developer Intern'),
+            'department'            => $request->input('department', 'Engineering & Development'),
+            'start_date'            => $request->input('start_date', now()->format('Y-m-d')),
+            'end_date'              => $request->input('end_date'),
+            'duration'              => $request->input('duration', '6 Months'),
+            'working_days'          => $workingDays,
+            'working_hours'         => $request->input('working_hours', '09:30 AM - 06:30 PM'),
+            'break_time'            => $request->input('break_time', '01:00 PM - 02:00 PM'),
+            'reporting_time'        => $request->input('reporting_time', '09:30 AM'),
+            'stipend_amount'        => $request->input('stipend_amount', 18000),
+            'stipend_currency'      => $request->input('stipend_currency', '₹'),
+            'payment_frequency'     => $request->input('payment_frequency', 'month'),
+            'reporting_to'          => $request->input('reporting_to', 'Technical Project Manager'),
+            'reporting_person_name' => $request->input('reporting_person_name', 'Authorized Signatory'),
+            'work_location'         => $request->input('work_location', 'Vadodara, Gujarat'),
+            'work_mode'             => $request->input('work_mode', 'Onsite'),
+            'issue_date'            => $request->input('issue_date', now()->format('Y-m-d')),
+            'reference_number'      => $request->input('reference_number'),
+            'signatory_name'        => $request->input('signatory_name', 'Authorized Signatory'),
+            'signatory_designation' => $request->input('signatory_designation', 'Director / HR Head'),
+            'admin_signature_path'  => $adminSigPath,
+            'admin_signature_data'  => $adminSigData,
+        ];
+    }
+
+    /**
+     * Reject an application with reason.
+     */
+    public function rejectApplication(Request $request, $id)
+    {
+        $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
+
+        $request->validate([
+            'rejection_reason' => 'nullable|string|max:2000',
         ]);
 
-        $task = InternshipTask::create($data);
-        return response()->json(['success' => true, 'data' => $task]);
-    }
+        $reason = $request->input('rejection_reason');
 
-    // Submissions
-    public function allSubmissions(Request $request)
-    {
-        if(!class_exists('\App\Models\InternshipSubmission')) {
-            // Mock empty if no model
-            return response()->json(['success' => true, 'data' => []]);
-        }
-        $query = \App\Models\InternshipSubmission::with(['user', 'task.internship']);
-        
-        $subs = $query->latest()->paginate($request->input('per_page', 15));
-        return response()->json(['success' => true, 'data' => $subs]);
-    }
+        $app->status = 'rejected';
+        $app->rejection_reason = $reason;
+        $app->reviewed_by = auth()->id();
+        $app->reviewed_at = now();
+        $app->save();
 
-    public function gradeSubmission(Request $request, $id)
-    {
-        if(!class_exists('\App\Models\InternshipSubmission')) return response()->json([], 404);
-        
-        $sub = \App\Models\InternshipSubmission::findOrFail($id);
-        $sub->update($request->only(['status', 'marks_obtained', 'feedback']));
-        return response()->json(['success' => true, 'data' => $sub]);
-    }
+        AuditLog::create([
+            'user_id'    => auth()->id(),
+            'action'     => 'internship_application_rejected',
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+            'user_agent' => $request->userAgent() ?? 'System',
+            'payload'    => [
+                'application_id'   => $app->id,
+                'rejection_reason' => $reason,
+            ]
+        ]);
 
-    public function applicationsByInternship(Request $request, $id)
-    {
-        $query = InternshipApplication::with(['user', 'internship'])
-            ->where('internship_id', $id);
-
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $query->whereHas('user', fn($q) => $q
-                ->where('first_name', 'like', "%{$s}%")
-                ->orWhere('last_name', 'like', "%{$s}%")
-                ->orWhere('email', 'like', "%{$s}%"));
-        }
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        try {
+            if ($app->user && $app->user->email) {
+                Mail::to($app->user->email)->send(new InternshipRejectionMail($app, $reason));
+            } elseif ($app->email) {
+                Mail::to($app->email)->send(new InternshipRejectionMail($app, $reason));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Rejection email delivery failed: ' . $e->getMessage());
         }
 
-        $apps = $query->latest()->paginate($request->input('per_page', 15));
-        return response()->json(['success' => true, 'data' => $apps]);
+        return response()->json([
+            'success' => true,
+            'data'    => $app,
+            'message' => 'Application marked as rejected.'
+        ]);
     }
 
+    /**
+     * Update status and internal notes.
+     */
     public function updateApplicationStatus(Request $request, $id)
     {
-        $request->validate(['status' => 'required|string']);
         $app = InternshipApplication::findOrFail($id);
-        
+
+        $request->validate([
+            'status'         => 'required|in:submitted,applied,pending,under_review,shortlisted,interview,approved,selected,completed,rejected,cancelled',
+            'internal_notes' => 'nullable|string|max:2000',
+        ]);
+
         $app->status = $request->status;
-        if ($request->filled('internal_notes')) {
+        if ($request->has('internal_notes')) {
             $app->internal_notes = $request->internal_notes;
         }
+        $app->reviewed_by = auth()->id();
+        $app->reviewed_at = now();
         $app->save();
 
         return response()->json([
             'success' => true,
-            'data' => $app,
+            'data'    => $app,
             'message' => 'Status updated successfully'
+        ]);
+    }
+
+    /**
+     * Admin download appointment letter.
+     */
+    public function downloadAppointmentLetter(Request $request, $id)
+    {
+        $app = InternshipApplication::with('appointmentLetter')->findOrFail($id);
+
+        if (empty($app->appointment_letter_path) || !Storage::disk('local')->exists($app->appointment_letter_path) || $request->has('regenerate')) {
+            $letter = $this->appointmentService->generate($app, auth()->id());
+            $app->refresh();
+        }
+
+        $path = Storage::disk('local')->path($app->appointment_letter_path);
+        $ref = $app->appointmentLetter?->reference_number ?? ('AL_' . $app->id);
+
+        return response()->file($path, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Appointment_Letter_' . $ref . '.pdf"',
         ]);
     }
 }

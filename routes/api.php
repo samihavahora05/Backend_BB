@@ -158,6 +158,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('jobs/{id}', [\App\Http\Controllers\Api\Public\PublicJobController::class, 'show'])->where('id', '[0-9]+');
 
     // ─── Internships Platform ─────────────────────────────────────────────────
+    Route::get('documents/terms-and-conditions', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'downloadTermsAndConditions']);
+    Route::get('internships/applications/{id}/signature', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'signature']);
     Route::get('internships', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'index']);
     Route::get('internships/{id}', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'show'])->where('id', '[0-9]+');
 
@@ -478,6 +480,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         // Unified My Applications
         Route::get('/all-applications', [\App\Http\Controllers\Api\Student\StudentApplicationController::class, 'index']);
+        Route::get('/applications/{id}/appointment-letter', [\App\Http\Controllers\Api\Student\StudentApplicationController::class, 'downloadAppointmentLetter']);
 
         // Contests
         Route::get('/contests', [\App\Http\Controllers\Api\Student\StudentContestController::class, 'index']);
@@ -968,6 +971,11 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('{id}/applications', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'applicationsByInternship']);
             Route::get('applications/{id}', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'showApplication']);
             Route::put('applications/{id}/status', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'updateApplicationStatus']);
+            Route::post('applications/{id}/appointment-details', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'saveAppointmentDetails']);
+              Route::post('applications/{id}/approve', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'approveApplication']);
+            Route::post('applications/{id}/reject', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'rejectApplication']);
+            Route::get('applications/{id}/appointment-letter', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'downloadAppointmentLetter']);
+            Route::get('applications/{id}/signature', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'signature']);
             
             // Tasks & Submissions
             Route::get('{id}/tasks', [\App\Http\Controllers\Api\Admin\InternshipTaskController::class, 'index']);
