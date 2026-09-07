@@ -16,8 +16,8 @@
   }
   body {
     font-family: 'DejaVu Sans', sans-serif;
-    font-size: 11.2px;
-    line-height: 1.58;
+    font-size: 11.4px;
+    line-height: 1.62;
     color: #1a202c;
     background: #ffffff;
     width: 210mm;
@@ -42,77 +42,70 @@
     z-index: 10;
     padding-top: 136px;
     padding-bottom: 75px;
-    padding-left: 48px;
-    padding-right: 48px;
+    padding-left: 50px;
+    padding-right: 50px;
   }
 
   .doc-title {
     text-align: center;
-    font-size: 15px;
+    font-size: 15.5px;
     font-weight: bold;
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: #0d1b3e;
-    margin-bottom: 14px;
+    margin-bottom: 15px;
   }
 
   .meta-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 13px;
-    font-size: 10.8px;
+    margin-bottom: 14px;
+    font-size: 11px;
   }
 
   .recipient-block {
-    margin-bottom: 13px;
-    font-size: 11.2px;
-    line-height: 1.48;
+    margin-bottom: 14px;
+    font-size: 11.4px;
+    line-height: 1.5;
   }
 
   .subject-line {
-    font-size: 11.8px;
+    font-size: 12px;
     font-weight: bold;
     color: #0d1b3e;
-    margin-bottom: 13px;
+    margin-bottom: 14px;
   }
 
   p {
-    margin-bottom: 11px;
+    margin-bottom: 12px;
     text-align: justify;
-    font-size: 11.2px;
-    line-height: 1.58;
+    font-size: 11.4px;
+    line-height: 1.62;
   }
 
   ul.clauses-list {
-    margin: 6px 0 13px 22px;
+    margin: 6px 0 14px 22px;
     padding: 0;
   }
 
   ul.clauses-list li {
-    font-size: 11.2px;
-    line-height: 1.52;
-    margin-bottom: 6px;
+    font-size: 11.4px;
+    line-height: 1.55;
+    margin-bottom: 7px;
   }
 
-  .signatures-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 16px;
-  }
-
-  .sig-col {
-    width: 50%;
-    vertical-align: top;
+  .signature-block {
+    margin-top: 18px;
   }
 
   .sig-img-container {
-    height: 60px;
+    height: 64px;
     margin: 4px 0;
   }
 
   .sig-img {
-    max-height: 56px;
-    max-width: 145px;
+    max-height: 60px;
+    max-width: 160px;
     display: block;
   }
 
@@ -121,10 +114,11 @@
     font-style: italic;
     color: #0d1b3e;
     font-weight: bold;
-    padding-top: 16px;
+    padding-top: 18px;
   }
 
   .sig-line {
+    width: 240px;
     border-top: 1.2px solid #374151;
     padding-top: 4px;
     font-size: 10px;
@@ -157,7 +151,7 @@
 
   <div class="recipient-block">
     <strong>To,</strong><br>
-    <strong style="font-size: 11.8px; color: #0d1b3e;">{{ $applicant_name }}</strong><br>
+    <strong style="font-size: 12px; color: #0d1b3e;">{{ $applicant_name }}</strong><br>
     @if(!empty($degree))<span>{{ $degree }}</span>@if(!empty($college)), <span>{{ $college }}</span>@endif<br>@endif
     <span>{{ $location }}</span> | <span>{{ $applicant_email }}</span> | <span>{{ $applicant_phone }}</span>
   </div>
@@ -190,50 +184,26 @@
     Kindly sign and return a copy of this letter as confirmation of your acceptance. We welcome you aboard and wish you success in your new role.
   </p>
 
-  <div style="font-size: 10.5px; font-weight: bold; margin-top: 10px; margin-bottom: 3px;">Warm regards,</div>
+  <div style="font-size: 11px; font-weight: bold; margin-top: 12px; margin-bottom: 3px;">Warm regards,</div>
 
-  <!-- Dual Signatures Side-by-Side Table -->
-  <table class="signatures-table">
-    <tr>
-      <!-- Left: Admin Authorized Signatory -->
-      <td class="sig-col" style="padding-right: 16px;">
-        <div style="font-size: 10.5px; font-weight: bold; color: #0d1b3e;">
-          BLUEBOXX DA PVT. LTD.
-        </div>
-        <div class="sig-img-container">
-          @if(!empty($admin_signature_data))
-            <img src="{{ $admin_signature_data }}" class="sig-img" alt="Admin Signature" />
-          @else
-            <div class="sig-text-stamp">[ Authorized Signatory ]</div>
-          @endif
-        </div>
-        <div class="sig-line">
-          <strong>{{ $signatory_name ?? 'Authorized Signatory' }}</strong><br>
-          <span style="color: #4b5563;">{{ $signatory_designation ?? 'Director / HR Head' }}</span><br>
-          <span class="badge-signed">&#10003; Officially Authorized & Signed</span>
-        </div>
-      </td>
-
-      <!-- Right: Candidate Acceptance -->
-      <td class="sig-col" style="padding-left: 16px;">
-        <div style="font-size: 10.5px; font-weight: bold; color: #0d1b3e;">
-          Candidate Acceptance:
-        </div>
-        <div class="sig-img-container">
-          @if(!empty($candidate_signature_data))
-            <img src="{{ $candidate_signature_data }}" class="sig-img" alt="Candidate Signature" />
-          @else
-            <div class="sig-text-stamp">[ Digitally Signed ]</div>
-          @endif
-        </div>
-        <div class="sig-line">
-          <strong>{{ $applicant_name }}</strong><br>
-          <span style="color: #4b5563;">Candidate / Appointee</span><br>
-          <span class="badge-signed">&#10003; Digitally Accepted on {{ $signed_at }}</span>
-        </div>
-      </td>
-    </tr>
-  </table>
+  <!-- Authorized Company Signature Block (Candidate signature removed) -->
+  <div class="signature-block">
+    <div style="font-size: 11px; font-weight: bold; color: #0d1b3e;">
+      BLUEBOXX DA PVT. LTD.
+    </div>
+    <div class="sig-img-container">
+      @if(!empty($admin_signature_data))
+        <img src="{{ $admin_signature_data }}" class="sig-img" alt="Admin Signature" />
+      @else
+        <div class="sig-text-stamp">[ Authorized Signatory ]</div>
+      @endif
+    </div>
+    <div class="sig-line">
+      <strong>{{ $signatory_name ?? 'Authorized Signatory' }}</strong><br>
+      <span style="color: #4b5563;">{{ $signatory_designation ?? 'Director / HR Head' }}</span><br>
+      <span class="badge-signed">&#10003; Officially Authorized & Signed</span>
+    </div>
+  </div>
 
 </div>
 
