@@ -6,10 +6,7 @@
 <style>
   @page {
     size: a4 portrait;
-    margin-top: 32mm;
-    margin-bottom: 22mm;
-    margin-left: 14mm;
-    margin-right: 14mm;
+    margin: 0;
   }
   * {
     box-sizing: border-box;
@@ -17,28 +14,44 @@
     padding: 0;
     font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
   }
-  body {
-    font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
-    font-size: 10px;
-    line-height: 1.45;
-    color: #1e293b;
+  html, body {
+    margin: 0;
+    padding: 0;
     background: #ffffff;
+    font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
+    color: #1e293b;
+    font-size: 9.8px;
+    line-height: 1.45;
   }
 
-  /* Fixed Background image on EVERY page */
+  /* Fixed Background Image repeated on EVERY page */
   .bg-letterhead {
     position: fixed;
-    top: -32mm;
-    left: -14mm;
+    top: 0;
+    left: 0;
     width: 210mm;
     height: 297mm;
     z-index: -1000;
   }
 
+  /* Content area padded to fit inside the letterhead safe zone */
+  .content-page {
+    position: relative;
+    padding-top: 36mm;
+    padding-bottom: 24mm;
+    padding-left: 15mm;
+    padding-right: 15mm;
+    box-sizing: border-box;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
   /* Document Title */
   .doc-title {
     text-align: center;
-    font-size: 19px;
+    font-size: 18px;
     font-weight: 900;
     color: #0d1635;
     letter-spacing: 0.3px;
@@ -70,7 +83,7 @@
   }
 
   .section-title {
-    font-size: 11px;
+    font-size: 10.8px;
     font-weight: bold;
     color: #0d1635;
     margin-top: 8px;
@@ -96,12 +109,7 @@
     font-size: 9.8px;
     line-height: 1.4;
     color: #334155;
-    padding-bottom: 2.5px;
-  }
-
-  /* Page Break */
-  .page-break {
-    page-break-before: always;
+    padding-bottom: 2px;
   }
 
   /* Signature Box (Candidate Only) */
@@ -129,12 +137,12 @@
 <body>
 
 @if(!empty($letterhead_bg_base64))
-  <!-- This fixed image automatically repeats on EVERY page of the PDF -->
-  <img src="{{ $letterhead_bg_base64 }}" class="bg-letterhead" alt="BlueBoxx Letterhead Background" />
+  <!-- Exact uploaded letterhead image placed at full bleed (0, 0 to 210mm, 297mm) on EVERY page -->
+  <img src="{{ $letterhead_bg_base64 }}" class="bg-letterhead" alt="Blueboxx Letterhead" />
 @endif
 
 <!-- ================= PAGE 1 ================= -->
-<div>
+<div class="content-page">
   <!-- Document Title -->
   <div class="doc-title">Appointment Letter</div>
 
@@ -216,7 +224,7 @@
 </div>
 
 <!-- ================= PAGE 2 ================= -->
-<div class="page-break">
+<div class="content-page page-break">
   <!-- Conduct, Confidentiality, and Compliance -->
   <div class="section-title" style="margin-top: 0;">Conduct, Confidentiality, and Compliance:</div>
   <p>
