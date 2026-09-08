@@ -234,7 +234,7 @@
 
 <!-- Footer on all pages -->
 <footer>
-  BLUEBOXX DA PVT. LTD. &nbsp;|&nbsp; SF-02, Indiabulls, Mega Mall Nr. Jetalpur, Bridge, Akota Road, Akota, Vadodara &nbsp;|&nbsp; ✉ info.blueboxx@gmail.com &nbsp;|&nbsp; 🌐 www.blueboxx.in
+  BLUEBOXX DA PVT. LTD. &nbsp;|&nbsp; SF-02, Indiabulls Mega Mall, Akota, Vadodara &nbsp;|&nbsp; Email: info.blueboxx@gmail.com &nbsp;|&nbsp; Web: www.blueboxx.in
 </footer>
 
 <!-- Hero Title -->
