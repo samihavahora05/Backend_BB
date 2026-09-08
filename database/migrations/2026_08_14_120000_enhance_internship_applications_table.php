@@ -3,21 +3,29 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
         if (Schema::hasTable('internship_applications')) {
-            Schema::table('internship_applications', function (Blueprint $table) {
-                // Drop foreign key constraints or unique index if present on user_id / internship_id
-                // to allow nullable user_id and multiple general applications
-                try {
-                    $table->dropUnique(['internship_id', 'user_id']);
-                } catch (\Throwable $e) {
-                    // Ignore if unique index does not exist
-                }
+            // In MySQL/InnoDB, dropping the composite unique index (internship_id, user_id) fails if
+            // the foreign key on internship_id relies on it as its supporting index.
+            // Adding a standalone index on internship_id first satisfies the foreign key.
+            try {
+                DB::statement("ALTER TABLE `internship_applications` ADD INDEX `internship_applications_internship_id_idx` (`internship_id`)");
+            } catch (\Throwable $e) {
+                // Ignore if index already exists or unsupported by engine
+            }
 
+            try {
+                DB::statement("ALTER TABLE `internship_applications` DROP INDEX `internship_applications_internship_id_user_id_unique`");
+            } catch (\Throwable $e) {
+                // Ignore if unique index does not exist or was already dropped
+            }
+
+            Schema::table('internship_applications', function (Blueprint $table) {
                 if (Schema::hasColumn('internship_applications', 'user_id')) {
                     $table->unsignedBigInteger('user_id')->nullable()->change();
                 }
