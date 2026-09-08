@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Internship;
 use App\Models\InternshipApplication;
+use App\Models\InternshipSubmission;
+use App\Models\InternshipTask;
 use App\Models\AppointmentLetter;
 use App\Models\AuditLog;
 use App\Mail\InternshipApprovalMail;
@@ -394,6 +396,49 @@ class AdminInternshipController extends Controller
         return response()->file($path, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="Appointment_Letter_' . $ref . '.pdf"',
+        ]);
+    }
+
+    /**
+     * Get all internship task submissions across all internships.
+     */
+    public function allSubmissions(Request $request)
+    {
+        $query = InternshipSubmission::with(['task.internship', 'user']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('submission_text', 'like', "%{$search}%")
+                  ->orWhere('github_link', 'like', "%{$search}%")
+                  ->orWhere('video_link', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('task', function($tq) use ($search) {
+                      $tq->where('title', 'like', "%{$search}%")
+                         ->orWhereHas('internship', function($iq) use ($search) {
+                             $iq->where('title', 'like', "%{$search}%");
+                         });
+                  });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $status = strtolower($request->status);
+            $query->where('status', $status);
+        }
+
+        if ($request->filled('task_id')) {
+            $query->where('task_id', $request->task_id);
+        }
+
+        $submissions = $query->latest()->paginate($request->input('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'data'    => $submissions
         ]);
     }
 }
