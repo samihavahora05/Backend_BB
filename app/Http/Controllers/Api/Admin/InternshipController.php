@@ -138,25 +138,38 @@ class InternshipController extends Controller
 
         $format = $request->get('format', 'csv');
 
-        if ($format === 'csv') {
-            $headers = ['ID', 'Title', 'Company', 'Status', 'Mode', 'Stipend', 'Openings', 'Start Date', 'End Date', 'Applications', 'Created At'];
-            $rows    = $internships->map(fn($i) => [
-                $i->id,
-                $i->title,
-                $i->company?->first_name . ' ' . $i->company?->last_name,
-                $i->status,
-                $i->mode,
-                $i->stipend,
-                $i->openings,
-                $i->start_date?->format('Y-m-d'),
-                $i->end_date?->format('Y-m-d'),
-                $i->applications()->count(),
-                $i->created_at->format('Y-m-d'),
-            ]);
+        if ($format === 'csv' || $format === 'excel' || $format === 'xlsx') {
+            $headers = ['ID', 'Title', 'Company', 'Company Logo URL', 'Department', 'Status', 'Mode', 'Location', 'Duration', 'Duration Months', 'Stipend', 'Openings', 'Skills Required', 'Eligibility', 'Description', 'Responsibilities', 'Learning Outcomes', 'Application Deadline', 'Created At'];
+            $rows    = $internships->map(function($i) {
+                $companyLogo = $i->company?->companyProfile?->logo ? \App\Support\StorageHelper::url($i->company->companyProfile->logo) : ($i->company?->avatar_url ? \App\Support\StorageHelper::url($i->company->avatar_url) : '');
+                $skillsStr = is_array($i->skills_required) ? implode(', ', $i->skills_required) : ($i->skills_required ?? '');
+                
+                return [
+                    $i->id,
+                    $i->title,
+                    trim(($i->company?->first_name ?? '') . ' ' . ($i->company?->last_name ?? '')) ?: ($i->company?->name ?? 'BlueBoxx Partner'),
+                    $companyLogo,
+                    $i->department ?? 'Engineering',
+                    $i->status ?? 'open',
+                    $i->mode ?? 'Remote',
+                    $i->location ?? 'India',
+                    $i->duration ?? '3 Months',
+                    $i->duration_months ?? 3,
+                    $i->stipend ?? 'Unpaid',
+                    $i->openings ?? 1,
+                    $skillsStr,
+                    $i->eligibility ?? '',
+                    $i->description ?? '',
+                    $i->responsibilities ?? '',
+                    $i->learning_outcomes ?? '',
+                    $i->application_deadline ? $i->application_deadline->format('Y-m-d') : '',
+                    $i->created_at ? $i->created_at->format('Y-m-d H:i:s') : '',
+                ];
+            });
 
             $csv = implode(',', $headers) . "\n";
             foreach ($rows as $row) {
-                $csv .= implode(',', array_map(fn($v) => '"' . str_replace('"', '""', $v ?? '') . '"', $row)) . "\n";
+                $csv .= implode(',', array_map(fn($v) => '"' . str_replace('"', '""', (string)($v ?? '')) . '"', $row)) . "\n";
             }
 
             return response($csv, 200, [

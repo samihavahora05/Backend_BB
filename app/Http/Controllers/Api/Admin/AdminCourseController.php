@@ -220,11 +220,14 @@ class AdminCourseController extends Controller
         
         if ($format === 'pdf') {
             $courses = Course::with(['category', 'expert'])->latest()->get();
-            $html = '<html><head><title>Courses Export</title><style>body { font-family: sans-serif; } table {width:100%; border-collapse: collapse; margin-top: 20px;} th, td {border:1px solid #ddd; padding:8px; text-align:left; font-size: 12px;} th {background:#f4f4f4;} @media print { button { display: none; } }</style></head><body onload="window.print()">';
+            $html = '<html><head><title>Courses Export</title><style>body { font-family: sans-serif; } table {width:100%; border-collapse: collapse; margin-top: 20px;} th, td {border:1px solid #ddd; padding:8px; text-align:left; font-size: 12px; vertical-align: middle;} th {background:#1B2A6B; color:white;} img.thumb {width: 48px; height: 48px; object-fit: cover; border-radius: 8px;} @media print { button { display: none; } }</style></head><body onload="window.print()">';
             $html .= '<div style="display: flex; justify-content: space-between; align-items: center;"><h2>Courses Export</h2><button onclick="window.print()" style="padding: 8px 16px; background: #1B2A6B; color: white; border: none; border-radius: 4px; cursor: pointer;">Print to PDF</button></div>';
-            $html .= '<table><tr><th>ID</th><th>Title</th><th>Category</th><th>Instructor</th><th>Type</th><th>Price</th><th>Status</th></tr>';
+            $html .= '<table><tr><th>ID</th><th>Thumbnail</th><th>Course Title</th><th>Category</th><th>Instructor</th><th>Type</th><th>Price</th><th>Status</th></tr>';
             foreach($courses as $c) {
-                $html .= "<tr><td>{$c->id}</td><td>{$c->title}</td><td>".($c->category->name ?? 'N/A')."</td><td>".trim(($c->expert->first_name ?? '').' '.($c->expert->last_name ?? ''))."</td><td>{$c->course_type}</td><td>{$c->price}</td><td>{$c->status}</td></tr>";
+                $imgUrl = $c->thumbnail ? \App\Support\StorageHelper::url($c->thumbnail) : '';
+                $imgTag = $imgUrl ? "<img src='{$imgUrl}' class='thumb' alt='thumbnail' />" : "<span style='color:#999;'>No Image</span>";
+                $instructor = trim(($c->expert->first_name ?? '').' '.($c->expert->last_name ?? '')) ?: ($c->expert->name ?? 'N/A');
+                $html .= "<tr><td>{$c->id}</td><td>{$imgTag}</td><td><strong>{$c->title}</strong></td><td>".($c->category->name ?? 'N/A')."</td><td>{$instructor}</td><td>{$c->course_type}</td><td>₹{$c->price}</td><td>{$c->status}</td></tr>";
             }
             $html .= '</table></body></html>';
             return response($html)->header('Content-Type', 'text/html');
@@ -605,6 +608,22 @@ class AdminCourseController extends Controller
                 $slugCount = Course::where('slug', 'like', "{$slug}%")->count();
                 if ($slugCount > 0) $slug = "{$slug}-" . ($slugCount + 1);
 
+                $thumbnail = $item['thumbnail'] ?? null;
+                if ($thumbnail && (str_starts_with($thumbnail, 'data:image/') || str_starts_with($thumbnail, 'data:application/'))) {
+                    try {
+                        if (preg_match('/^data:image\/(\w+);base64,/', $thumbnail, $type)) {
+                            $imgData = substr($thumbnail, strpos($thumbnail, ',') + 1);
+                            $typeExt = strtolower($type[1]);
+                            $decodedBinary = base64_decode($imgData);
+                            if ($decodedBinary !== false) {
+                                $imgFilename = 'course_thumb_' . uniqid() . '.' . $typeExt;
+                                \Illuminate\Support\Facades\Storage::disk('public')->put('courses/thumbnails/' . $imgFilename, $decodedBinary);
+                                $thumbnail = 'courses/thumbnails/' . $imgFilename;
+                            }
+                        }
+                    } catch (\Throwable $imgErr) {}
+                }
+
                 Course::create([
                     'category_id'       => $categoryId,
                     'level_id'          => $levelId,
@@ -613,7 +632,7 @@ class AdminCourseController extends Controller
                     'slug'              => $slug,
                     'short_description' => $item['short_description'] ?? "Master {$item['title']}.",
                     'description'       => $item['description'] ?? "Comprehensive masterclass in {$item['title']}.",
-                    'thumbnail'         => $item['thumbnail'] ?? null,
+                    'thumbnail'         => $thumbnail,
                     'price'             => is_numeric($item['price'] ?? null) ? (float)$item['price'] : 0,
                     'discount_price'    => is_numeric($item['discount_price'] ?? null) ? (float)$item['discount_price'] : 0,
                     'course_type'       => in_array($item['course_type'] ?? '', ['Free', 'Paid']) ? $item['course_type'] : 'Paid',
