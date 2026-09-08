@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\StorageHelper;
 
 class StudentJobOffer extends Model
 {
@@ -23,4 +24,19 @@ class StudentJobOffer extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    protected $appends = [
+        'image_url',
+        'photo_url',
+    ];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return StorageHelper::url($this->avatar_url);
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return StorageHelper::url($this->avatar_url);
+    }
 }
