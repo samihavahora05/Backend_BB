@@ -132,6 +132,24 @@ class CmsPublicController extends Controller
                 $name = $st['student_name'] ?? $st['name'] ?? ('Student ' . ($index + 1));
                 $img = $st['image_url'] ?? $st['avatar_url'] ?? $st['image'] ?? null;
 
+                // If image is a Base64 string, write it to physical disk and store the URL
+                if ($img && str_starts_with($img, 'data:image')) {
+                    if (preg_match('/^data:image\/(\w+);base64,/', $img, $matches)) {
+                        $ext = strtolower($matches[1]);
+                        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                            $ext = 'png';
+                        }
+                        $rawBase64 = substr($img, strpos($img, ',') + 1);
+                        $decoded = base64_decode($rawBase64);
+                        if ($decoded !== false) {
+                            $cleanName = \Illuminate\Support\Str::slug($name);
+                            $filename = 'students/showcase/student_' . ($cleanName ?: 'showcase') . '_' . uniqid() . '.' . $ext;
+                            \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                            $img = '/storage/' . $filename;
+                        }
+                    }
+                }
+
                 StudentJobOffer::create([
                     'student_name' => $name,
                     'degree'       => $st['degree'] ?? 'Alumni',

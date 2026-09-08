@@ -108,6 +108,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::post('job-offers', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'saveJobOffers']);
     Route::get('cms/testimonials', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getTestimonials']);
     Route::get('testimonials', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getTestimonials']);
+    Route::post('upload', [\App\Http\Controllers\Api\Admin\UploadController::class, 'upload']);
 
     // Featured Courses (Homepage Hero)
     Route::get('featured-courses', [\App\Http\Controllers\Api\Public\PublicCourseController::class, 'featured']);
