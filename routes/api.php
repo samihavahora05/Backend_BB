@@ -962,6 +962,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'duplicate']);
             Route::get('stats', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'stats']);
             Route::get('sample-csv', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'sampleCsv']);
+                        Route::get('sample-template', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'sampleTemplate']);
+            Route::post('import/preview', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'previewImport']);
+            Route::post('import/confirm', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'confirmImport']);
             Route::post('import', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'importCsv']);
             Route::get('export', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'export']);
             
@@ -1001,6 +1004,9 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         // ----- Courses -----
         Route::prefix('courses')->group(function () {
+                        Route::get('sample-template', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'sampleTemplate']);
+            Route::post('import/preview', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'previewImport']);
+            Route::post('import/confirm', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'confirmImport']);
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'bulkDelete']);
             Route::post('bulk-status', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'bulkStatus']);
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'duplicate']);

@@ -169,104 +169,421 @@ class InternshipController extends Controller
     }
 
     /**
-     * Download a sample CSV template for Internship Import
+     * Download sample Excel or CSV template for Internship Import
+     * GET /api/admin/internships/sample-template
      */
+    public function sampleTemplate(Request $request)
+    {
+        $format = strtolower($request->query('format', 'xlsx'));
+
+        $headers = [
+            'Internship Title',
+            'Company Name',
+            'Company Logo URL',
+            'Department / Domain',
+            'Work Mode (Remote/Hybrid/Onsite)',
+            'Location (City, Country)',
+            'Duration (e.g. 3 Months)',
+            'Duration Months (Number)',
+            'Stipend (Monthly INR)',
+            'Openings',
+            'Required Skills (Comma separated)',
+            'Eligibility Criteria',
+            'Internship Description',
+            'Roles & Responsibilities',
+            'Learning Outcomes',
+            'Application Deadline (YYYY-MM-DD)',
+            'Status (open/draft)'
+        ];
+
+        $sampleRows = [
+            [
+                'Full Stack Web Development Intern',
+                'TechCorp Global Solutions',
+                'https://images.unsplash.com/photo-1572021335469-31706a17aaef?auto=format&fit=crop&w=300&q=80',
+                'Engineering',
+                'Remote',
+                'Bangalore, India',
+                '6 Months',
+                '6',
+                '15000',
+                '5',
+                'React.js, Next.js, Node.js, TypeScript, PostgreSQL, REST APIs, Git',
+                'B.Tech / MCA / BCA students or recent graduates with solid foundations in JavaScript.',
+                'Join our core platform engineering team to build scalable full-stack web applications and microservices.',
+                'Design and implement responsive web UI; Build high-performance REST APIs; Write unit and integration tests; Participate in agile sprint planning.',
+                'Production-grade full-stack architecture, database optimization, CI/CD pipeline automation, and collaborative Git workflows.',
+                now()->addDays(45)->format('Y-m-d'),
+                'open'
+            ],
+            [
+                'UI/UX Design Intern',
+                'DesignHub Digital Studio',
+                'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=300&q=80',
+                'Design',
+                'Hybrid',
+                'Mumbai, India',
+                '3 Months',
+                '3',
+                '12000',
+                '3',
+                'Figma, UI Design, Wireframing, Prototyping, Design Systems, User Research',
+                'Design graduates or enthusiastic self-taught UI/UX designers with a strong portfolio.',
+                'Collaborate closely with product managers and engineers to create intuitive, accessible user interfaces.',
+                'Conduct user research and usability testing; Create wireframes, user journeys, and high-fidelity mockups; Build and maintain design system tokens.',
+                'Mastery of Figma component systems, interactive prototyping, user-centered design principles, and developer handoff workflows.',
+                now()->addDays(30)->format('Y-m-d'),
+                'open'
+            ],
+            [
+                'Data Analyst & AI Intern',
+                'FinMetrics Analytics',
+                'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=300&q=80',
+                'Data Science',
+                'Remote',
+                'Hyderabad, India',
+                '4 Months',
+                '4',
+                '18000',
+                '4',
+                'Python, SQL, Pandas, NumPy, PowerBI, Machine Learning, Data Visualization',
+                'Students or graduates in Computer Science, Statistics, Mathematics, or Data Science.',
+                'Work on predictive analytics and AI-powered data pipelines for enterprise financial intelligence.',
+                'Extract and clean complex datasets; Build automated analytical dashboards in PowerBI; Train baseline machine learning models; Present data-driven insights to leadership.',
+                'End-to-end data pipeline construction, statistical analysis, dashboarding best practices, and enterprise ML integration.',
+                now()->addDays(60)->format('Y-m-d'),
+                'open'
+            ]
+        ];
+
+        if ($format === 'csv') {
+            $csv = fopen('php://temp', 'r+');
+            fputcsv($csv, $headers);
+            foreach ($sampleRows as $row) {
+                fputcsv($csv, $row);
+            }
+            rewind($csv);
+            $csvData = stream_get_contents($csv);
+            fclose($csv);
+
+            return response($csvData, 200, [
+                'Content-Type'        => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="internships-sample-template.csv"',
+            ]);
+        }
+
+        try {
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Internship Template');
+
+            foreach ($headers as $index => $header) {
+                $cellCoordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1) . '1';
+                $sheet->setCellValue($cellCoordinate, $header);
+            }
+
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+            $headerRange = "A1:{$lastCol}1";
+            $sheet->getStyle($headerRange)->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1B2A6B']],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER, 'wrapText' => true]
+            ]);
+            $sheet->getRowDimension(1)->setRowHeight(28);
+
+            foreach ($sampleRows as $rowIndex => $rowData) {
+                $rowNum = $rowIndex + 2;
+                foreach ($rowData as $colIndex => $value) {
+                    $cellCoordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1) . $rowNum;
+                    $sheet->setCellValue($cellCoordinate, $value);
+                }
+                $sheet->getRowDimension($rowNum)->setRowHeight(22);
+            }
+
+            for ($i = 1; $i <= count($headers); $i++) {
+                $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $tempPath = tempnam(sys_get_temp_dir(), 'xlsx_template_');
+            $writer->save($tempPath);
+
+            return response()->download($tempPath, 'internships-sample-template.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+
+        } catch (\Throwable $e) {
+            return $this->sampleCsv();
+        }
+    }
+
     public function sampleCsv()
     {
-        $headers = [
-            'title', 'company', 'department', 'mode', 'location', 
-            'duration', 'duration_months', 'stipend', 'openings', 
-            'skills_required', 'eligibility', 'description', 
-            'responsibilities', 'learning_outcomes', 'application_deadline', 'status'
+        return $this->sampleTemplate(new Request(['format' => 'csv']));
+    }
+
+    private function parseUploadedFileMatrix($file)
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+        $filePath = $file->getRealPath();
+
+        if (in_array($extension, ['xlsx', 'xls'])) {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            return $sheet->toArray(null, true, true, false);
+        }
+
+        $rows = [];
+        if (($handle = fopen($filePath, 'r')) !== false) {
+            while (($data = fgetcsv($handle)) !== false) {
+                $rows[] = $data;
+            }
+            fclose($handle);
+        }
+        return $rows;
+    }
+
+    private function normalizeRowData(array $rawRow, array $headerMap, int $rowNumber)
+    {
+        $getVal = function ($keys, $default = null) use ($rawRow, $headerMap) {
+            foreach ((array)$keys as $k) {
+                $clean = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $k)));
+                if (isset($headerMap[$clean]) && isset($rawRow[$headerMap[$clean]])) {
+                    $val = trim((string)$rawRow[$headerMap[$clean]]);
+                    if ($val !== '') return $val;
+                }
+            }
+            return $default;
+        };
+
+        $title = $getVal(['title', 'internshiptitle', 'role', 'position', 'name', 'jobtitle']);
+        $companyName = $getVal(['company', 'companyname', 'employer', 'organization', 'hiringcompany'], 'BlueBoxx Partner');
+        $companyLogo = $getVal(['companylogo', 'logo', 'logourl', 'image', 'thumbnail', 'banner']);
+        $department = $getVal(['department', 'dept', 'category', 'domain', 'field', 'stream'], 'Engineering');
+        $location = $getVal(['location', 'city', 'internshiplocation', 'office', 'place'], 'Remote');
+        
+        $modeRaw = strtolower($getVal(['mode', 'workmode', 'workplacetype', 'remotetype', 'worktype'], 'Remote'));
+        $mode = 'Remote';
+        if (str_contains($modeRaw, 'hybrid')) {
+            $mode = 'Hybrid';
+        } elseif (str_contains($modeRaw, 'onsite') || str_contains($modeRaw, 'on-site') || str_contains($modeRaw, 'office')) {
+            $mode = 'Onsite';
+        }
+
+        $durationMonthsRaw = $getVal(['durationmonths', 'months', 'durationinmonths']);
+        $durationRaw = $getVal(['duration', 'period', 'tenure']);
+        
+        $durationMonths = 3;
+        if (is_numeric($durationMonthsRaw) && (int)$durationMonthsRaw > 0) {
+            $durationMonths = (int)$durationMonthsRaw;
+        } elseif ($durationRaw && preg_match('/(\d+)/', $durationRaw, $matches)) {
+            $durationMonths = (int)$matches[1];
+        }
+
+        $duration = $durationRaw ?: "{$durationMonths} Months";
+
+        $stipendRaw = $getVal(['stipend', 'salary', 'allowance', 'compensation', 'pay', 'ctc']);
+        $stipend = null;
+        if ($stipendRaw !== null) {
+            $cleanStipend = preg_replace('/[^0-9.]/', '', (string)$stipendRaw);
+            if (is_numeric($cleanStipend)) {
+                $stipend = (float)$cleanStipend;
+            }
+        }
+
+        $openingsRaw = $getVal(['openings', 'vacancies', 'positions', 'seats', 'capacity'], '1');
+        $openings = max(1, (int)preg_replace('/[^0-9]/', '', (string)$openingsRaw));
+
+        $skillsRaw = $getVal(['skillsrequired', 'skills', 'keyskills', 'requiredskills', 'techstack', 'technologies'], '');
+        $skills = [];
+        if ($skillsRaw) {
+            $parts = preg_split('/[,\n\r;|]+/', (string)$skillsRaw);
+            $skills = array_values(array_filter(array_map('trim', $parts)));
+        }
+
+        $eligibility = $getVal(['eligibility', 'qualification', 'qualifications', 'criteria', 'requirements'], 'Open to all eligible students and recent graduates.');
+        $description = $getVal(['description', 'internshipdescription', 'aboutinternship', 'overview', 'details'], $title ? "Hands-on professional industry experience in {$title}." : '');
+        $responsibilities = $getVal(['responsibilities', 'rolesresponsibilities', 'duties', 'whatyouwilldo'], 'Collaborate with cross-functional project teams and deliver sprint goals.');
+        $learningOutcomes = $getVal(['learningoutcomes', 'outcomes', 'learnings', 'whatyouwilllearn'], 'Industry domain experience, software engineering best practices, and team collaboration.');
+
+        $deadlineRaw = $getVal(['applicationdeadline', 'deadline', 'lastdate', 'applyby', 'expiry']);
+        $deadline = null;
+        if ($deadlineRaw) {
+            $time = strtotime($deadlineRaw);
+            if ($time !== false) {
+                $deadline = date('Y-m-d', $time);
+            }
+        }
+        if (!$deadline) {
+            $deadline = now()->addDays(45)->format('Y-m-d');
+        }
+
+        $statusRaw = strtolower($getVal(['status'], 'open'));
+        $status = in_array($statusRaw, ['open', 'draft', 'closed', 'archived']) ? $statusRaw : 'open';
+
+        return [
+            'row_number'           => $rowNumber,
+            'is_valid'             => true,
+            'is_duplicate'         => false,
+            'errors'               => [],
+            'data'                 => [
+                'title'                => $title,
+                'company_name'         => $companyName,
+                'company_logo'         => $companyLogo,
+                'thumbnail'            => $companyLogo,
+                'department'           => $department,
+                'location'             => $location,
+                'mode'                 => $mode,
+                'duration_months'      => $durationMonths,
+                'duration'             => $duration,
+                'stipend'              => $stipend,
+                'openings'             => $openings,
+                'skills_required'      => $skills,
+                'eligibility'          => $eligibility,
+                'description'          => $description,
+                'responsibilities'     => $responsibilities,
+                'learning_outcomes'    => $learningOutcomes,
+                'application_deadline' => $deadline,
+                'status'               => $status,
+            ]
         ];
-
-        $sampleRow1 = [
-            'Full Stack Web Development Intern',
-            'TechCorp Global',
-            'Engineering',
-            'Remote',
-            'Bangalore, India',
-            '6 Months',
-            '6',
-            '15000',
-            '5',
-            'React, Next.js, Node.js, TypeScript, PostgreSQL',
-            'B.Tech / MCA / BCA students or recent graduates with passion for web dev',
-            'Hands-on live production project internship working with modern web application architecture.',
-            'Develop responsive frontend UI; Collaborate on REST API integrations; Participate in agile sprint reviews',
-            'Production React development, REST API design, Git team workflow, CI/CD deployment',
-            '2026-10-31',
-            'open'
-        ];
-
-        $sampleRow2 = [
-            'UI/UX Design Intern',
-            'DesignHub Studio',
-            'Design',
-            'Hybrid',
-            'Mumbai, India',
-            '3 Months',
-            '3',
-            '12000',
-            '3',
-            'Figma, Design Systems, Wireframing, User Research, Adobe XD',
-            'Design graduates or enthusiastic self-taught UI/UX learners with an active portfolio',
-            'Work alongside senior product designers to create user-centric digital experiences.',
-            'Conduct user interviews; Build wireframes and clickable prototypes; Design component tokens',
-            'Mastery of Figma components, design tokens, client design handoff',
-            '2026-10-31',
-            'open'
-        ];
-
-        $csv = fopen('php://temp', 'r+');
-        fputcsv($csv, $headers);
-        fputcsv($csv, $sampleRow1);
-        fputcsv($csv, $sampleRow2);
-
-        rewind($csv);
-        $csvData = stream_get_contents($csv);
-        fclose($csv);
-
-        return response($csvData, 200, [
-            'Content-Type'        => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="internships-sample-template.csv"',
-        ]);
     }
 
     /**
-     * Import internships from uploaded CSV file
-     * POST /api/admin/internships/import
+     * Preview and Validate Excel / CSV file without saving
+     * POST /api/admin/internships/import/preview
      */
-    public function importCsv(Request $request)
+    public function previewImport(Request $request)
     {
         $request->validate([
-            'file' => 'nullable|file|mimes:csv,txt',
-            'csv_file' => 'nullable|file|mimes:csv,txt',
+            'file' => 'required|file|max:20480',
         ]);
 
-        $file = $request->file('file') ?? $request->file('csv_file');
+        $file = $request->file('file');
+        
+        try {
+            $rawMatrix = $this->parseUploadedFileMatrix($file);
+            
+            if (empty($rawMatrix) || count($rawMatrix) < 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The uploaded file appears to be empty or missing data rows.'
+                ], 422);
+            }
 
-        if (!$file && !$request->has('csv_data')) {
+            $headerRow = array_shift($rawMatrix);
+            if (isset($headerRow[0])) {
+                $headerRow[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string)$headerRow[0]);
+            }
+
+            $headerMap = [];
+            foreach ($headerRow as $colIdx => $h) {
+                $clean = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', (string)$h)));
+                if ($clean !== '') {
+                    $headerMap[$clean] = $colIdx;
+                }
+            }
+
+            $existingTitles = \App\Models\Internship::pluck('title')->map(fn($t) => strtolower(trim($t)))->toArray();
+            $existingSet = array_flip($existingTitles);
+
+            $processedRows = [];
+            $validCount = 0;
+            $invalidCount = 0;
+            $duplicateCount = 0;
+
+            foreach ($rawMatrix as $idx => $rawRow) {
+                if (empty(array_filter($rawRow, fn($v) => trim((string)$v) !== ''))) {
+                    continue;
+                }
+
+                $rowNum = $idx + 2;
+                $rowItem = $this->normalizeRowData($rawRow, $headerMap, $rowNum);
+                $normalized = $rowItem['data'];
+                
+                $rowErrors = [];
+                $isValid = true;
+                $isDuplicate = false;
+
+                if (empty($normalized['title'])) {
+                    $rowErrors[] = 'Internship Title is required.';
+                    $isValid = false;
+                } elseif (strlen($normalized['title']) < 3) {
+                    $rowErrors[] = 'Internship Title must be at least 3 characters.';
+                    $isValid = false;
+                }
+
+                if ($normalized['openings'] < 1) {
+                    $rowErrors[] = 'Openings must be a positive number greater than 0.';
+                    $isValid = false;
+                }
+
+                if ($normalized['duration_months'] < 1) {
+                    $rowErrors[] = 'Duration must be at least 1 month.';
+                    $isValid = false;
+                }
+
+                if (!empty($normalized['title'])) {
+                    $cleanTitle = strtolower(trim($normalized['title']));
+                    if (isset($existingSet[$cleanTitle])) {
+                        $isDuplicate = true;
+                    }
+                }
+
+                $rowItem['is_valid'] = $isValid;
+                $rowItem['is_duplicate'] = $isDuplicate;
+                $rowItem['errors'] = $rowErrors;
+
+                if ($isValid && !$isDuplicate) {
+                    $validCount++;
+                } elseif ($isDuplicate) {
+                    $duplicateCount++;
+                } else {
+                    $invalidCount++;
+                }
+
+                $processedRows[] = $rowItem;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_detected'   => count($processedRows),
+                    'valid_count'      => $validCount,
+                    'invalid_count'    => $invalidCount,
+                    'duplicate_count'  => $duplicateCount,
+                    'rows'             => $processedRows,
+                    'headers_found'    => array_keys($headerMap)
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please provide a valid CSV file.'
+                'message' => 'Failed to parse file: ' . $e->getMessage()
             ], 422);
         }
+    }
 
-        $filePath = $file ? $file->getRealPath() : null;
-        $csvString = $request->input('csv_data');
+    /**
+     * Confirm and Execute Internship Import into Database
+     * POST /api/admin/internships/import/confirm
+     */
+    public function confirmImport(Request $request)
+    {
+        $request->validate([
+            'rows'             => 'required|array|min:1',
+            'initial_status'   => 'nullable|in:open,draft',
+            'skip_duplicates'  => 'nullable|boolean',
+            'skip_invalid'     => 'nullable|boolean',
+        ]);
 
-        if ($filePath) {
-            $handle = fopen($filePath, 'r');
-        } elseif ($csvString) {
-            $handle = fopen('php://temp', 'r+');
-            fwrite($handle, $csvString);
-            rewind($handle);
-        } else {
-            return response()->json(['success' => false, 'message' => 'No CSV content found.'], 422);
-        }
+        $rows = $request->input('rows');
+        $initialStatus = $request->input('initial_status', 'open');
+        $skipDuplicates = filter_var($request->input('skip_duplicates', true), FILTER_VALIDATE_BOOLEAN);
+        $skipInvalid = filter_var($request->input('skip_invalid', true), FILTER_VALIDATE_BOOLEAN);
 
-        // Default Company / Admin user
         $defaultCompany = \App\Models\User::role('company')->first() 
             ?? \App\Models\User::role('admin')->first() 
             ?? \App\Models\User::role('super_admin')->first()
@@ -274,124 +591,115 @@ class InternshipController extends Controller
 
         $defaultCompanyId = $defaultCompany ? $defaultCompany->id : 1;
 
-        // Read and normalize headers
-        $rawHeaders = fgetcsv($handle);
-        if (!$rawHeaders) {
-            fclose($handle);
-            return response()->json(['success' => false, 'message' => 'CSV file is empty.'], 422);
-        }
-
-        // Strip UTF-8 BOM if present
-        $rawHeaders[0] = preg_replace('/^\xEF\xBB\xBF/', '', $rawHeaders[0]);
-
-        $headerMap = [];
-        foreach ($rawHeaders as $idx => $h) {
-            $cleaned = strtolower(trim(str_replace([' ', '_', '-'], '', $h)));
-            $headerMap[$cleaned] = $idx;
-        }
-
         $imported = 0;
+        $skipped = 0;
         $errors = [];
-        $rowNum = 1;
-
-        $getVal = function ($row, $keys, $default = null) use ($headerMap) {
-            foreach ((array)$keys as $k) {
-                $cleaned = strtolower(trim(str_replace([' ', '_', '-'], '', $k)));
-                if (isset($headerMap[$cleaned]) && isset($row[$headerMap[$cleaned]])) {
-                    $val = trim($row[$headerMap[$cleaned]]);
-                    if ($val !== '') return $val;
-                }
-            }
-            return $default;
-        };
 
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
-            while (($row = fgetcsv($handle)) !== false) {
-                $rowNum++;
-                // Skip empty lines
-                if (count(array_filter($row)) === 0) continue;
+            foreach ($rows as $item) {
+                // Support both flat row and nested row
+                $data = isset($item['data']) ? $item['data'] : $item;
+                $isValid = $item['is_valid'] ?? true;
+                $isDuplicate = $item['is_duplicate'] ?? false;
 
-                $title = $getVal($row, ['title', 'internshiptitle', 'role', 'position', 'name']);
-                if (empty($title)) {
-                    $errors[] = "Row {$rowNum}: Missing Internship Title.";
+                if (!$isValid && $skipInvalid) {
+                    $skipped++;
                     continue;
                 }
 
-                $companyName = $getVal($row, ['company', 'companyname', 'employer', 'organization'], 'BlueBoxx Partner');
-                $department = $getVal($row, ['department', 'dept', 'category'], 'Engineering');
-                $location = $getVal($row, ['location', 'city', 'internshiplocation'], 'India');
-                $modeRaw = strtolower($getVal($row, ['mode', 'workplacetype', 'remotetype', 'workmode'], 'Remote'));
-                $mode = 'Remote';
-                if (in_array($modeRaw, ['hybrid', 'onsite', 'remote'])) {
-                    $mode = ucfirst($modeRaw);
+                if ($isDuplicate && $skipDuplicates) {
+                    $skipped++;
+                    continue;
                 }
 
-                $durationMonths = (int)$getVal($row, ['durationmonths', 'months'], 3);
-                $duration = $getVal($row, ['duration'], ($durationMonths > 0 ? "{$durationMonths} Months" : '3 Months'));
-                $stipend = $getVal($row, ['stipend', 'salary', 'allowance'], null);
-                $openings = (int)$getVal($row, ['openings', 'vacancies', 'positions'], 1);
-                $eligibility = $getVal($row, ['eligibility', 'qualification', 'qualifications'], 'Open to all students and recent graduates.');
-                $description = $getVal($row, ['description', 'internshipdescription', 'desc'], "Gain valuable industry experience in {$title}.");
-                $responsibilities = $getVal($row, ['responsibilities', 'rolesresponsibilities', 'duties'], 'Participate in project deliverables and team meetings.');
-                $learningOutcomes = $getVal($row, ['learningoutcomes', 'outcomes', 'learnings'], 'Practical industry exposure and project execution skills.');
-                $deadlineRaw = $getVal($row, ['applicationdeadline', 'deadline'], null);
-                $deadline = $deadlineRaw ? date('Y-m-d', strtotime($deadlineRaw)) : now()->addDays(45)->format('Y-m-d');
+                if (empty($data['title'])) {
+                    $skipped++;
+                    continue;
+                }
 
-                $statusRaw = strtolower($getVal($row, ['status'], 'open'));
-                $status = in_array($statusRaw, ['open', 'draft', 'closed', 'archived']) ? $statusRaw : 'open';
+                $companyId = $defaultCompanyId;
+                if (!empty($data['company_name'])) {
+                    $matchedUser = \App\Models\User::where('first_name', 'like', "%{$data['company_name']}%")
+                        ->orWhere('name', 'like', "%{$data['company_name']}%")
+                        ->first();
+                    if ($matchedUser) {
+                        $companyId = $matchedUser->id;
+                    }
+                }
 
-                // Parse list of skills
-                $skillsRaw = $getVal($row, ['skillsrequired', 'skills', 'keyskills', 'requiredskills'], '');
-                $skills = [];
-                if ($skillsRaw) {
-                    $items = preg_split('/[,\n\r;|]+/', $skillsRaw);
-                    $skills = array_values(array_filter(array_map('trim', $items)));
+                $statusToApply = $initialStatus;
+                if (!empty($data['status']) && in_array($data['status'], ['open', 'draft', 'closed', 'archived'])) {
+                    $statusToApply = $initialStatus === 'draft' ? 'draft' : $data['status'];
                 }
 
                 \App\Models\Internship::create([
-                    'company_id'           => $defaultCompanyId,
-                    'title'                => $title,
-                    'department'           => $department,
-                    'location'             => $location,
-                    'mode'                 => $mode,
-                    'duration_months'      => max(1, $durationMonths),
-                    'duration'             => $duration,
-                    'stipend'              => is_numeric($stipend) ? (float)$stipend : null,
-                    'skills_required'      => $skills,
-                    'eligibility'          => $eligibility,
-                    'description'          => $description,
-                    'responsibilities'     => $responsibilities,
-                    'learning_outcomes'    => $learningOutcomes,
-                    'openings'             => max(1, $openings),
-                    'application_deadline' => $deadline,
-                    'status'               => $status,
-                    'featured'             => $imported < 5,
+                    'company_id'           => $companyId,
+                    'title'                => trim($data['title']),
+                    'department'           => $data['department'] ?? 'Engineering',
+                    'location'             => $data['location'] ?? 'Remote',
+                    'mode'                 => in_array($data['mode'] ?? '', ['Remote', 'Hybrid', 'Onsite']) ? $data['mode'] : 'Remote',
+                    'duration_months'      => max(1, (int)($data['duration_months'] ?? 3)),
+                    'duration'             => $data['duration'] ?? '3 Months',
+                    'stipend'              => is_numeric($data['stipend'] ?? null) ? (float)$data['stipend'] : null,
+                    'skills_required'      => is_array($data['skills_required'] ?? null) ? $data['skills_required'] : [],
+                    'eligibility'          => $data['eligibility'] ?? 'Open to all eligible candidates.',
+                    'description'          => $data['description'] ?? "Internship opportunity in {$data['title']}.",
+                    'responsibilities'     => $data['responsibilities'] ?? 'Perform assigned project tasks and sprint deliverables.',
+                    'learning_outcomes'    => $data['learning_outcomes'] ?? 'Practical project experience and engineering skills.',
+                    'openings'             => max(1, (int)($data['openings'] ?? 1)),
+                    'application_deadline' => !empty($data['application_deadline']) ? $data['application_deadline'] : now()->addDays(45)->format('Y-m-d'),
+                    'status'               => $statusToApply,
+                    'featured'             => $imported < 3,
                 ]);
 
                 $imported++;
             }
 
             \Illuminate\Support\Facades\DB::commit();
-            fclose($handle);
 
             return response()->json([
                 'success'        => true,
-                'message'        => "Successfully imported {$imported} internships.",
-                'imported_count' => $imported,
+                'message'        => "Successfully imported {$imported} internships into the database.",
+                'data'           => [
+                    'imported_count'           => $imported,
+                    'skipped_duplicates_count' => $skipped,
+                    'failed_count'             => count($errors),
+                ],
                 'errors'         => $errors,
             ]);
 
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            if (is_resource($handle)) fclose($handle);
-
             return response()->json([
                 'success' => false,
-                'message' => 'CSV Import failed: ' . $e->getMessage(),
+                'message' => 'Import transaction failed: ' . $e->getMessage()
             ], 500);
         }
     }
+
+    public function importCsv(Request $request)
+    {
+        $file = $request->file('file') ?? $request->file('csv_file');
+
+        if (!$file) {
+            return response()->json(['success' => false, 'message' => 'Please provide a valid file.'], 422);
+        }
+
+        $previewRes = $this->previewImport($request);
+        $previewData = json_decode($previewRes->getContent(), true);
+
+        if (!$previewData || empty($previewData['success'])) {
+            return $previewRes;
+        }
+
+        $confirmReq = new Request([
+            'rows'            => $previewData['data']['rows'] ?? [],
+            'initial_status'  => 'open',
+            'skip_duplicates' => true,
+            'skip_invalid'    => true,
+        ]);
+
+        return $this->confirmImport($confirmReq);
+    }
 }
-
-
