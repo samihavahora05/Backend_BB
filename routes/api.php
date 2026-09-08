@@ -961,6 +961,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'bulkDelete']);
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'duplicate']);
             Route::get('stats', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'stats']);
+            Route::get('sample-csv', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'sampleCsv']);
+            Route::post('import', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'importCsv']);
             Route::get('export', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'export']);
             
             // Global Applications & Submissions – use AdminInternshipController (no policy gates)
