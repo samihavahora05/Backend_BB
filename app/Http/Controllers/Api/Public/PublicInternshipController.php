@@ -295,10 +295,9 @@ class PublicInternshipController extends Controller
             ],
         ]);
 
-        // Email Notification to Admin (Protected in try/catch to maintain transactional stability)
+        // Email Notification to Admin (info.blueboxx@gmail.com)
         try {
-            $adminEmail = config('mail.from.address', 'info.blueboxx@gmail.com');
-            Mail::to($adminEmail)->send(new AdminNewInternshipApplicationMail($application));
+            Mail::to('info.blueboxx@gmail.com')->send(new AdminNewInternshipApplicationMail($application));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Admin application notification email delivery failed: ' . $e->getMessage());
         }
@@ -401,8 +400,7 @@ class PublicInternshipController extends Controller
         ]);
 
         try {
-            $adminEmail = config('mail.from.address', 'info.blueboxx@gmail.com');
-            Mail::to($adminEmail)->send(new AdminNewInternshipApplicationMail($application));
+            Mail::to('info.blueboxx@gmail.com')->send(new AdminNewInternshipApplicationMail($application));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Admin email delivery failed: ' . $e->getMessage());
         }
