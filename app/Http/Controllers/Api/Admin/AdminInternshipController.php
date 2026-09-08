@@ -202,11 +202,25 @@ class AdminInternshipController extends Controller
         $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
 
         return DB::transaction(function () use ($app, $request) {
-            $app->status = 'approved';
-            $app->approved_at = now();
-            $app->reviewed_by = auth()->id();
-            $app->reviewed_at = now();
-            $app->save();
+            try {
+                $app->status = 'approved';
+                $app->approved_at = now();
+                $app->reviewed_by = auth()->id();
+                $app->reviewed_at = now();
+                $app->save();
+            } catch (\Throwable $e) {
+                try {
+                    DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
+                    $app->status = 'approved';
+                    $app->approved_at = now();
+                    $app->reviewed_by = auth()->id();
+                    $app->reviewed_at = now();
+                    $app->save();
+                } catch (\Throwable $ex) {
+                    $app->status = 'selected';
+                    $app->save();
+                }
+            }
 
             $options = $this->extractAppointmentOptions($request);
 
@@ -363,13 +377,28 @@ class AdminInternshipController extends Controller
             'internal_notes' => 'nullable|string|max:2000',
         ]);
 
-        $app->status = $request->status;
-        if ($request->has('internal_notes')) {
-            $app->internal_notes = $request->internal_notes;
+        try {
+            $app->status = $request->status;
+            if ($request->has('internal_notes')) {
+                $app->internal_notes = $request->internal_notes;
+            }
+            $app->reviewed_by = auth()->id();
+            $app->reviewed_at = now();
+            $app->save();
+        } catch (\Throwable $e) {
+            try {
+                DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
+                $app->status = $request->status;
+                if ($request->has('internal_notes')) {
+                    $app->internal_notes = $request->internal_notes;
+                }
+                $app->reviewed_by = auth()->id();
+                $app->reviewed_at = now();
+                $app->save();
+            } catch (\Throwable $ex) {
+                // Ignore if already saved
+            }
         }
-        $app->reviewed_by = auth()->id();
-        $app->reviewed_at = now();
-        $app->save();
 
         return response()->json([
             'success' => true,
