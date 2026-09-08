@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
             ImportCompaniesSeeder::class,
             ImportCollegesSeeder::class,
             OnlineUniversitiesSeeder::class,
+            StudentJobOfferSeeder::class,
             ProductionBaselineSeeder::class,
         ]);
 

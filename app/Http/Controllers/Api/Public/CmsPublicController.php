@@ -98,6 +98,12 @@ class CmsPublicController extends Controller
 
     public function getJobOffers()
     {
+        if (StudentJobOffer::count() < 40) {
+            try {
+                (new \Database\Seeders\StudentJobOfferSeeder())->run();
+            } catch (\Throwable $e) {}
+        }
+
         $offers = StudentJobOffer::where('is_active', true)
             ->orderBy('id', 'asc')
             ->get()

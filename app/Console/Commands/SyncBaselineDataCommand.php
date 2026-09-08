@@ -314,6 +314,9 @@ class SyncBaselineDataCommand extends Command
 
     private function syncStudentJobOffers(bool $dryRun): array
     {
+        if (!$dryRun && StudentJobOffer::count() < 40) {
+            (new \Database\Seeders\StudentJobOfferSeeder())->run();
+        }
         $count = StudentJobOffer::count();
         return ['Student Job Offers (CMS Showcase)', $count, 0, $count, 'OK (' . $count . ' Active Offers)'];
     }
