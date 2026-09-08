@@ -311,13 +311,28 @@ class AppointmentLetterService
 
         // Re-generate if not exists or if source view was updated
         $viewPath = resource_path('views/pdf/terms_and_conditions.blade.php');
-        $needsRegen = !file_exists($filePath) || (file_exists($viewPath) && filemtime($viewPath) > filemtime($filePath));
+        $needsRegen = true; // Always regenerate with updated layout
 
         if ($needsRegen) {
+            $logoBase64 = null;
+            $possibleLogoPaths = [
+                public_path('images/Boxxlogo.png'),
+                public_path('Boxxlogo.png'),
+                public_path('images/logoblue.png'),
+                public_path('logoblue.png'),
+            ];
+            foreach ($possibleLogoPaths as $logoPath) {
+                if (file_exists($logoPath)) {
+                    $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                    break;
+                }
+            }
+
             $data = [
                 'company_name'   => 'BLUEBOXX DA PVT. LTD.',
                 'version'        => 'v3.2',
                 'effective_date' => date('d F Y'),
+                'logo_base64'    => $logoBase64,
             ];
 
             $pdf = Pdf::loadView('pdf.terms_and_conditions', $data)
