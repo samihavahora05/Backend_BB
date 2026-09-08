@@ -384,8 +384,7 @@ class CmsEcosystemController extends Controller
 
         DB::beginTransaction();
         try {
-            // Clear existing records and replace with updated showcase list
-            StudentJobOffer::truncate();
+            DB::table('student_job_offers')->delete();
 
             foreach ($students as $index => $st) {
                 $name = $st['student_name'] ?? $st['name'] ?? ('Student ' . ($index + 1));
@@ -393,20 +392,23 @@ class CmsEcosystemController extends Controller
 
                 // If image is a Base64 string, write it to physical disk and store the URL
                 if ($img && str_starts_with($img, 'data:image')) {
-                    if (preg_match('/^data:image\/(\w+);base64,/', $img, $matches)) {
-                        $ext = strtolower($matches[1]);
-                        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
-                            $ext = 'png';
+                    try {
+                        if (preg_match('/^data:image\/(\w+);base64,/', $img, $matches)) {
+                            $ext = strtolower($matches[1]);
+                            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                                $ext = 'png';
+                            }
+                            $rawBase64 = substr($img, strpos($img, ',') + 1);
+                            $decoded = base64_decode($rawBase64);
+                            if ($decoded !== false) {
+                                $cleanName = \Illuminate\Support\Str::slug($name);
+                                $filename = 'students/showcase/student_' . ($cleanName ?: 'showcase') . '_' . uniqid() . '.' . $ext;
+                                \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('students/showcase');
+                                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                                $img = '/storage/' . $filename;
+                            }
                         }
-                        $rawBase64 = substr($img, strpos($img, ',') + 1);
-                        $decoded = base64_decode($rawBase64);
-                        if ($decoded !== false) {
-                            $cleanName = \Illuminate\Support\Str::slug($name);
-                            $filename = 'students/showcase/student_' . ($cleanName ?: 'showcase') . '_' . uniqid() . '.' . $ext;
-                            \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
-                            $img = '/storage/' . $filename;
-                        }
-                    }
+                    } catch (\Throwable $storageErr) {}
                 }
 
                 StudentJobOffer::create([
@@ -425,6 +427,7 @@ class CmsEcosystemController extends Controller
             return response()->json(['success' => true, 'message' => 'Student showcase saved successfully.']);
         } catch (\Throwable $e) {
             DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('saveJobOffers admin failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => 'Failed to save student showcase: ' . $e->getMessage()], 500);
         }
     }
