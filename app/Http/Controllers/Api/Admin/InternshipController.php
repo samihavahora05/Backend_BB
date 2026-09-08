@@ -31,8 +31,7 @@ class InternshipController extends Controller
                   ->orWhere('location', 'like', "%{$search}%")
                   ->orWhereHas('company', function ($companyQuery) use ($search) {
                       $companyQuery->where('first_name', 'like', "%{$search}%")
-                                   ->orWhere('last_name', 'like', "%{$search}%")
-                                   ->orWhere('name', 'like', "%{$search}%");
+                                   ->orWhere('last_name', 'like', "%{$search}%");
                   });
             });
         }
@@ -634,7 +633,7 @@ class InternshipController extends Controller
                 $companyId = $defaultCompanyId;
                 if (!empty($data['company_name'])) {
                     $matchedUser = \App\Models\User::where('first_name', 'like', "%{$data['company_name']}%")
-                        ->orWhere('name', 'like', "%{$data['company_name']}%")
+                        ->orWhere('last_name', 'like', "%{$data['company_name']}%")
                         ->first();
                     if ($matchedUser) {
                         $companyId = $matchedUser->id;

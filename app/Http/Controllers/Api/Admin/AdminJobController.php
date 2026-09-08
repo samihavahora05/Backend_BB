@@ -33,8 +33,7 @@ class AdminJobController extends Controller
                   ->orWhere('location', 'like', "%{$search}%")
                   ->orWhereHas('company', function ($q2) use ($search) {
                       $q2->where('first_name', 'like', "%{$search}%")
-                         ->orWhere('last_name', 'like', "%{$search}%")
-                         ->orWhere('name', 'like', "%{$search}%");
+                         ->orWhere('last_name', 'like', "%{$search}%");
                   });
             });
         }

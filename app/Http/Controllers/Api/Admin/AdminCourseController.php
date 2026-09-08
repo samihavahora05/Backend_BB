@@ -594,7 +594,7 @@ class AdminCourseController extends Controller
                 $expertId = $defaultExpertId;
                 if (!empty($item['instructor_name'])) {
                     $user = \App\Models\User::where('first_name', 'like', "%{$item['instructor_name']}%")
-                        ->orWhere('name', 'like', "%{$item['instructor_name']}%")
+                        ->orWhere('last_name', 'like', "%{$item['instructor_name']}%")
                         ->first();
                     if ($user) $expertId = $user->id;
                 }
