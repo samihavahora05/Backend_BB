@@ -170,29 +170,38 @@ class AdminInternshipController extends Controller
      */
     public function saveAppointmentDetails(Request $request, $id)
     {
-        $this->appointmentService->ensureSchema();
-        $app = InternshipApplication::findOrFail($id);
+        try {
+            $this->appointmentService->ensureSchema();
+            $app = InternshipApplication::findOrFail($id);
 
-        $options = $this->extractAppointmentOptions($request);
+            $options = $this->extractAppointmentOptions($request);
+            $refNum = $options['reference_number'] ?? ('BB-AL-' . date('Y') . '-' . str_pad((string)$app->id, 4, '0', STR_PAD_LEFT) . '-' . strtoupper(Str::random(4)));
 
-        $record = AppointmentLetter::updateOrCreate(
-            ['application_id' => $app->id],
-            [
-                'user_id'          => $app->user_id,
-                'reference_number' => $options['reference_number'] ?? ('BB-AL-' . date('Y') . '-' . str_pad((string)$app->id, 4, '0', STR_PAD_LEFT) . '-' . strtoupper(Str::random(4))),
-                'file_path'        => $app->appointment_letter_path ?? '',
-                'document_version' => 'v3.0',
-                'generated_by'     => auth()->id(),
-                'generated_at'     => now(),
-                'metadata'         => $options,
-            ]
-        );
+            $record = AppointmentLetter::updateOrCreate(
+                ['application_id' => $app->id],
+                [
+                    'user_id'          => $app->user_id,
+                    'reference_number' => $refNum,
+                    'file_path'        => $app->appointment_letter_path ?? '',
+                    'document_version' => 'v4.0',
+                    'generated_by'     => auth()->id(),
+                    'generated_at'     => now(),
+                    'metadata'         => $options,
+                ]
+            );
 
-        return response()->json([
-            'success' => true,
-            'data'    => $record,
-            'message' => 'Appointment details saved successfully.'
-        ]);
+            return response()->json([
+                'success' => true,
+                'data'    => $record,
+                'message' => 'Appointment details saved successfully.'
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('saveAppointmentDetails error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save appointment details: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
