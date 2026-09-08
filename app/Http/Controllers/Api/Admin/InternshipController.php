@@ -129,7 +129,7 @@ class InternshipController extends Controller
         return response()->json(['success' => true, 'data' => $stats]);
     }
 
-    public function export(Request $request): \Illuminate\Http\Response
+    public function export(Request $request)
     {
         $internships = \App\Models\Internship::with('company')
             ->when($request->status, fn($q) => $q->where('status', $request->status))
@@ -227,9 +227,10 @@ class InternshipController extends Controller
         $csvData = stream_get_contents($csv);
         fclose($csv);
 
-        return response($csvData)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="internships-sample-template.csv"');
+        return response($csvData, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="internships-sample-template.csv"',
+        ]);
     }
 
     /**
