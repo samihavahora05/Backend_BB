@@ -320,16 +320,16 @@ class AppointmentLetterService
         ]);
 
         // Persist structured metadata into appointment_letters table
-        $record = AppointmentLetter::updateOrCreate(
-            ['application_id' => $application->id],
-            [
+        $existing = AppointmentLetter::where('application_id', $application->id)->first();
+        if ($existing) {
+            $existing->update([
                 'user_id'          => $application->user_id,
-                'reference_number' => $referenceNumber,
+                'reference_number' => $referenceNumber ?: $existing->reference_number,
                 'file_path'        => $storageRelativePath,
-                'document_version' => 'v3.0',
-                'generated_by'     => $generatedBy,
+                'document_version' => 'v4.0',
+                'generated_by'     => $generatedBy ?? $existing->generated_by,
                 'generated_at'     => now(),
-                'metadata'         => [
+                'metadata'         => array_merge($existing->metadata ?? [], $options, [
                     'designation'       => $designation,
                     'department'        => $department,
                     'start_date'        => $startDate,
@@ -341,9 +341,33 @@ class AppointmentLetterService
                     'work_mode'         => $mode,
                     'issue_date'        => $issueDate,
                     'has_candidate_sig' => !empty($candidateSigData),
-                ],
-            ]
-        );
+                ]),
+            ]);
+            $record = $existing;
+        } else {
+            $record = AppointmentLetter::create([
+                'application_id'   => $application->id,
+                'user_id'          => $application->user_id,
+                'reference_number' => $referenceNumber,
+                'file_path'        => $storageRelativePath,
+                'document_version' => 'v4.0',
+                'generated_by'     => $generatedBy,
+                'generated_at'     => now(),
+                'metadata'         => array_merge($options, [
+                    'designation'       => $designation,
+                    'department'        => $department,
+                    'start_date'        => $startDate,
+                    'end_date'          => $endDate,
+                    'duration'          => $duration,
+                    'stipend_amount'    => $stipendAmount,
+                    'formatted_stipend' => $formattedStipend,
+                    'work_location'     => $location,
+                    'work_mode'         => $mode,
+                    'issue_date'        => $issueDate,
+                    'has_candidate_sig' => !empty($candidateSigData),
+                ]),
+            ]);
+        }
 
         return $record;
     }
