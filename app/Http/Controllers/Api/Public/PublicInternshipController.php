@@ -253,7 +253,7 @@ class PublicInternshipController extends Controller
         $application = InternshipApplication::create([
             'internship_id'    => $internship?->id,
             'user_id'          => $user?->id,
-            'status'           => 'submitted',
+            'status'           => 'applied',
             'first_name'       => $data['first_name'] ?? ($user?->first_name ?? null),
             'last_name'        => $data['last_name'] ?? ($user?->last_name ?? null),
             'email'            => $data['email'] ?? ($user?->email ?? null),
@@ -366,7 +366,7 @@ class PublicInternshipController extends Controller
         $application = InternshipApplication::create([
             'internship_id'    => $data['internship_id'] ?? null,
             'user_id'          => $user?->id,
-            'status'           => 'submitted',
+            'status'           => 'applied',
             'first_name'       => $data['first_name'],
             'last_name'        => $data['last_name'] ?? null,
             'email'            => $data['email'],

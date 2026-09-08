@@ -101,8 +101,14 @@ class StudentApplicationController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
-        if ($app->status !== 'approved' || empty($app->appointment_letter_path) || !Storage::disk('local')->exists($app->appointment_letter_path)) {
-            return response()->json(['success' => false, 'message' => 'Appointment Letter is not available.'], 404);
+        if ($app->status !== 'approved') {
+            return response()->json(['success' => false, 'message' => 'Appointment Letter is not yet approved by administration.'], 403);
+        }
+
+        if (empty($app->appointment_letter_path) || !Storage::disk('local')->exists($app->appointment_letter_path)) {
+            $service = app(\App\Services\AppointmentLetterService::class);
+            $service->generate($app);
+            $app->refresh();
         }
 
         // Record Audit Log
@@ -122,11 +128,12 @@ class StudentApplicationController extends Controller
         }
 
         $path = Storage::disk('local')->path($app->appointment_letter_path);
-        $ref = $app->appointmentLetter?->reference_number ?? ('AL_' . $app->id);
+        $candidateName = Str::slug($app->applicant_name ?: ($app->first_name . ' ' . $app->last_name), '_');
+        $filename = 'BlueBoxx_Appointment_Letter_' . ($candidateName ?: 'Candidate_' . $app->id) . '.pdf';
 
         return response()->file($path, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="Appointment_Letter_' . $ref . '.pdf"',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
     }
 }

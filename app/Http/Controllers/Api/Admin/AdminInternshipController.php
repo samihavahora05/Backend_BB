@@ -391,11 +391,12 @@ class AdminInternshipController extends Controller
         }
 
         $path = Storage::disk('local')->path($app->appointment_letter_path);
-        $ref = $app->appointmentLetter?->reference_number ?? ('AL_' . $app->id);
+        $candidateName = Str::slug($app->applicant_name ?: ($app->first_name . ' ' . $app->last_name), '_');
+        $filename = 'BlueBoxx_Appointment_Letter_' . ($candidateName ?: 'Candidate_' . $app->id) . '.pdf';
 
         return response()->file($path, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="Appointment_Letter_' . $ref . '.pdf"',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
     }
 

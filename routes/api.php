@@ -74,6 +74,8 @@ Route::get('/cms/placement-partners', [\App\Http\Controllers\Api\Public\CmsPubli
 Route::get('/cms/colleges', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getColleges']);
 Route::get('/cms/colleges/{slug}', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getCollegeBySlug']);
 Route::get('/cms/portfolios', [\App\Http\Controllers\Api\Public\CmsPublicController::class, 'getPortfolios']);
+Route::get('/documents/terms-and-conditions', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'downloadTermsAndConditions']);
+Route::get('/terms-and-conditions/pdf', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'downloadTermsAndConditions']);
 
 // ─── PUBLIC Course Catalog & Career APIs ─────────────────────────────────────
 Route::prefix('public')->middleware('throttle:60,1')->group(function () {

@@ -25,7 +25,7 @@ class AppointmentLetterService
         }
 
         $standard = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        if ($days === $standard || count(array_diff($standard, $days)) === 0 && count(array_diff($days, $standard)) === 0) {
+        if ($days === $standard || (count(array_diff($standard, $days)) === 0 && count(array_diff($days, $standard)) === 0)) {
             return 'Monday to Friday';
         }
         if (count($days) === 1) {
@@ -39,15 +39,15 @@ class AppointmentLetterService
     }
 
     /**
-     * Format dates consistently (e.g., 07 September 2026).
+     * Format dates consistently (e.g., 15-07-2026 or 15 July 2026).
      */
-    public function formatDate($date): string
+    public function formatDate($date, $format = 'd-m-Y'): string
     {
         if (empty($date)) {
-            return now()->format('d F Y');
+            return now()->format($format);
         }
         try {
-            return \Carbon\Carbon::parse($date)->format('d F Y');
+            return \Carbon\Carbon::parse($date)->format($format);
         } catch (\Throwable $e) {
             return (string)$date;
         }
@@ -63,87 +63,154 @@ class AppointmentLetterService
         }
         if (is_numeric($amount)) {
             $curr = !empty($currency) ? $currency : '₹';
-            return $curr . number_format((float)$amount) . ' per ' . ($frequency ?: 'month');
+            return $curr . number_format((float)$amount);
         }
         return (string)$amount;
     }
 
     /**
-     * Generate an official Appointment Letter PDF with dynamic details & DejaVu Sans Unicode support.
+     * Get domain-specific responsibilities based on role title or department.
+     */
+    public function getDefaultResponsibilities(string $designation, string $department): array
+    {
+        $text = strtolower($designation . ' ' . $department);
+
+        if (str_contains($text, 'marketing') || str_contains($text, 'seo') || str_contains($text, 'social media') || str_contains($text, 'digital')) {
+            return [
+                'Assist in planning and executing digital marketing campaigns.',
+                'Create and publish content on Facebook, Instagram, LinkedIn, and YouTube.',
+                'Manage social media calendars and maintain brand consistency.',
+                'Support Meta Ads and Google Ads campaign setup, monitoring, and optimization.',
+                'Perform keyword research and assist with on-page and off-page SEO.',
+                'Create captions, creatives, reels, and promotional content using Canva and AI tools.',
+                'Conduct competitor analysis and market research.',
+                'Generate and manage leads through digital marketing channels.',
+                'Support email marketing campaigns and automation.',
+                'Prepare daily, weekly, and monthly marketing reports.',
+                'Monitor campaign performance using Google Analytics and Meta Business Suite.',
+                'Coordinate with design, sales, and development teams.',
+                'Participate in meetings, complete assigned tasks, and maintain professional communication.',
+            ];
+        }
+
+        if (str_contains($text, 'developer') || str_contains($text, 'software') || str_contains($text, 'backend') || str_contains($text, 'frontend') || str_contains($text, 'full stack') || str_contains($text, 'web')) {
+            return [
+                'Design, build, and maintain efficient, reusable, and reliable software components.',
+                'Develop and integrate RESTful APIs and modern database schemas as per technical specs.',
+                'Troubleshoot, debug, and optimize application speed, scalability, and security.',
+                'Collaborate closely with UI/UX designers, product managers, and senior engineers.',
+                'Write modular, clean code and maintain standard Git version control best practices.',
+                'Perform unit testing and participate in peer code review cycles.',
+                'Log daily progress, tasks, and milestone updates on the internal BlueBoxx tracking system.',
+                'Participate in agile standups, complete assigned tasks, and maintain professional communication.',
+            ];
+        }
+
+        if (str_contains($text, 'design') || str_contains($text, 'ui') || str_contains($text, 'ux') || str_contains($text, 'graphic') || str_contains($text, 'animat')) {
+            return [
+                'Create engaging graphic assets, wireframes, prototypes, and user interface designs.',
+                'Collaborate with product and development teams to translate ideas into high-fidelity visuals.',
+                'Maintain brand consistency across all marketing, web, and social media creative collateral.',
+                'Incorporate feedback from senior mentors and iterate rapidly on visual designs.',
+                'Utilize Figma, Adobe Creative Suite, and modern design tools efficiently.',
+                'Organize and document design system components, typography scales, and asset libraries.',
+                'Log daily progress, tasks, and milestone updates on the internal BlueBoxx tracking system.',
+                'Participate in reviews, complete assigned tasks, and maintain professional communication.',
+            ];
+        }
+
+        return [
+            'Assist in planning and executing domain-specific project milestones and operational deliverables.',
+            'Collaborate with mentors, project leads, and team members to meet quality benchmarks.',
+            'Conduct research, data compilation, documentation, and reporting for assigned initiatives.',
+            'Maintain quality assurance, confidentiality, and data security across all workflows.',
+            'Actively participate in daily reviews, workshops, and milestone evaluations.',
+            'Complete assigned tasks on time, update logs, and maintain professional communication.',
+        ];
+    }
+
+    /**
+     * Generate an official Appointment Letter PDF matching reference layout with candidate-only signature.
      */
     public function generate(InternshipApplication $application, ?int $generatedBy = null, array $options = []): AppointmentLetter
     {
         $application->load(['user', 'internship.company.companyProfile']);
 
-        // Reference number: use custom admin ref or generate unique
+        // Reference number
         $referenceNumber = !empty($options['reference_number']) 
             ? $options['reference_number'] 
             : ('BB-AL-' . date('Y') . '-' . str_pad((string)$application->id, 4, '0', STR_PAD_LEFT) . '-' . strtoupper(Str::random(4)));
 
         $issueDate = $this->formatDate($options['issue_date'] ?? now());
 
-        // Candidate details (auto-fetched)
-        $applicantName = $application->applicant_name;
-        $applicantEmail = $application->applicant_email;
-        $applicantPhone = $application->applicant_phone;
+        // Candidate details
+        $applicantName = $application->applicant_name ?: ($application->first_name . ' ' . $application->last_name);
+        $applicantEmail = $application->applicant_email ?: $application->email;
+        $applicantPhone = $application->applicant_phone ?: $application->phone;
         $college = $application->user?->college ?? $application->college ?? null;
         $degree = $application->degree ?? null;
         $location = $options['work_location'] ?? ($application->internship?->location ?? 'Vadodara, Gujarat');
-        $mode = $options['work_mode'] ?? ($application->internship?->mode ?? 'Onsite');
+        $mode = $options['work_mode'] ?? ($application->internship?->mode ?? 'Fully Remote');
 
-        // Appointment specific details (from Admin options or application fallback)
-        $designation = $options['designation'] ?? ($application->internship?->title ?? $application->application_type ?? 'Backend Developer Intern');
-        $department = $options['department'] ?? ($application->internship?->department ?? 'Engineering & Development');
+        // Role & department details
+        $designation = $options['designation'] ?? ($application->internship?->title ?? $application->application_type ?? 'Associate – L1');
+        $department = $options['department'] ?? ($application->internship?->department ?? 'Digital Marketing');
         
         $startDate = $this->formatDate($options['start_date'] ?? ($application->internship?->start_date ?? now()));
-        $endDate = !empty($options['end_date']) ? $this->formatDate($options['end_date']) : null;
+        $endDate = !empty($options['end_date']) 
+            ? $this->formatDate($options['end_date']) 
+            : $this->formatDate(now()->addMonths(2));
         
-        $duration = $options['duration'] ?? ($application->internship?->duration ?? '6 Months');
+        $duration = $options['duration'] ?? ($application->internship?->duration ?? 'Fifty Days');
         $workingDays = $this->formatWorkingDays($options['working_days'] ?? 'Monday to Friday');
         $workingHours = $options['working_hours'] ?? '09:30 AM - 06:30 PM';
-        $breakTime = $options['break_time'] ?? '01:00 PM - 02:00 PM';
-        $reportingTime = $options['reporting_time'] ?? '09:30 AM';
         
-        $stipendAmount = $options['stipend_amount'] ?? ($application->internship?->stipend ?? 18000);
+        $stipendAmount = $options['stipend_amount'] ?? ($application->internship?->stipend ?? 6000);
         $stipendCurrency = $options['stipend_currency'] ?? '₹';
-        $paymentFrequency = $options['payment_frequency'] ?? 'month';
-        $formattedStipend = $this->formatCompensation($stipendAmount, $stipendCurrency, $paymentFrequency);
+        $formattedStipend = $this->formatCompensation($stipendAmount, $stipendCurrency);
 
-        $reportingTo = $options['reporting_to'] ?? 'Team Lead / Project Manager';
-        $reportingPersonName = $options['reporting_person_name'] ?? null;
-        
-        $companyName = 'BLUEBOXX DA PVT. LTD.';
-        $signedAt = $this->formatDate($application->signed_at ?? now());
+        $companyName = 'Blueboxx DA Pvt. Ltd.';
+        $signedAt = $this->formatDate($application->signed_at ?? $application->created_at ?? now());
+
+        // Responsibilities
+        $responsibilities = !empty($options['responsibilities']) && is_array($options['responsibilities'])
+            ? $options['responsibilities']
+            : $this->getDefaultResponsibilities($designation, $department);
 
         // Candidate signature base64 data URI
         $candidateSigData = null;
-        if (!empty($application->signature_path) && Storage::disk('local')->exists($application->signature_path)) {
-            $rawContent = Storage::disk('local')->get($application->signature_path);
-            $mime = (str_ends_with(strtolower($application->signature_path), '.jpg') || str_ends_with(strtolower($application->signature_path), '.jpeg')) ? 'image/jpeg' : 'image/png';
-            $candidateSigData = 'data:' . $mime . ';base64,' . base64_encode($rawContent);
+        if (!empty($application->signature_path)) {
+            $sigPath = $application->signature_path;
+            $rawContent = null;
+            if (Storage::disk('local')->exists($sigPath)) {
+                $rawContent = Storage::disk('local')->get($sigPath);
+            } elseif (Storage::disk('public')->exists($sigPath)) {
+                $rawContent = Storage::disk('public')->get($sigPath);
+            } elseif (file_exists(storage_path('app/' . $sigPath))) {
+                $rawContent = file_get_contents(storage_path('app/' . $sigPath));
+            } elseif (file_exists(public_path($sigPath))) {
+                $rawContent = file_get_contents(public_path($sigPath));
+            }
+
+            if ($rawContent) {
+                $mime = (str_ends_with(strtolower($sigPath), '.jpg') || str_ends_with(strtolower($sigPath), '.jpeg')) ? 'image/jpeg' : 'image/png';
+                $candidateSigData = 'data:' . $mime . ';base64,' . base64_encode($rawContent);
+            }
         }
 
-        // Admin signature base64 data URI
-        $adminSigData = null;
-        $adminSigPath = $options['admin_signature_path'] ?? null;
-        if (!empty($adminSigPath) && Storage::disk('local')->exists($adminSigPath)) {
-            $rawContent = Storage::disk('local')->get($adminSigPath);
-            $mime = (str_ends_with(strtolower($adminSigPath), '.jpg') || str_ends_with(strtolower($adminSigPath), '.jpeg')) ? 'image/jpeg' : 'image/png';
-            $adminSigData = 'data:' . $mime . ';base64,' . base64_encode($rawContent);
-        } elseif (!empty($options['admin_signature_data'])) {
-            $adminSigData = $options['admin_signature_data'];
-        }
-
-        $signatoryName = $options['signatory_name'] ?? 'Authorized Signatory';
-        $signatoryDesignation = $options['signatory_designation'] ?? 'Managing Director / HR Head';
-
-        // Official clean letterhead background
-        $letterheadBg = null;
-        $bgPath = storage_path('app/letterhead_bg.png');
-        if (file_exists($bgPath)) {
-            $letterheadBg = 'data:image/png;base64,' . base64_encode(file_get_contents($bgPath));
-        } elseif (file_exists(public_path('images/letterhead_bg.png'))) {
-            $letterheadBg = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/letterhead_bg.png')));
+        // Company Logo Base64 Data URI
+        $logoBase64 = null;
+        $possibleLogoPaths = [
+            public_path('images/Boxxlogo.png'),
+            public_path('Boxxlogo.png'),
+            public_path('images/logoblue.png'),
+            public_path('logoblue.png'),
+        ];
+        foreach ($possibleLogoPaths as $logoPath) {
+            if (file_exists($logoPath)) {
+                $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                break;
+            }
         }
 
         $data = [
@@ -156,42 +223,37 @@ class AppointmentLetterService
             'degree'                   => $degree,
             'designation'              => $designation,
             'department'               => $department,
+            'employment_type'          => 'Internship / Trainee Appointment',
             'start_date'               => $startDate,
             'end_date'                 => $endDate,
             'duration'                 => $duration,
+            'duration_text'            => $duration,
             'working_days'             => $workingDays,
             'working_hours'            => $workingHours,
-            'break_time'               => $breakTime,
-            'reporting_time'           => $reportingTime,
             'stipend'                  => $formattedStipend,
             'stipend_amount'           => $stipendAmount,
             'stipend_currency'         => $stipendCurrency,
-            'payment_frequency'        => $paymentFrequency,
-            'reporting_to'             => $reportingTo,
-            'reporting_person_name'    => $reportingPersonName,
             'location'                 => $location,
             'mode'                     => $mode,
             'company_name'             => $companyName,
             'signed_at'                => $signedAt,
+            'responsibilities'         => $responsibilities,
             'candidate_signature_data' => $candidateSigData,
-            'admin_signature_data'     => $adminSigData,
-            'signatory_name'           => $signatoryName,
-            'signatory_designation'    => $signatoryDesignation,
-            'letterhead_bg'            => $letterheadBg,
+            'logo_base64'              => $logoBase64,
             'application_id'           => $application->id,
         ];
 
-        // Render with DomPDF using DejaVu Sans for native UTF-8 Unicode glyphs (Rupee ₹, dashes, bullets)
+        // Render DomPDF with DejaVu Sans for native UTF-8 Unicode glyphs (Rupee ₹, dashes, bullets)
         $pdf = Pdf::loadView('pdf.appointment_letter', $data)
             ->setPaper('a4', 'portrait')
             ->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
-                'defaultFont'          => 'DejaVu Sans',
+                'isHtml5ParserEnabled'    => true,
+                'isRemoteEnabled'         => true,
+                'defaultFont'             => 'DejaVu Sans',
                 'isFontSubsettingEnabled' => true,
             ]);
 
-        $fileName = $referenceNumber . '.pdf';
+        $fileName = 'appointment_' . $application->id . '_' . Str::slug($applicantName) . '.pdf';
         $storageRelativePath = 'appointment_letters/' . $fileName;
 
         if (!Storage::disk('local')->exists('appointment_letters')) {
@@ -213,36 +275,63 @@ class AppointmentLetterService
                 'user_id'          => $application->user_id,
                 'reference_number' => $referenceNumber,
                 'file_path'        => $storageRelativePath,
-                'document_version' => 'v2.1',
+                'document_version' => 'v3.0',
                 'generated_by'     => $generatedBy,
                 'generated_at'     => now(),
                 'metadata'         => [
-                    'designation'           => $designation,
-                    'department'            => $department,
-                    'start_date'            => $startDate,
-                    'end_date'              => $endDate,
-                    'duration'              => $duration,
-                    'working_days'          => $workingDays,
-                    'working_hours'         => $workingHours,
-                    'break_time'            => $breakTime,
-                    'reporting_time'        => $reportingTime,
-                    'stipend_amount'        => $stipendAmount,
-                    'stipend_currency'      => $stipendCurrency,
-                    'payment_frequency'     => $paymentFrequency,
-                    'formatted_stipend'     => $formattedStipend,
-                    'reporting_to'          => $reportingTo,
-                    'reporting_person_name' => $reportingPersonName,
-                    'work_location'         => $location,
-                    'work_mode'             => $mode,
-                    'issue_date'            => $issueDate,
-                    'signatory_name'        => $signatoryName,
-                    'signatory_designation' => $signatoryDesignation,
-                    'has_candidate_sig'     => !empty($candidateSigData),
-                    'has_admin_sig'         => !empty($adminSigData),
+                    'designation'       => $designation,
+                    'department'        => $department,
+                    'start_date'        => $startDate,
+                    'end_date'          => $endDate,
+                    'duration'          => $duration,
+                    'stipend_amount'    => $stipendAmount,
+                    'formatted_stipend' => $formattedStipend,
+                    'work_location'     => $location,
+                    'work_mode'         => $mode,
+                    'issue_date'        => $issueDate,
+                    'has_candidate_sig' => !empty($candidateSigData),
                 ],
             ]
         );
 
         return $record;
+    }
+
+    /**
+     * Generate or fetch the official 9-section Terms & Conditions PDF.
+     */
+    public function getTermsAndConditionsPdf(): string
+    {
+        $directory = storage_path('app/documents');
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $filePath = $directory . '/BlueBoxx_DA_Official_Consent_Declaration_Terms_and_Conditions.pdf';
+
+        // Re-generate if not exists or if source view was updated
+        $viewPath = resource_path('views/pdf/terms_and_conditions.blade.php');
+        $needsRegen = !file_exists($filePath) || (file_exists($viewPath) && filemtime($viewPath) > filemtime($filePath));
+
+        if ($needsRegen) {
+            $data = [
+                'company_name'   => 'BLUEBOXX DA PVT. LTD.',
+                'version'        => 'v3.2',
+                'effective_date' => date('d F Y'),
+            ];
+
+            $pdf = Pdf::loadView('pdf.terms_and_conditions', $data)
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'isHtml5ParserEnabled'    => true,
+                    'isRemoteEnabled'         => true,
+                    'defaultFont'             => 'DejaVu Sans',
+                    'isFontSubsettingEnabled' => true,
+                ]);
+
+            file_put_contents($filePath, $pdf->output());
+        }
+
+        return $filePath;
     }
 }
