@@ -416,10 +416,9 @@ class AdminInternshipController extends Controller
     {
         $app = InternshipApplication::with('appointmentLetter')->findOrFail($id);
 
-        if (empty($app->appointment_letter_path) || !Storage::disk('local')->exists($app->appointment_letter_path) || $request->has('regenerate')) {
-            $letter = $this->appointmentService->generate($app, auth()->id());
-            $app->refresh();
-        }
+        $options = $app->appointmentLetter?->metadata ?? [];
+        $letter = $this->appointmentService->generate($app, auth()->id(), $options);
+        $app->refresh();
 
         $path = Storage::disk('local')->path($app->appointment_letter_path);
         $candidateName = Str::slug($app->applicant_name ?: ($app->first_name . ' ' . $app->last_name), '_');

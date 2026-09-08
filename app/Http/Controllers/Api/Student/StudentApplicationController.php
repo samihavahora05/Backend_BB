@@ -105,11 +105,10 @@ class StudentApplicationController extends Controller
             return response()->json(['success' => false, 'message' => 'Appointment Letter is not yet approved by administration.'], 403);
         }
 
-        if (empty($app->appointment_letter_path) || !Storage::disk('local')->exists($app->appointment_letter_path)) {
-            $service = app(\App\Services\AppointmentLetterService::class);
-            $service->generate($app);
-            $app->refresh();
-        }
+        $options = $app->appointmentLetter?->metadata ?? [];
+        $service = app(\App\Services\AppointmentLetterService::class);
+        $service->generate($app, $app->appointmentLetter?->generated_by, $options);
+        $app->refresh();
 
         // Record Audit Log
         AuditLog::create([

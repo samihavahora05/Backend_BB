@@ -252,6 +252,9 @@ class AppointmentLetterService
             public_path('images/letterhead_bg.png'),
             public_path('letterhead_bg.png'),
             resource_path('images/letterhead_bg.png'),
+            base_path('public/images/letterhead_bg.png'),
+            base_path('public/letterhead_bg.png'),
+            base_path('resources/images/letterhead_bg.png'),
         ];
         foreach ($possibleBgPaths as $bgPath) {
             if (file_exists($bgPath)) {
