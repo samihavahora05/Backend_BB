@@ -232,7 +232,7 @@ class AppointmentLetterService
             }
         }
 
-        // Company Logo Base64 Data URI
+        // Company Logo & Letterhead Background Base64 Data URI
         $logoBase64 = null;
         $possibleLogoPaths = [
             public_path('images/Boxxlogo.png'),
@@ -247,7 +247,21 @@ class AppointmentLetterService
             }
         }
 
+        $letterheadBgBase64 = null;
+        $possibleBgPaths = [
+            public_path('images/letterhead_bg.png'),
+            public_path('letterhead_bg.png'),
+            resource_path('images/letterhead_bg.png'),
+        ];
+        foreach ($possibleBgPaths as $bgPath) {
+            if (file_exists($bgPath)) {
+                $letterheadBgBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($bgPath));
+                break;
+            }
+        }
+
         $data = [
+            'letterhead_bg_base64'     => $letterheadBgBase64,
             'reference_number'         => $referenceNumber,
             'issue_date'               => $issueDate,
             'applicant_name'           => $applicantName,
