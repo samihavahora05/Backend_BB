@@ -170,6 +170,7 @@ class AdminInternshipController extends Controller
      */
     public function saveAppointmentDetails(Request $request, $id)
     {
+        $this->appointmentService->ensureSchema();
         $app = InternshipApplication::findOrFail($id);
 
         $options = $this->extractAppointmentOptions($request);
@@ -180,7 +181,7 @@ class AdminInternshipController extends Controller
                 'user_id'          => $app->user_id,
                 'reference_number' => $options['reference_number'] ?? ('BB-AL-' . date('Y') . '-' . str_pad((string)$app->id, 4, '0', STR_PAD_LEFT) . '-' . strtoupper(Str::random(4))),
                 'file_path'        => $app->appointment_letter_path ?? '',
-                'document_version' => 'v2.1',
+                'document_version' => 'v3.0',
                 'generated_by'     => auth()->id(),
                 'generated_at'     => now(),
                 'metadata'         => $options,
@@ -199,6 +200,7 @@ class AdminInternshipController extends Controller
      */
     public function approveApplication(Request $request, $id)
     {
+        $this->appointmentService->ensureSchema();
         $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
 
         return DB::transaction(function () use ($app, $request) {

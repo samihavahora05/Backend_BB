@@ -130,10 +130,44 @@ class AppointmentLetterService
     }
 
     /**
+     * Ensure required tables and columns exist automatically on MySQL without failing.
+     */
+    public function ensureSchema(): void
+    {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('internship_applications')) {
+                if (\Illuminate\Support\Facades\DB::connection()->getDriverName() === 'mysql') {
+                    \Illuminate\Support\Facades\DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('appointment_letters')) {
+                \Illuminate\Support\Facades\Schema::create('appointment_letters', function ($table) {
+                    $table->id();
+                    $table->unsignedBigInteger('application_id');
+                    $table->unsignedBigInteger('user_id')->nullable();
+                    $table->string('reference_number', 100)->unique();
+                    $table->string('file_path');
+                    $table->string('document_version', 50)->default('v1.0');
+                    $table->unsignedBigInteger('generated_by')->nullable();
+                    $table->timestamp('generated_at')->nullable();
+                    $table->timestamp('downloaded_at')->nullable();
+                    $table->json('metadata')->nullable();
+                    $table->timestamps();
+                });
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    /**
      * Generate an official Appointment Letter PDF matching reference layout with candidate-only signature.
      */
     public function generate(InternshipApplication $application, ?int $generatedBy = null, array $options = []): AppointmentLetter
     {
+        $this->ensureSchema();
+
         $application->load(['user', 'internship.company.companyProfile']);
 
         // Reference number
