@@ -32,23 +32,17 @@ class DatabaseSeeder extends Seeder
         );
         $admin->assignRole('super_admin');
 
-        // 3. Call structured, idempotent baseline seeders
+        // 3. Call structured, idempotent authentic baseline seeders
         $this->call([
             PlatformSettingsSeeder::class,
             CmsEcosystemSeeder::class,
             CmsContentSeeder::class,
             ImportCompaniesSeeder::class,
             ImportCollegesSeeder::class,
-            ComprehensiveDataSeeder::class,
-            JobModuleSeeder::class,
-            InternshipModuleSeeder::class,
-            StudentModuleSeeder::class,
-            InstructorModuleSeeder::class,
             OnlineUniversitiesSeeder::class,
-            EventsAndActivitiesSeeder::class,
-            CRMAndSalesSeeder::class,
+            ProductionBaselineSeeder::class,
         ]);
 
-        $this->command->info('✅ Database Seeded Successfully with Enterprise Data!');
+        $this->command->info('✅ Database Seeded Successfully with Authentic Baseline Data!');
     }
 }
