@@ -168,6 +168,9 @@ class InternshipController extends Controller
         return response()->json(['success' => false, 'message' => 'Unsupported format'], 400);
     }
 
+    /**
+     * Download a sample CSV template for Internship Import
+     */
     public function sampleCsv()
     {
         $headers = [
