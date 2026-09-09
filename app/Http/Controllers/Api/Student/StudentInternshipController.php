@@ -13,10 +13,7 @@ class StudentInternshipController extends Controller
         $user = auth()->user();
 
         $applications = InternshipApplication::where('user_id', $user->id)
-            ->with(['internship' => function($q) {
-                $q->select('id', 'title', 'company_id', 'location', 'duration', 'stipend', 'skills')
-                  ->with('company:id,company_name');
-            }])
+            ->with(['internship.company.companyProfile'])
             ->latest()
             ->get();
 

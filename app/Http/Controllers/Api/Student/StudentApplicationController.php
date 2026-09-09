@@ -9,6 +9,7 @@ use App\Models\InternshipApplication;
 use App\Models\ScholarshipApplication;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class StudentApplicationController extends Controller
 {
@@ -21,7 +22,7 @@ class StudentApplicationController extends Controller
         $applications = collect();
 
         // 1. Job Applications
-        $jobs = JobApplication::with('job:id,title,company_id')
+        $jobs = JobApplication::with('job')
             ->where('user_id', $userId)
             ->get()
             ->map(function ($app) {
@@ -37,7 +38,7 @@ class StudentApplicationController extends Controller
         $applications = $applications->concat($jobs);
 
         // 2. Internship Applications (enriched with T&C, signature, and appointment letter links)
-        $internships = InternshipApplication::with(['internship:id,title,company_name,location,duration,stipend', 'appointmentLetter'])
+        $internships = InternshipApplication::with(['internship.company.companyProfile', 'appointmentLetter'])
             ->where('user_id', $userId)
             ->get()
             ->map(function ($app) {
@@ -60,14 +61,14 @@ class StudentApplicationController extends Controller
         $applications = $applications->concat($internships);
 
         // 3. Scholarship Applications
-        $scholarships = ScholarshipApplication::with('program:id,name')
+        $scholarships = ScholarshipApplication::with('program')
             ->where('user_id', $userId)
             ->get()
             ->map(function ($app) {
                 return [
                     'id'         => 'scholarship_'.$app->id,
                     'type'       => 'Scholarship',
-                    'title'      => $app->program->name ?? 'Scholarship Program',
+                    'title'      => $app->program->title ?? $app->program->name ?? 'Scholarship Program',
                     'status'     => $app->status,
                     'applied_on' => $app->created_at,
                     'link'       => '/student/scholarships'

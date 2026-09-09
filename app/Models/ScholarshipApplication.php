@@ -20,7 +20,12 @@ class ScholarshipApplication extends Model
 
     public function scholarshipProgram()
     {
-        return $this->belongsTo(ScholarshipProgram::class);
+        return $this->belongsTo(ScholarshipProgram::class, 'scholarship_program_id');
+    }
+
+    public function program()
+    {
+        return $this->belongsTo(ScholarshipProgram::class, 'scholarship_program_id');
     }
 }
 
