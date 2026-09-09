@@ -1,12 +1,21 @@
 @extends('emails.layout')
 
 @section('content')
-    <h2>Mentor Session Confirmed</h2>
-    <p>Your mentor session booking has been successfully confirmed:</p>
-    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">Session with {{ $mentorName }}</h3>
-        <p><strong>Topic / Details:</strong> {{ $sessionTopic }}</p>
-        <p style="margin-bottom: 0;"><strong>Scheduled Time:</strong> {{ $sessionTime }}</p>
+    <p>Dear Student,</p>
+
+    <p>Your mentor session booking has been confirmed:</p>
+
+    <div class="details-box">
+        <p style="margin: 0 0 6px 0;"><strong>Mentor:</strong> {{ $mentorName }}</p>
+        <p style="margin: 0 0 6px 0;"><strong>Topic:</strong> {{ $sessionTopic }}</p>
+        <p style="margin: 0;"><strong>Scheduled Time:</strong> {{ $sessionTime }}</p>
     </div>
-    <p>Please join the session on time. You can view session details and links inside your dashboard.</p>
+
+    <p>Please be prepared and join the session on time. You can access meeting links and preparation materials from your student dashboard.</p>
+
+    <div class="signature">
+        Regards,<br><br>
+        <strong>Mentorship &amp; Industry Network Team</strong><br>
+        BlueBoxx Designs &amp; Animation Pvt. Ltd.
+    </div>
 @endsection

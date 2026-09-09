@@ -44,7 +44,7 @@ class InternshipApplicationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Application Confirmation: ' . $this->internshipTitle . ' | BlueBoxx DA',
+            subject: 'Application Received – ' . $this->internshipTitle,
         );
     }
 

@@ -24,8 +24,9 @@ class InternshipApprovalMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $position = $this->application->internship?->title ?? $this->application->application_type ?? 'Internship';
         return new Envelope(
-            subject: 'Congratulations! Your Internship Application Has Been Approved - ' . ($this->application->internship?->title ?? 'Blueboxx DA'),
+            subject: "Application Approved – {$position}",
         );
     }
 
@@ -38,6 +39,10 @@ class InternshipApprovalMail extends Mailable
             view: 'emails.internship_approved',
             with: [
                 'app'              => $this->application,
+                'position'         => $this->application->internship?->title ?? $this->application->application_type ?? 'Internship Position',
+                'studentName'      => $this->application->applicant_name ?? 'Student',
+                'referenceId'      => $this->application->reference_id ?? ('BB-INT-' . str_pad($this->application->id, 5, '0', STR_PAD_LEFT)),
+                'approvedDate'     => $this->application->updated_at ? $this->application->updated_at->format('M d, Y') : now()->format('M d, Y'),
                 'studentPortalUrl' => $studentPortalUrl,
                 'frontendUrl'      => $frontendUrl,
             ]

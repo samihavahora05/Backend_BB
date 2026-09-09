@@ -1,11 +1,20 @@
 @extends('emails.layout')
 
 @section('content')
-    <h2>Scholarship Application Received</h2>
-    <p>Thank you for applying for the scholarship program. We have successfully received your application.</p>
-    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">{{ $scholarshipName }}</h3>
-        <p style="margin-bottom: 0;"><strong>Submission Date:</strong> {{ $submissionDate }}</p>
+    <p>Dear Applicant,</p>
+
+    <p>Your application for the scholarship program has been received and registered for evaluation.</p>
+
+    <div class="details-box">
+        <p style="margin: 0 0 6px 0;"><strong>Program:</strong> {{ $scholarshipName }}</p>
+        <p style="margin: 0;"><strong>Submission Date:</strong> {{ $submissionDate }}</p>
     </div>
-    <p>Our review panel will evaluate your details and documents. You will receive an update once the evaluation process is complete.</p>
+
+    <p>Our scholarship review committee will assess your academic records and application details. You will receive an official notification once the review is completed.</p>
+
+    <div class="signature">
+        Regards,<br><br>
+        <strong>Scholarship Review Committee</strong><br>
+        BlueBoxx Designs &amp; Animation Pvt. Ltd.
+    </div>
 @endsection

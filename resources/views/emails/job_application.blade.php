@@ -1,13 +1,22 @@
 @extends('emails.layout')
 
 @section('content')
-    <h2>Job Application Submitted</h2>
-    <p>Your application for the following position has been received:</p>
-    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">{{ $jobTitle }}</h3>
-        <p><strong>Company:</strong> {{ $companyName }}</p>
-        <p><strong>Applied Date:</strong> {{ $appliedDate }}</p>
-        <p style="margin-bottom: 0;"><strong>Status:</strong> <span style="background-color: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 600;">{{ ucfirst($status) }}</span></p>
+    <p>Dear Applicant,</p>
+
+    <p>Your job application has been successfully submitted and logged in our system.</p>
+
+    <div class="details-box">
+        <p style="margin: 0 0 6px 0;"><strong>Position:</strong> {{ $jobTitle }}</p>
+        <p style="margin: 0 0 6px 0;"><strong>Company:</strong> {{ $companyName }}</p>
+        <p style="margin: 0 0 6px 0;"><strong>Applied Date:</strong> {{ $appliedDate }}</p>
+        <p style="margin: 0;"><strong>Status:</strong> {{ ucfirst($status) }}</p>
     </div>
-    <p>The company's hiring team will review your application. We will notify you of any updates.</p>
+
+    <p>The hiring team will review your credentials and reach out regarding next steps if shortlisted.</p>
+
+    <div class="signature">
+        Regards,<br><br>
+        <strong>Talent Acquisition Team</strong><br>
+        BlueBoxx Designs &amp; Animation Pvt. Ltd.
+    </div>
 @endsection

@@ -1,14 +1,24 @@
 @extends('emails.layout')
 
 @section('content')
-    <h2>Course Enrollment Confirmation</h2>
-    <p>Congratulations! You have successfully enrolled in the course:</p>
-    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">{{ $courseName }}</h3>
-        <p style="margin-bottom: 0;"><strong>Enrolled Date:</strong> {{ $enrollmentDate }}</p>
+    <p>Dear Student,</p>
+
+    <p>You have successfully enrolled in the following course:</p>
+
+    <div class="details-box">
+        <p style="margin: 0 0 6px 0;"><strong>Course Name:</strong> {{ $courseName }}</p>
+        <p style="margin: 0;"><strong>Enrolled On:</strong> {{ $enrollmentDate }}</p>
     </div>
-    <p>You can now access the course material and start learning.</p>
-    <div style="text-align: center;">
-        <a href="{{ $courseUrl }}" class="btn">Go to Course</a>
+
+    <p>You can access your modules and start learning from your course dashboard:</p>
+
+    <div>
+        <a href="{{ $courseUrl }}" class="btn" target="_blank">Access Course</a>
+    </div>
+
+    <div class="signature">
+        Regards,<br><br>
+        <strong>Academic &amp; Learning Operations</strong><br>
+        BlueBoxx Designs &amp; Animation Pvt. Ltd.
     </div>
 @endsection

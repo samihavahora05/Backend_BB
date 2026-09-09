@@ -1,16 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account Approved</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #ffffff; color: #1f2937; margin: 0; padding: 24px; font-size: 14px; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+        p { margin: 0 0 16px 0; }
+        .btn { display: inline-block; background-color: #1e3a8a; color: #ffffff !important; text-decoration: none; padding: 10px 22px; border-radius: 4px; font-size: 14px; font-weight: 600; margin: 16px 0; }
+        .signature { margin-top: 28px; font-size: 14px; color: #374151; line-height: 1.5; }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 8px; text-align: center;">
-        <h2 style="color: #1B2A6B;">Your Account is Approved!</h2>
-        <p>Hello {{ $user->first_name }},</p>
-        <p>Great news! Your account on BlueBoxx DA has been officially approved by our Admin team.</p>
-        <p>You can now log in and access all the features available to your role.</p>
-        <a href="{{ config('app.frontend_url') ?? 'http://localhost:3000' }}/login" style="display: inline-block; padding: 10px 20px; margin-top: 20px; background-color: #C9A227; color: #fff; text-decoration: none; font-weight: bold; border-radius: 5px;">Log In Now</a>
-        <p style="margin-top: 30px; font-size: 12px; color: #888;">Thank you for joining BlueBoxx DA!</p>
+<body>
+    <div class="container">
+        <p>Hi {{ $user->first_name }},</p>
+
+        <p>Your BlueBoxx account registration has been formally approved by our administration team.</p>
+
+        <p>You can now log in to your account and access your dashboard using the button below:</p>
+
+        <div>
+            <a href="{{ config('app.frontend_url') ?? 'https://sarvakshetra.com' }}/login" class="btn" target="_blank">
+                Log In to Your Account
+            </a>
+        </div>
+
+        <div class="signature">
+            Regards,<br><br>
+            <strong>Operations &amp; Admin Team</strong><br>
+            BlueBoxx Designs &amp; Animation Pvt. Ltd.<br>
+            <a href="{{ config('app.frontend_url') ?? 'https://sarvakshetra.com' }}" style="color: #2563eb; text-decoration: none;">sarvakshetra.com</a>
+        </div>
     </div>
 </body>
 </html>

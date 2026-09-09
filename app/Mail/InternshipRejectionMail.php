@@ -24,18 +24,23 @@ class InternshipRejectionMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $position = $this->application->internship?->title ?? $this->application->application_type ?? 'Internship';
         return new Envelope(
-            subject: 'Update Regarding Your Internship Application - ' . ($this->application->internship?->title ?? 'Blueboxx DA'),
+            subject: "Application Status Update – {$position}",
         );
     }
 
     public function content(): Content
     {
+        $frontendUrl = rtrim(config('app.frontend_url') ?: 'https://sarvakshetra.com', '/');
+
         return new Content(
             view: 'emails.internship_rejected',
             with: [
-                'app'    => $this->application,
-                'reason' => $this->reason,
+                'app'         => $this->application,
+                'position'    => $this->application->internship?->title ?? $this->application->application_type ?? 'Internship Position',
+                'reason'      => $this->reason,
+                'frontendUrl' => $frontendUrl,
             ]
         );
     }

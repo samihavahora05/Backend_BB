@@ -1,89 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'BlueBoxx DA' }}</title>
+    <title>{{ $title ?? 'BlueBoxx' }}</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
             margin: 0;
-            padding: 0;
+            padding: 24px;
             color: #1f2937;
+            font-size: 14px;
+            line-height: 1.6;
         }
         .container {
             max-width: 600px;
-            margin: 40px auto;
+            margin: 0 auto;
             background: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .header {
-            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-            color: #ffffff;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
+        h2 {
+            font-size: 16px;
             font-weight: 700;
-            letter-spacing: -0.025em;
+            color: #111827;
+            margin: 0 0 16px 0;
         }
-        .content {
-            padding: 40px 30px;
-            line-height: 1.6;
-        }
-        .footer {
-            background-color: #f9fafb;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #6b7280;
-            border-top: 1px solid #e5e7eb;
+        p {
+            margin: 0 0 16px 0;
+            color: #1f2937;
         }
         .btn {
             display: inline-block;
-            background: #2563eb;
+            background-color: #1e3a8a;
             color: #ffffff !important;
-            padding: 12px 24px;
-            border-radius: 6px;
+            padding: 10px 22px;
+            border-radius: 4px;
             text-decoration: none;
             font-weight: 600;
-            margin-top: 20px;
+            font-size: 14px;
             text-align: center;
+            margin: 16px 0;
         }
-        .btn:hover {
-            background: #1d4ed8;
+        .details-box {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin: 16px 0 20px 0;
         }
-        .otp-code {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: 0.1em;
-            color: #2563eb;
-            background-color: #eff6ff;
-            padding: 12px 24px;
-            border-radius: 8px;
-            display: inline-block;
-            margin: 20px 0;
-            border: 1px dashed #bfdbfe;
+        .signature {
+            margin-top: 28px;
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.5;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 16px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>BlueBoxx DA</h1>
-        </div>
-        <div class="content">
-            @yield('content')
-        </div>
-        <div class="footer">
-            <p>&copy; {{ date('Y') }} BlueBoxx DA. All rights reserved.</p>
-            <p>If you did not request this email, you can safely ignore it.</p>
-        </div>
+        @yield('content')
     </div>
 </body>
 </html>
