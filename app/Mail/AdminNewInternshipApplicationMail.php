@@ -22,8 +22,11 @@ class AdminNewInternshipApplicationMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $studentName = $this->application->applicant_name ?? 'Applicant';
+        $position = $this->application->internship?->title ?? $this->application->application_type ?? 'Internship';
+
         return new Envelope(
-            subject: 'New Internship Application Received: #' . $this->application->id . ' - ' . $this->application->applicant_name,
+            subject: "New Internship Application – {$studentName} – {$position}",
         );
     }
 
