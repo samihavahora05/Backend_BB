@@ -219,18 +219,50 @@ class AuthController extends Controller
         // Using password_reset_ prefix
         Cache::put('password_reset_' . $user->email, $otp, now()->addMinutes(30));
         
-        SendQueuedEmailJob::dispatch(
-            $user->email,
-            new PasswordResetMail($otp),
-            'Password Reset Verification Code'
-        );
-        if ($user->phone) {
-            \App\Jobs\SendSmsOtpJob::dispatch($user->phone, $otp);
+        $userName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+        $mailSent = false;
+
+        try {
+            Mail::to($user->email)->send(new PasswordResetMail($otp, $user->email, $userName));
+            $mailSent = true;
+            
+            try {
+                \App\Models\EmailLog::create([
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'type' => 'Password Reset Verification Code',
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+            } catch (\Throwable $logEx) {
+                // Ignore log model issue if any
+            }
+        } catch (\Throwable $e) {
+            Log::error('Direct password reset email failed to send: ' . $e->getMessage());
+            // Fallback dispatch to queue
+            try {
+                SendQueuedEmailJob::dispatch(
+                    $user->email,
+                    new PasswordResetMail($otp, $user->email, $userName),
+                    'Password Reset Verification Code'
+                );
+            } catch (\Throwable $queueEx) {
+                Log::error('Queue fallback also failed: ' . $queueEx->getMessage());
+            }
         }
 
+        if ($user->phone) {
+            try {
+                \App\Jobs\SendSmsOtpJob::dispatch($user->phone, $otp);
+            } catch (\Throwable $smsEx) {
+                Log::warning('SMS dispatch failed: ' . $smsEx->getMessage());
+            }
+        }
 
         return response()->json([
-            'message' => 'Password reset OTP sent to your email and phone.'
+            'success' => true,
+            'email' => $user->email,
+            'message' => "A 6-digit OTP has been sent to your registered email address: {$user->email}"
         ]);
     }
 

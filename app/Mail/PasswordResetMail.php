@@ -13,16 +13,20 @@ class PasswordResetMail extends Mailable
     use Queueable, SerializesModels;
 
     public $otp;
+    public $userEmail;
+    public $userName;
 
-    public function __construct($otp)
+    public function __construct($otp, $userEmail = null, $userName = null)
     {
         $this->otp = $otp;
+        $this->userEmail = $userEmail;
+        $this->userName = $userName;
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Password Reset Verification Code',
+            subject: 'Password Reset Verification Code - BlueBoxx',
         );
     }
 
