@@ -213,33 +213,19 @@ class AdminInternshipController extends Controller
             $this->appointmentService->ensureSchema();
             $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
 
-            return DB::transaction(function () use ($app, $request) {
-                try {
-                    $app->status = 'approved';
-                    $app->approved_at = now();
-                    $app->reviewed_by = auth()->id();
-                    $app->reviewed_at = now();
-                    $app->save();
-                } catch (\Throwable $e) {
-                    try {
-                        DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
-                        $app->status = 'approved';
-                        $app->approved_at = now();
-                        $app->reviewed_by = auth()->id();
-                        $app->reviewed_at = now();
-                        $app->save();
-                    } catch (\Throwable $ex) {
-                        $app->status = 'selected';
-                        $app->save();
-                    }
-                }
+            // 1. Update application status
+            $app->status = 'approved';
+            $app->approved_at = now();
+            $app->reviewed_by = auth()->id();
+            $app->reviewed_at = now();
+            $app->save();
 
-                $options = $this->extractAppointmentOptions($request);
+            // 2. Extract options and generate appointment letter
+            $options = $this->extractAppointmentOptions($request);
+            $letter = $this->appointmentService->generate($app, auth()->id(), $options);
 
-                // Generate appointment letter with dual signatures & DejaVu Sans Unicode support
-                $letter = $this->appointmentService->generate($app, auth()->id(), $options);
-
-                // Audit log
+            // 3. Record Audit Log
+            try {
                 AuditLog::create([
                     'user_id'    => auth()->id(),
                     'action'     => 'internship_application_approved',
@@ -252,24 +238,25 @@ class AdminInternshipController extends Controller
                         'stipend'          => $options['stipend_amount'] ?? 18000,
                     ]
                 ]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Approval audit log failed: ' . $e->getMessage());
+            }
 
-                // Email Notification
-                try {
-                    if ($app->user && $app->user->email) {
-                        Mail::to($app->user->email)->send(new InternshipApprovalMail($app, $letter));
-                    } elseif ($app->email) {
-                        Mail::to($app->email)->send(new InternshipApprovalMail($app, $letter));
-                    }
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Approval email delivery failed: ' . $e->getMessage());
+            // 4. Send Approval Email to Applicant
+            try {
+                $recipientEmail = $app->applicant_email ?: ($app->email ?: ($app->user?->email ?? null));
+                if ($recipientEmail) {
+                    Mail::to($recipientEmail)->send(new InternshipApprovalMail($app, $letter));
                 }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Approval email delivery failed: ' . $e->getMessage());
+            }
 
-                return response()->json([
-                    'success' => true,
-                    'data'    => $app->fresh(['appointmentLetter']),
-                    'message' => 'Application approved and official Appointment Letter generated successfully.'
-                ]);
-            });
+            return response()->json([
+                'success' => true,
+                'data'    => $app->fresh(['appointmentLetter']),
+                'message' => 'Application approved and official Appointment Letter generated successfully.'
+            ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('approveApplication failure: ' . $e->getMessage(), [
                 'exception' => $e,

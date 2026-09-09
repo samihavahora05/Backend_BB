@@ -201,8 +201,6 @@ class AppointmentLetterService
      */
     public function generate(InternshipApplication $application, ?int $generatedBy = null, array $options = []): AppointmentLetter
     {
-        $this->ensureSchema();
-
         $application->load(['user', 'internship.company.companyProfile']);
 
         // Reference number
