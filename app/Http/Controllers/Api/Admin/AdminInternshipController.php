@@ -209,66 +209,77 @@ class AdminInternshipController extends Controller
      */
     public function approveApplication(Request $request, $id)
     {
-        $this->appointmentService->ensureSchema();
-        $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
+        try {
+            $this->appointmentService->ensureSchema();
+            $app = InternshipApplication::with(['user', 'internship'])->findOrFail($id);
 
-        return DB::transaction(function () use ($app, $request) {
-            try {
-                $app->status = 'approved';
-                $app->approved_at = now();
-                $app->reviewed_by = auth()->id();
-                $app->reviewed_at = now();
-                $app->save();
-            } catch (\Throwable $e) {
+            return DB::transaction(function () use ($app, $request) {
                 try {
-                    DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
                     $app->status = 'approved';
                     $app->approved_at = now();
                     $app->reviewed_by = auth()->id();
                     $app->reviewed_at = now();
                     $app->save();
-                } catch (\Throwable $ex) {
-                    $app->status = 'selected';
-                    $app->save();
+                } catch (\Throwable $e) {
+                    try {
+                        DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
+                        $app->status = 'approved';
+                        $app->approved_at = now();
+                        $app->reviewed_by = auth()->id();
+                        $app->reviewed_at = now();
+                        $app->save();
+                    } catch (\Throwable $ex) {
+                        $app->status = 'selected';
+                        $app->save();
+                    }
                 }
-            }
 
-            $options = $this->extractAppointmentOptions($request);
+                $options = $this->extractAppointmentOptions($request);
 
-            // Generate appointment letter with dual signatures & DejaVu Sans Unicode support
-            $letter = $this->appointmentService->generate($app, auth()->id(), $options);
+                // Generate appointment letter with dual signatures & DejaVu Sans Unicode support
+                $letter = $this->appointmentService->generate($app, auth()->id(), $options);
 
-            // Audit log
-            AuditLog::create([
-                'user_id'    => auth()->id(),
-                'action'     => 'internship_application_approved',
-                'ip_address' => $request->ip() ?? '127.0.0.1',
-                'user_agent' => $request->userAgent() ?? 'System',
-                'payload'    => [
-                    'application_id'   => $app->id,
-                    'reference_number' => $letter->reference_number,
-                    'signatory_name'   => $options['signatory_name'] ?? 'Authorized Signatory',
-                    'stipend'          => $options['stipend_amount'] ?? 18000,
-                ]
+                // Audit log
+                AuditLog::create([
+                    'user_id'    => auth()->id(),
+                    'action'     => 'internship_application_approved',
+                    'ip_address' => $request->ip() ?? '127.0.0.1',
+                    'user_agent' => $request->userAgent() ?? 'System',
+                    'payload'    => [
+                        'application_id'   => $app->id,
+                        'reference_number' => $letter->reference_number,
+                        'signatory_name'   => $options['signatory_name'] ?? 'Authorized Signatory',
+                        'stipend'          => $options['stipend_amount'] ?? 18000,
+                    ]
+                ]);
+
+                // Email Notification
+                try {
+                    if ($app->user && $app->user->email) {
+                        Mail::to($app->user->email)->send(new InternshipApprovalMail($app, $letter));
+                    } elseif ($app->email) {
+                        Mail::to($app->email)->send(new InternshipApprovalMail($app, $letter));
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Approval email delivery failed: ' . $e->getMessage());
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'data'    => $app->fresh(['appointmentLetter']),
+                    'message' => 'Application approved and official Appointment Letter generated successfully.'
+                ]);
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('approveApplication failure: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace'     => $e->getTraceAsString(),
             ]);
-
-            // Email Notification
-            try {
-                if ($app->user && $app->user->email) {
-                    Mail::to($app->user->email)->send(new InternshipApprovalMail($app, $letter));
-                } elseif ($app->email) {
-                    Mail::to($app->email)->send(new InternshipApprovalMail($app, $letter));
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Approval email delivery failed: ' . $e->getMessage());
-            }
-
             return response()->json([
-                'success' => true,
-                'data'    => $app->fresh(['appointmentLetter']),
-                'message' => 'Application approved and official Appointment Letter generated successfully.'
-            ]);
-        });
+                'success' => false,
+                'message' => 'Failed to approve application and generate letter: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

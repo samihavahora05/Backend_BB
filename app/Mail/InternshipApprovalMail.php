@@ -14,10 +14,12 @@ class InternshipApprovalMail extends Mailable
     use Queueable, SerializesModels;
 
     public InternshipApplication $application;
+    public $letter;
 
-    public function __construct(InternshipApplication $application)
+    public function __construct(InternshipApplication $application, $letter = null)
     {
         $this->application = $application;
+        $this->letter = $letter;
     }
 
     public function envelope(): Envelope

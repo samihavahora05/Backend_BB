@@ -137,8 +137,43 @@ class AppointmentLetterService
         try {
             if (\Illuminate\Support\Facades\Schema::hasTable('internship_applications')) {
                 if (\Illuminate\Support\Facades\DB::connection()->getDriverName() === 'mysql') {
-                    \Illuminate\Support\Facades\DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
+                    try {
+                        \Illuminate\Support\Facades\DB::statement("ALTER TABLE `internship_applications` MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'applied'");
+                    } catch (\Throwable $e) {}
                 }
+
+                \Illuminate\Support\Facades\Schema::table('internship_applications', function ($table) {
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'appointment_letter_path')) {
+                        $table->string('appointment_letter_path')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'appointment_letter_generated_at')) {
+                        $table->timestamp('appointment_letter_generated_at')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'approved_at')) {
+                        $table->timestamp('approved_at')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'reviewed_by')) {
+                        $table->unsignedBigInteger('reviewed_by')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'reviewed_at')) {
+                        $table->timestamp('reviewed_at')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'rejection_reason')) {
+                        $table->text('rejection_reason')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'terms_accepted')) {
+                        $table->boolean('terms_accepted')->default(true);
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'terms_version')) {
+                        $table->string('terms_version', 50)->default('v1.0');
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'signature_path')) {
+                        $table->string('signature_path')->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('internship_applications', 'signed_at')) {
+                        $table->timestamp('signed_at')->nullable();
+                    }
+                });
             }
         } catch (\Throwable $e) {}
 
