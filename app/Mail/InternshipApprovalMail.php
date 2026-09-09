@@ -29,10 +29,15 @@ class InternshipApprovalMail extends Mailable
 
     public function content(): Content
     {
+        $frontendUrl = rtrim(config('app.frontend_url') ?: 'https://sarvakshetra.com', '/');
+        $studentPortalUrl = $frontendUrl . '/login?redirect=/student/applications';
+
         return new Content(
             view: 'emails.internship_approved',
             with: [
-                'app' => $this->application,
+                'app'              => $this->application,
+                'studentPortalUrl' => $studentPortalUrl,
+                'frontendUrl'      => $frontendUrl,
             ]
         );
     }

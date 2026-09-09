@@ -8,6 +8,7 @@ use App\Models\InternshipApplication;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Mail\AdminNewInternshipApplicationMail;
+use App\Mail\InternshipApplicationMail;
 use App\Services\AppointmentLetterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -295,11 +296,20 @@ class PublicInternshipController extends Controller
             ],
         ]);
 
-        // Email Notification to Admin (info.blueboxx@gmail.com)
+        // 1. Email Notification to Admin (info.blueboxx@gmail.com)
         try {
             Mail::to('info.blueboxx@gmail.com')->send(new AdminNewInternshipApplicationMail($application));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Admin application notification email delivery failed: ' . $e->getMessage());
+        }
+
+        // 2. Email Confirmation to Student
+        if (!empty($application->applicant_email)) {
+            try {
+                Mail::to($application->applicant_email)->send(new InternshipApplicationMail($application));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Student confirmation email delivery failed: ' . $e->getMessage());
+            }
         }
 
         return response()->json([
@@ -399,10 +409,20 @@ class PublicInternshipController extends Controller
             ],
         ]);
 
+        // 1. Email Notification to Admin
         try {
             Mail::to('info.blueboxx@gmail.com')->send(new AdminNewInternshipApplicationMail($application));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Admin email delivery failed: ' . $e->getMessage());
+        }
+
+        // 2. Email Confirmation to Student
+        if (!empty($application->applicant_email)) {
+            try {
+                Mail::to($application->applicant_email)->send(new InternshipApplicationMail($application));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Student confirmation email delivery failed: ' . $e->getMessage());
+            }
         }
 
         return response()->json([

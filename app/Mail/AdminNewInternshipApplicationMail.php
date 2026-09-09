@@ -29,10 +29,15 @@ class AdminNewInternshipApplicationMail extends Mailable
 
     public function content(): Content
     {
+        $frontendUrl = rtrim(config('app.frontend_url') ?: 'https://sarvakshetra.com', '/');
+        $adminReviewUrl = $frontendUrl . '/login?redirect=/admin/internships/applications';
+
         return new Content(
             view: 'emails.admin_new_internship_application',
             with: [
-                'app' => $this->application,
+                'app'            => $this->application,
+                'adminReviewUrl' => $adminReviewUrl,
+                'frontendUrl'    => $frontendUrl,
             ]
         );
     }
