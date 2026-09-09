@@ -28,14 +28,14 @@ class InternshipApplicationMail extends Mailable
             $this->applicantName = $applicationOrTitle->applicant_name ?: ($applicationOrTitle->first_name . ' ' . $applicationOrTitle->last_name);
             $this->internshipTitle = $applicationOrTitle->internship?->title ?? $applicationOrTitle->application_type ?? 'Internship Program';
             $this->companyName = $applicationOrTitle->internship?->company_name ?? 'BlueBoxx DA PVT. LTD.';
-            $this->appliedDate = $applicationOrTitle->applied_at ? $applicationOrTitle->applied_at->format('M d, Y • h:i A') : now()->format('M d, Y • h:i A');
+            $this->appliedDate = ($applicationOrTitle->applied_at ? $applicationOrTitle->applied_at->copy()->timezone('Asia/Kolkata') : now('Asia/Kolkata'))->format('M d, Y \a\t h:i A');
             $this->status = ucfirst($applicationOrTitle->status ?? 'Applied');
             $this->termsVersion = $applicationOrTitle->terms_version ?? 'v1.0';
         } else {
             $this->applicantName = 'Applicant';
             $this->internshipTitle = (string) $applicationOrTitle;
             $this->companyName = (string) $companyName;
-            $this->appliedDate = $appliedDate ? (is_string($appliedDate) ? $appliedDate : $appliedDate->format('M d, Y')) : now()->format('M d, Y');
+            $this->appliedDate = $appliedDate ? (is_string($appliedDate) ? $appliedDate : $appliedDate->copy()->timezone('Asia/Kolkata')->format('M d, Y \a\t h:i A')) : now('Asia/Kolkata')->format('M d, Y \a\t h:i A');
             $this->status = ucfirst((string) $status);
             $this->termsVersion = 'v1.0';
         }

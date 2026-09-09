@@ -21,7 +21,7 @@
 
         <p style="margin: 0 0 20px 0; color: #1f2937; line-height: 1.8;">
             <strong>Reference ID:</strong> {{ $referenceId ?? ($app->reference_id ?? ('BB-INT-' . str_pad($app->id, 5, '0', STR_PAD_LEFT))) }}<br>
-            <strong>Approved:</strong> {{ $approvedDate ?? ($app->updated_at ? $app->updated_at->format('F d, Y') : now()->format('F d, Y')) }}
+            <strong>Approved:</strong> {{ $approvedDate ?? (($app->updated_at ? $app->updated_at->copy()->timezone('Asia/Kolkata') : now('Asia/Kolkata'))->format('F d, Y')) }}
         </p>
 
         <p style="margin: 0 0 24px 0;">

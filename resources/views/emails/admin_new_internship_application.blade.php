@@ -18,7 +18,7 @@
         </p>
 
         <p style="margin: 0 0 16px 0; color: #1f2937;">
-            The applicant has agreed to the Terms &amp; Conditions and their digital signature has been verified. The application was submitted on <strong>{{ $app->applied_at ? $app->applied_at->format('M d, Y \a\t h:i A') : ($app->created_at ? $app->created_at->format('M d, Y \a\t h:i A') : now()->format('M d, Y \a\t h:i A')) }}</strong>.
+            The applicant has agreed to the Terms &amp; Conditions and their digital signature has been verified. The application was submitted on <strong>{{ ($app->applied_at ? $app->applied_at->copy()->timezone('Asia/Kolkata') : ($app->created_at ? $app->created_at->copy()->timezone('Asia/Kolkata') : now('Asia/Kolkata')))->format('M d, Y \a\t h:i A') }}</strong>.
         </p>
 
         <p style="margin: 0 0 24px 0; color: #1f2937;">
