@@ -39,8 +39,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 
 Route::get('/health', [HealthController::class, 'health']);
-
-
+Route::get('/stream/google-drive/{fileId}', [\App\Http\Controllers\Api\GoogleDriveStreamController::class, 'stream']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);

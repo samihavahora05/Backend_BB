@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Models\Lesson;
+use Google\Client;
+use Google\Service\Drive;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +73,28 @@ class AdminCourseCurriculumController extends Controller
     }
     
     // --- LESSONS ---
+    // Helper function to extract Google Drive video duration
+    private function getGoogleDriveVideoDuration($url)
+    {
+        if (strpos($url, 'drive.google.com') !== false && preg_match('/\/d\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            try {
+                $client = new Client();
+                $client->setAuthConfig(storage_path('app/google-drive/service-account.json'));
+                $client->addScope('https://www.googleapis.com/auth/drive.readonly');
+                $service = new Drive($client);
+                
+                $file = $service->files->get($matches[1], ['fields' => 'videoMediaMetadata']);
+                if ($file->getVideoMediaMetadata()) {
+                    $durationMillis = $file->getVideoMediaMetadata()->getDurationMillis();
+                    return $durationMillis / 60000; // Return exact minutes
+                }
+            } catch (\Exception $e) {
+                // Ignore failure
+            }
+        }
+        return null;
+    }
+
     public function storeLesson(Request $request, $module_id)
     {
         $request->validate([
@@ -82,8 +106,16 @@ class AdminCourseCurriculumController extends Controller
         ]);
         
         $order = Lesson::where('module_id', $module_id)->max('order') + 1;
+        $data = $request->all();
         
-        $lesson = Lesson::create(array_merge($request->all(), [
+        if (empty($data['duration_minutes']) && !empty($data['video_url'])) {
+            $fetchedDuration = $this->getGoogleDriveVideoDuration($data['video_url']);
+            if ($fetchedDuration) {
+                $data['duration_minutes'] = $fetchedDuration;
+            }
+        }
+        
+        $lesson = Lesson::create(array_merge($data, [
             'module_id' => $module_id,
             'order' => $order
         ]));
@@ -104,7 +136,16 @@ class AdminCourseCurriculumController extends Controller
             'video_url' => 'nullable|string',
             'duration_minutes' => 'nullable|numeric'
         ]);
-        $lesson->update($request->all());
+        
+        $data = $request->all();
+        if (empty($data['duration_minutes']) && !empty($data['video_url'])) {
+            $fetchedDuration = $this->getGoogleDriveVideoDuration($data['video_url']);
+            if ($fetchedDuration) {
+                $data['duration_minutes'] = $fetchedDuration;
+            }
+        }
+        
+        $lesson->update($data);
         return response()->json(['status' => 'success', 'data' => $lesson]);
     }
     

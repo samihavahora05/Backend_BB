@@ -138,13 +138,18 @@ class StudentCourseController extends Controller
         $curriculum = $course->modules->map(function ($module, $mIdx) use ($completedLessonIds) {
             return [
                 'id' => $module->id,
+                'title' => $module->title,
                 'module' => $module->title,
                 'order' => $module->order,
                 'lessons' => $module->lessons->map(function ($lesson, $lIdx) use ($completedLessonIds, $mIdx) {
                     return [
                         'id' => $lesson->id,
                         'title' => $lesson->title,
-                        'duration' => $lesson->duration_minutes . ' min',
+                        'duration' => $lesson->duration_minutes ? (
+                            $lesson->duration_minutes < 1 
+                                ? round($lesson->duration_minutes * 60) . 's' 
+                                : floor($lesson->duration_minutes) . 'm ' . round(($lesson->duration_minutes - floor($lesson->duration_minutes)) * 60) . 's'
+                        ) : '0s',
                         'isFree' => $lesson->type === 'video', // Adjust as needed
                         'videoUrl' => $lesson->video_url, // No fallback
                         'isCompleted' => in_array($lesson->id, $completedLessonIds),
@@ -157,6 +162,28 @@ class StudentCourseController extends Controller
 
         $totalLessons = $course->modules->flatMap(function($m) { return $m->lessons; })->count();
         $progress = $totalLessons > 0 ? round((count($completedLessonIds) / $totalLessons) * 100) : 0;
+        
+        $totalMinutes = $course->modules->flatMap(function($m) { return $m->lessons; })->sum('duration_minutes');
+        
+        $durationFormatted = 'N/A';
+        if ($totalMinutes > 0) {
+            if ($totalMinutes < 1) {
+                $durationFormatted = round($totalMinutes * 60) . 's';
+            } else {
+                $hours = floor($totalMinutes / 60);
+                $minutes = floor($totalMinutes) % 60;
+                $seconds = round(($totalMinutes - floor($totalMinutes)) * 60);
+                
+                $parts = [];
+                if ($hours > 0) $parts[] = $hours . 'h';
+                if ($minutes > 0) $parts[] = $minutes . 'm';
+                if ($seconds > 0) $parts[] = $seconds . 's';
+                
+                $durationFormatted = empty($parts) ? '0s' : implode(' ', $parts);
+            }
+        } else {
+            $durationFormatted = $course->duration ?? 'N/A';
+        }
 
         return response()->json([
             'success' => true,
@@ -171,7 +198,7 @@ class StudentCourseController extends Controller
                         ? asset('storage/' . $course->expert->expertProfile->profile_photo)
                         : 'https://ui-avatars.com/api/?name=' . urlencode($course->expert ? $course->expert->name : 'Instructor') . '&background=C9A227&color=fff',
                 ],
-                'duration' => $course->duration ?? 'N/A',
+                'duration' => $durationFormatted,
                 'level' => $course->level?->title ?? 'Beginner',
                 'curriculum' => $curriculum,
                 'completed_lesson_ids' => $completedLessonIds,

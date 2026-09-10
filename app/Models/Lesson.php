@@ -26,7 +26,7 @@ class Lesson extends Model
     {
         return [
             'order' => 'integer',
-            'duration_minutes' => 'integer',
+            'duration_minutes' => 'float',
         ];
     }
 
