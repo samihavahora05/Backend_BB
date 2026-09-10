@@ -181,8 +181,9 @@ class PublicJobController extends Controller
                 'is_featured'          => $job->is_featured,
                 'application_count'    => $job->applications()->count(),
                 'is_bookmarked'        => $isBookmarked,
-                'has_applied'          => $hasApplied,
+                                'has_applied'          => $hasApplied,
                 'posted_at'            => $job->created_at ? $job->created_at->diffForHumans() : 'Recently',
+                'permission'           => \App\Services\OpportunityPermissionService::getPermissionStatus($request->user() ?? auth('sanctum')->user(), 'job'),
             ]
         ]);
     }
@@ -194,6 +195,30 @@ class PublicJobController extends Controller
     public function apply(Request $request, $id)
     {
         $job = Job::findOrFail($id);
+
+        $user = auth('sanctum')->user() ?? $request->user();
+        if (!$user && $token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            if ($accessToken && $accessToken->tokenable) {
+                $user = $accessToken->tokenable;
+            }
+        }
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Please log in to apply for this job.'], 401);
+        }
+
+        if (!\App\Services\OpportunityPermissionService::canApplyToJob($user)) {
+            $perm = \App\Services\OpportunityPermissionService::getPermissionStatus($user, 'job');
+            return response()->json([
+                'success' => false,
+                'message' => $perm['message'],
+                'code' => $perm['code'],
+                'current_role' => $perm['current_role'],
+                'target_role' => $perm['target_role'],
+                'can_request_role_change' => $perm['can_request_role_change'],
+            ], 403);
+        }
 
         // Check deadline
         if ($job->application_deadline && $job->application_deadline->isPast()) {

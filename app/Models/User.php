@@ -27,6 +27,13 @@ class User extends Authenticatable
         'phone',
         'password',
         'status',
+        'account_status',
+        'admin_approved',
+        'admin_approved_at',
+        'approved_by',
+        'rejection_reason',
+        'rejected_at',
+        'rejected_by',
         'email_verified_at',
     ];
 
@@ -79,6 +86,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'admin_approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
+            'admin_approved' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -94,6 +104,38 @@ class User extends Authenticatable
         });
     }
 
+    /**
+     * Check if user email is verified.
+     */
+    public function isEmailVerified(): bool
+    {
+        return !is_null($this->email_verified_at);
+    }
+
+    /**
+     * Check if user is approved by administrator.
+     */
+    public function isAdminApproved(): bool
+    {
+        return (bool) $this->admin_approved;
+    }
+
+    /**
+     * Check if account is active.
+     */
+    public function isActive(): bool
+    {
+        return ($this->account_status === 'active' || $this->status === 'active');
+    }
+
+    /**
+     * Check if this role requires administrator approval.
+     */
+    public function requiresAdminApproval(): bool
+    {
+        return $this->hasAnyRole(['expert', 'college', 'company']);
+    }
+
     // ------------------------------------------------------------------------
     // RELATIONSHIPS - PROFILES
     // ------------------------------------------------------------------------
@@ -104,6 +146,13 @@ class User extends Authenticatable
     public function internProfile() { return $this->hasOne(InternProfile::class); }
     public function jobSeekerProfile() { return $this->hasOne(JobSeekerProfile::class); }
     
+    // ------------------------------------------------------------------------
+    // RELATIONSHIPS - APPROVALS & OTPS
+    // ------------------------------------------------------------------------
+    public function approver() { return $this->belongsTo(User::class, 'approved_by'); }
+    public function rejecter() { return $this->belongsTo(User::class, 'rejected_by'); }
+    public function emailOtps() { return $this->hasMany(EmailVerificationOtp::class); }
+
     // ------------------------------------------------------------------------
     // RELATIONSHIPS - APP DATA
     // ------------------------------------------------------------------------

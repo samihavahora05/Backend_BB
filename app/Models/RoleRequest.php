@@ -11,10 +11,19 @@ class RoleRequest extends Model
 
     protected $fillable = [
         'user_id',
+        'current_role',
+        'requested_role',
         'requested_role_id',
         'status',
         'reason',
         'notes',
+        'reviewed_by',
+        'reviewed_at',
+        'rejection_reason',
+    ];
+
+    protected $casts = [
+        'reviewed_at' => 'datetime',
     ];
 
     public function user()
@@ -25,5 +34,10 @@ class RoleRequest extends Model
     public function requestedRole()
     {
         return $this->belongsTo(\Spatie\Permission\Models\Role::class, 'requested_role_id');
+    }
+
+    public function reviewer()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 }

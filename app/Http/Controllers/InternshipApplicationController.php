@@ -34,6 +34,19 @@ class InternshipApplicationController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        if (!\App\Services\OpportunityPermissionService::canApplyToInternship($user)) {
+            $perm = \App\Services\OpportunityPermissionService::getPermissionStatus($user, 'internship');
+            return response()->json([
+                'success' => false,
+                'message' => $perm['message'],
+                'code' => $perm['code'],
+                'current_role' => $perm['current_role'],
+                'target_role' => $perm['target_role'],
+                'can_request_role_change' => $perm['can_request_role_change'],
+            ], 403);
+        }
+
         $request->validate([
             'internship_id' => 'required|exists:internships,id',
             'resume_path' => 'nullable|string'

@@ -34,6 +34,19 @@ class JobApplicationController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        if (!\App\Services\OpportunityPermissionService::canApplyToJob($user)) {
+            $perm = \App\Services\OpportunityPermissionService::getPermissionStatus($user, 'job');
+            return response()->json([
+                'success' => false,
+                'message' => $perm['message'],
+                'code' => $perm['code'],
+                'current_role' => $perm['current_role'],
+                'target_role' => $perm['target_role'],
+                'can_request_role_change' => $perm['can_request_role_change'],
+            ], 403);
+        }
+
         $request->validate([
             'job_id' => 'required|exists:jobs,id',
             'resume_path' => 'nullable|string',

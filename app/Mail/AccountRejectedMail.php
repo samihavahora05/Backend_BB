@@ -9,19 +9,21 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class AccountApprovedMail extends Mailable
+class AccountRejectedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public User $user;
+    public string $reason;
     public string $roleName;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(User $user)
+    public function __construct(User $user, string $reason)
     {
         $this->user = $user;
+        $this->reason = $reason;
         $this->roleName = ucfirst(str_replace(['_', '-'], ' ', $user->roles->first()?->name ?? 'Account'));
     }
 
@@ -31,7 +33,7 @@ class AccountApprovedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Sarvakshetra Account Has Been Approved',
+            subject: 'Your Sarvakshetra Account Requires Changes',
         );
     }
 
@@ -41,11 +43,12 @@ class AccountApprovedMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.account_approved',
+            view: 'emails.account_rejected',
             with: [
                 'user' => $this->user,
+                'reason' => $this->reason,
                 'roleName' => $this->roleName,
-                'title' => 'Account Approved | Sarvakshetra',
+                'title' => 'Account Registration Update | Sarvakshetra',
             ]
         );
     }

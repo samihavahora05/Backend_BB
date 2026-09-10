@@ -147,9 +147,10 @@ class PublicInternshipController extends Controller
             'success' => true,
             'data'    => array_merge($internship->toArray(), [
                 'company_logo' => $internship->company_logo ? \App\Support\StorageHelper::url($internship->company_logo) : null,
-                'has_applied'  => $hasApplied,
+                                'has_applied'  => $hasApplied,
                 'is_bookmarked'=> $isBookmarked,
                 'posted_at'    => $internship->created_at ? $internship->created_at->diffForHumans() : 'Recently',
+                'permission'   => \App\Services\OpportunityPermissionService::getPermissionStatus($user, 'internship'),
             ])
         ]);
     }

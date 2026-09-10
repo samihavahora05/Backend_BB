@@ -41,6 +41,8 @@ use App\Http\Controllers\PaymentController;
 Route::get('/health', [HealthController::class, 'health']);
 Route::get('/stream/google-drive/{fileId}', [\App\Http\Controllers\Api\GoogleDriveStreamController::class, 'stream']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -197,6 +199,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
+        
+        // Role Change Requests
+        Route::post('/role-change-requests', [\App\Http\Controllers\Api\RoleChangeRequestController::class, 'store']);
+        Route::get('/role-change-requests/my-status', [\App\Http\Controllers\Api\RoleChangeRequestController::class, 'myStatus']);
         
         // Notifications
         Route::prefix('notifications')->group(function () {
@@ -760,6 +766,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         // Approvals API
         Route::get('approvals', [ApprovalController::class, 'index']);
+        Route::get('approvals/{id}', [ApprovalController::class, 'show']);
         Route::put('approvals/{id}/approve', [ApprovalController::class, 'approve']);
         Route::put('approvals/{id}/reject', [ApprovalController::class, 'reject']);
         Route::put('approvals/{id}/suspend', [ApprovalController::class, 'suspend']);
