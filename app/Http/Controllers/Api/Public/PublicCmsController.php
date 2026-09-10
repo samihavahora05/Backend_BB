@@ -18,7 +18,7 @@ class PublicCmsController extends Controller
         return Cache::remember('public.cms.stats.v2', now()->addHours(1), function () {
             $studentsCount = User::role('student')->count() + 5000;
             $placementsCount = 4000;
-            $projectsCount = Internship::count() * 5 + 850; 
+            $projectsCount = Internship::count() * 5 + 3000; 
             $partnersCount = PlacementPartner::where('is_active', true)->count() + 120;
 
             return response()->json([
