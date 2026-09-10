@@ -26,6 +26,27 @@ class RoleRequest extends Model
         'reviewed_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'requested_role',
+        'current_role',
+    ];
+
+    public function getRequestedRoleAttribute()
+    {
+        if (!empty($this->attributes['requested_role'])) {
+            return $this->attributes['requested_role'];
+        }
+        return $this->requestedRole?->name ?? 'jobseeker';
+    }
+
+    public function getCurrentRoleAttribute()
+    {
+        if (!empty($this->attributes['current_role'])) {
+            return $this->attributes['current_role'];
+        }
+        return $this->user?->roles?->first()?->name ?? 'student';
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

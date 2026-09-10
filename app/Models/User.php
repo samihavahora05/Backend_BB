@@ -55,7 +55,20 @@ class User extends Authenticatable
      */
     protected $appends = [
         'name',
+        'role',
     ];
+
+    /**
+     * Get the user's primary role name as a string.
+     */
+    public function getRoleAttribute(): ?string
+    {
+        if ($this->relationLoaded('roles')) {
+            $r = $this->roles->first();
+            return $r ? (is_string($r) ? $r : ($r->name ?? null)) : null;
+        }
+        return $this->roles()->first()?->name ?? null;
+    }
 
     /**
      * Get the user's full name.
