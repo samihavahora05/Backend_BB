@@ -88,7 +88,7 @@ class PublicInternshipController extends Controller
         $data = $internships->through(fn($i) => [
             'id'           => $i->id,
             'title'        => $i->title,
-            'company_name' => $i->company_name ?? ($i->company?->companyProfile?->company_name ?? $i->company?->name ?? 'Blueboxx Partner'),
+            'company_name' => $i->company_name ?: 'Blueboxx Partner',
             'company_logo' => $i->company_logo ? \App\Support\StorageHelper::url($i->company_logo) : null,
             'location'     => $i->location ?? 'Remote',
             'type'         => $i->mode ?? 'Remote',
@@ -204,7 +204,23 @@ class PublicInternshipController extends Controller
             }
         }
 
-        if ($user && $internship) {
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Please log in with an Intern account to apply for this internship.'], 401);
+        }
+
+        if (!\App\Services\OpportunityPermissionService::canApplyToInternship($user)) {
+            $perm = \App\Services\OpportunityPermissionService::getPermissionStatus($user, 'internship');
+            return response()->json([
+                'success' => false,
+                'message' => $perm['message'],
+                'code' => $perm['code'],
+                'current_role' => $perm['current_role'],
+                'target_role' => $perm['target_role'],
+                'can_request_role_change' => $perm['can_request_role_change'],
+            ], 403);
+        }
+
+        if ($internship) {
             $alreadyApplied = InternshipApplication::where('internship_id', $internship->id)
                 ->where('user_id', $user->id)
                 ->exists();

@@ -38,16 +38,17 @@ class Job extends Model
         if (!empty($this->attributes['company_name'])) {
             return $this->attributes['company_name'];
         }
-        if (!empty($this->attributes['company'])) {
+        if (!empty($this->attributes['company']) && is_string($this->attributes['company'])) {
             return $this->attributes['company'];
         }
-        if ($this->relationLoaded('company') && $this->company) {
-            if ($this->company->relationLoaded('companyProfile') && $this->company->companyProfile) {
-                return $this->company->companyProfile->company_name 
-                    ?? $this->company->name 
+        $companyRelation = $this->relationLoaded('company') ? $this->getRelation('company') : null;
+        if ($companyRelation instanceof Model) {
+            if ($companyRelation->relationLoaded('companyProfile') && $companyRelation->companyProfile) {
+                return $companyRelation->companyProfile->company_name 
+                    ?? $companyRelation->name 
                     ?: 'Blueboxx Partner';
             }
-            return $this->company->name 
+            return $companyRelation->name 
                 ?: 'Blueboxx Partner';
         }
         return 'Blueboxx Partner';
@@ -58,8 +59,9 @@ class Job extends Model
         if (!empty($this->attributes['company_logo'])) {
             return $this->attributes['company_logo'];
         }
-        if ($this->relationLoaded('company') && $this->company && $this->company->relationLoaded('companyProfile')) {
-            return $this->company->companyProfile?->logo ?? null;
+        $companyRelation = $this->relationLoaded('company') ? $this->getRelation('company') : null;
+        if ($companyRelation instanceof Model && $companyRelation->relationLoaded('companyProfile')) {
+            return $companyRelation->companyProfile?->logo ?? null;
         }
         return null;
     }

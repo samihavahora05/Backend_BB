@@ -255,33 +255,28 @@ class UserController extends Controller
     public function verifyProfile(Request $request, string $id)
     {
         $user = User::findOrFail($id);
-        
         $role = $user->roles()->first()?->name;
-        
         $profile = match($role) {
             'expert' => $user->expertProfile()->first(),
             'company' => $user->companyProfile()->first(),
             'college' => $user->collegeProfile()->first(),
             default => null
         };
-
-        if (!$profile) {
-            return response()->json(['message' => 'This user role does not require profile verification.'], 400);
+        if ($profile) {
+            $profile->update(['is_verified' => true]);
         }
-
-        $profile->update(['is_verified' => true]);
-
-        // Send profile approved notification
+        $user->update(['status' => 'active']);
         $user->notify(new PlatformNotification(
             "Profile Approved! 🎉",
-            "Congratulations! Your profile as a " . ucfirst($role) . " has been successfully verified.",
+            "Congratulations! Your account" . ($role ? " as a " . ucfirst($role) : "") . " has been successfully verified and activated.",
             'profile_approved',
             ['role' => $role]
         ));
-
-        return response()->json(['message' => "{$role} profile verified successfully."]);
+        return response()->json([
+            "message" => ($role ? ucfirst($role) . " account" : "User") . " verified and activated successfully.",
+            'status' => 'active'
+        ]);
     }
-
     public function export(Request $request)
     {
         $query = User::with('roles')
