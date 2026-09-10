@@ -36,6 +36,7 @@ return [
     )))),
 
     'allowed_origins_patterns' => [
+        '#^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$#i',
         '#^https?://.*\.blueboxx\.in$#i',
         '#^https?://.*\.sarvakshetra\.com$#i',
         '#^https?://.*\.vercel\.app$#i',
