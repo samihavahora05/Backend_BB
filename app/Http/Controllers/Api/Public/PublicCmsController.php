@@ -15,11 +15,15 @@ class PublicCmsController extends Controller
 {
     public function stats()
     {
-        return Cache::remember('public.cms.stats.v2', now()->addHours(1), function () {
-            $studentsCount = User::role('student')->count() + 5000;
+        return Cache::remember('public.cms.stats.v3', now()->addHours(1), function () {
+            $studentsCount = 5000;
             $placementsCount = 4000;
-            $projectsCount = Internship::count() * 5 + 3000; 
-            $partnersCount = PlacementPartner::where('is_active', true)->count() + 120;
+            $projectsCount = 3000; 
+            $partnersCount = 250;
+            $clientsCount = 1500;
+            $industriesCount = 15;
+            $experienceYears = 12;
+            $commitmentRate = 100;
 
             return response()->json([
                 'success' => true,
@@ -28,6 +32,10 @@ class PublicCmsController extends Controller
                     'placed' => $placementsCount,
                     'projects' => $projectsCount,
                     'partners' => $partnersCount,
+                    'clients' => $clientsCount,
+                    'industries' => $industriesCount,
+                    'experience_years' => $experienceYears,
+                    'commitment_rate' => $commitmentRate,
                 ]
             ]);
         });
@@ -63,102 +71,33 @@ class PublicCmsController extends Controller
         });
     }
 
+    public function faqs()
+    {
+        return Cache::remember('public.cms.faqs', now()->addHours(6), function () {
+            return response()->json([
+                'success' => true,
+                'data' => Faq::where('is_active', true)->orderBy('order')->get()
+            ]);
+        });
+    }
+
     public function partners()
     {
         return Cache::remember('public.cms.partners', now()->addHours(6), function () {
-            $partners = PlacementPartner::where('is_active', true)
-                ->orderBy('id', 'asc')
-                ->get()
-                ->map(fn($p) => [
-                    'id' => $p->id,
-                    'name' => $p->company_name,
-                    'logo' => $p->logo_path ? asset('storage/' . $p->logo_path) : null,
-                ]);
-
             return response()->json([
                 'success' => true,
-                'data' => $partners
+                'data' => PlacementPartner::where('is_active', true)->orderBy('order')->get()
             ]);
         });
     }
 
     public function testimonials()
     {
-        return Cache::remember('public.cms.testimonials', now()->addMinutes(5), function () {
-            $testimonials = Testimonial::where('status', 'active')
-                ->orderBy('display_order', 'asc')
-                ->get()
-                ->map(fn($t) => [
-                    'id' => $t->id,
-                    'name' => $t->name,
-                    'designation' => $t->designation,
-                    'role' => $t->designation, // Compatibility for TestimonialsSection
-                    'company' => $t->company,
-                    'review' => $t->review,
-                    'content' => $t->review, // Compatibility for TestimonialsSection
-                    'image_url' => $t->image_url,
-                    'avatar' => $t->image_url, // Compatibility for TestimonialsSection
-                    'rating' => $t->rating,
-                    'year' => $t->created_at ? $t->created_at->format('Y') : date('Y'), // Compatibility for TestimonialsSection
-                    'highlightedText' => '', // Compatibility for TestimonialsSection
-                ]);
-
+        return Cache::remember('public.cms.testimonials', now()->addHours(6), function () {
             return response()->json([
                 'success' => true,
-                'data' => $testimonials
+                'data' => Testimonial::where('is_active', true)->orderBy('order')->get()
             ]);
         });
-    }
-
-    public function faqs()
-    {
-        return Cache::remember('public.cms.faqs', now()->addHours(6), function () {
-            $faqs = Faq::where('is_active', 1)
-                ->orderBy('order', 'asc')
-                ->get()
-                ->map(fn($f) => [
-                    'id' => $f->id,
-                    'question' => $f->question,
-                    'answer' => $f->answer,
-                ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => $faqs
-            ]);
-        });
-    }
-
-    public function experts()
-    {
-        $experts = ExpertProfile::with('user')
-            ->where(function($q) {
-                $q->where('is_available', true)
-                  ->orWhereNull('is_available');
-            })
-            ->orderBy('average_rating', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->take(3)
-            ->get()
-                ->map(fn($e) => [
-                    'id' => $e->id,
-                    'name' => $e->user ? trim(($e->user->first_name ?? '') . ' ' . ($e->user->last_name ?? '')) : 'Unknown',
-                    'role' => $e->designation ?? 'Expert Mentor',
-                    'exp' => $e->experience_years ? $e->experience_years . ' yrs' : '5+ yrs',
-                    'rating' => $e->average_rating,
-                    'sessions' => 0,
-                    'skills' => [],
-                    'price' => '₹' . ($e->hourly_rate ? round($e->hourly_rate / 2) : 499) . '/30m',
-                    'badge' => $e->specialization ? $e->specialization . ' Expert' : 'Expert',
-                    'gradientFrom' => '#1B2A6B',
-                    'gradientTo' => '#2E45A3',
-                    'avatarBg' => 'from-blue-600 to-indigo-700',
-                    'slug' => $e->id
-                ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => $experts
-            ]);
     }
 }
