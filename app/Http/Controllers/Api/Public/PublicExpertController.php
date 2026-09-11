@@ -241,6 +241,14 @@ class PublicExpertController extends Controller
                 ?? \App\Models\ExpertProfile::with('user')->where('user_id', $session_id)->first();
         }
 
+        // Self-booking check
+        if ($expertProfile->user_id === $studentUser->id || ($expertProfile->user && $expertProfile->user->id === $studentUser->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot book a mentorship session with yourself.'
+            ], 422);
+        }
+
         // Strict verification: Reject with 404 if no valid expert profile is found
         if (!$expertProfile) {
             return response()->json([

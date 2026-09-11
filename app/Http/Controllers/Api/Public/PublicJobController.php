@@ -147,8 +147,8 @@ class PublicJobController extends Controller
         $isBookmarked = false;
         $hasApplied = false;
         if ($request->user()) {
-            $isBookmarked = JobBookmark::where('job_id', $job->id)->where('user_id', $request->user()->id)->exists();
-            $hasApplied = JobApplication::where('job_id', $job->id)->where('user_id', $request->user()->id)->exists();
+            $isBookmarked = JobBookmark::where('job_id', $job->id)->where('user_id', $user->id)->exists();
+            $hasApplied = JobApplication::where('job_id', $job->id)->where('user_id', $user->id)->exists();
         }
 
         $loc = $job->location ?: ($job->remote_type ?: 'On-site');
@@ -229,7 +229,7 @@ class PublicJobController extends Controller
 
         // Check for duplicate application
         $alreadyApplied = JobApplication::where('job_id', $job->id)
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->exists();
         if ($alreadyApplied) {
             return response()->json(['success' => false, 'message' => 'You have already applied for this job'], 422);
@@ -247,7 +247,7 @@ class PublicJobController extends Controller
 
         $application = JobApplication::create([
             'job_id'       => $job->id,
-            'user_id'      => $request->user()->id,
+            'user_id'      => $user->id,
             'status'       => 'applied',
             'cover_letter' => $data['cover_letter'] ?? null,
             'resume_path'  => $resumePath,
@@ -267,14 +267,14 @@ class PublicJobController extends Controller
     public function toggleBookmark(Request $request, $id)
     {
         $job = Job::findOrFail($id);
-        $existing = JobBookmark::where('job_id', $job->id)->where('user_id', $request->user()->id)->first();
+        $existing = JobBookmark::where('job_id', $job->id)->where('user_id', $user->id)->first();
 
         if ($existing) {
             $existing->delete();
             return response()->json(['success' => true, 'bookmarked' => false]);
         }
 
-        JobBookmark::create(['job_id' => $job->id, 'user_id' => $request->user()->id]);
+        JobBookmark::create(['job_id' => $job->id, 'user_id' => $user->id]);
         return response()->json(['success' => true, 'bookmarked' => true]);
     }
 
@@ -285,7 +285,7 @@ class PublicJobController extends Controller
     public function myApplications(Request $request)
     {
         $applications = JobApplication::with(['job'])
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->latest()
             ->paginate(10);
 
@@ -311,7 +311,7 @@ class PublicJobController extends Controller
     public function bookmarks(Request $request)
     {
         $bookmarks = JobBookmark::with(['job'])
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->latest()
             ->get()
             ->map(fn($b) => [

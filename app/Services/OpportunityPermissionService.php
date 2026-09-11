@@ -7,6 +7,41 @@ use App\Models\User;
 class OpportunityPermissionService
 {
     /**
+     * Helper to extract role safely from User instance
+     */
+    public static function getUserRole(?User $user): string
+    {
+        if (!$user) {
+            return '';
+        }
+
+        // 1. Check raw attribute if set directly
+        if (!empty($user->attributes['role'])) {
+            return strtolower(trim(str_replace('_', '-', $user->attributes['role'])));
+        }
+
+        // 2. Check getRoleAttribute accessor
+        try {
+            $roleAttr = $user->role;
+            if (!empty($roleAttr)) {
+                return strtolower(trim(str_replace('_', '-', $roleAttr)));
+            }
+        } catch (\Throwable $e) {}
+
+        // 3. Check Spatie roles relationship
+        try {
+            if ($user->relationLoaded('roles') && $user->roles->isNotEmpty()) {
+                return strtolower(trim(str_replace('_', '-', $user->roles->first()->name ?? '')));
+            }
+            if (method_exists($user, 'roles') && $user->roles()->exists()) {
+                return strtolower(trim(str_replace('_', '-', $user->roles()->first()->name ?? '')));
+            }
+        } catch (\Throwable $e) {}
+
+        return 'student';
+    }
+
+    /**
      * Determine if a user can apply to a Job.
      * Allowed: job-seeker, jobseeker, super_admin, admin
      */
@@ -16,7 +51,16 @@ class OpportunityPermissionService
             return false;
         }
 
-        return $user->hasAnyRole(['job-seeker', 'jobseeker', 'super_admin', 'admin']);
+        $role = self::getUserRole($user);
+        if (in_array($role, ['job-seeker', 'jobseeker', 'super-admin', 'admin'])) {
+            return true;
+        }
+
+        try {
+            return $user->hasAnyRole(['job-seeker', 'jobseeker', 'super_admin', 'admin', 'super-admin']);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
@@ -29,7 +73,16 @@ class OpportunityPermissionService
             return false;
         }
 
-        return $user->hasAnyRole(['intern', 'super_admin', 'admin']);
+        $role = self::getUserRole($user);
+        if (in_array($role, ['intern', 'super-admin', 'admin'])) {
+            return true;
+        }
+
+        try {
+            return $user->hasAnyRole(['intern', 'super_admin', 'admin', 'super-admin']);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
@@ -63,7 +116,7 @@ class OpportunityPermissionService
             return false;
         }
 
-        $currentRole = strtolower(trim(str_replace('_', '-', $user->roles->first()?->name ?? 'student')));
+        $currentRole = self::getUserRole($user);
         
         // Cannot request same role
         if ($currentRole === $normalizedTarget || ($currentRole === 'jobseeker' && $normalizedTarget === 'job-seeker') || ($currentRole === 'job-seeker' && $normalizedTarget === 'jobseeker')) {
@@ -91,8 +144,8 @@ class OpportunityPermissionService
             ];
         }
 
-        $currentRole = $user->roles->first()?->name ?? 'student';
-        $currentRoleDisplay = match (strtolower(str_replace('_', '-', $currentRole))) {
+        $currentRole = self::getUserRole($user);
+        $currentRoleDisplay = match ($currentRole) {
             'student' => 'Student',
             'intern' => 'Intern',
             'job-seeker', 'jobseeker' => 'Jobseeker',
@@ -117,7 +170,7 @@ class OpportunityPermissionService
                 ];
             }
 
-            $message = match (strtolower(str_replace('_', '-', $currentRole))) {
+            $message = match ($currentRole) {
                 'student' => 'You are currently registered as a Student. Students cannot apply for Jobs.',
                 'intern' => 'You are currently registered as an Intern. Interns can apply for Internships, not Jobs.',
                 'expert' => 'You are currently registered as an Expert. Experts cannot apply for Jobs.',
@@ -151,7 +204,7 @@ class OpportunityPermissionService
                 ];
             }
 
-            $message = match (strtolower(str_replace('_', '-', $currentRole))) {
+            $message = match ($currentRole) {
                 'student' => 'You are currently registered as a Student. Students cannot apply for Internships.',
                 'job-seeker', 'jobseeker' => 'You are currently registered as a Jobseeker. Jobseekers can apply for Jobs, not Internships.',
                 'expert' => 'You are currently registered as an Expert. Experts cannot apply for Internships.',

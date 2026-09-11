@@ -63,6 +63,9 @@ class User extends Authenticatable
      */
     public function getRoleAttribute(): ?string
     {
+        if (isset($this->attributes['role']) && !empty($this->attributes['role'])) {
+            return $this->attributes['role'];
+        }
         if ($this->relationLoaded('roles')) {
             $r = $this->roles->first();
             return $r ? (is_string($r) ? $r : ($r->name ?? null)) : null;
