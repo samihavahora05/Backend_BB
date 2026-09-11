@@ -93,7 +93,7 @@ class RoleChangeRequestController extends Controller
             ->first();
 
         $history = RoleRequest::where('user_id', $user->id)
-            ->with('reviewer:id,first_name,last_name,name')
+            ->with('reviewer:id,first_name,last_name,email')
             ->latest()
             ->take(5)
             ->get();

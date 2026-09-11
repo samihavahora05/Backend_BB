@@ -17,8 +17,8 @@ class AdminRoleRequestController extends Controller
     public function index()
     {
         $requests = RoleRequest::with([
-            'user:id,first_name,last_name,name,email,phone,status,account_status',
-            'reviewer:id,first_name,last_name,name,email',
+            'user:id,first_name,last_name,email,phone,status',
+            'reviewer:id,first_name,last_name,email',
             'requestedRole'
         ])
         ->latest()

@@ -1,6 +1,11 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api\Public;
+
+use App\Jobs\SendQueuedEmailJob;
+use App\Mail\BookingConfirmedMail;
+use App\Mail\PaymentSuccessMail;
+use App\Mail\PaymentFailedMail;
 
 use App\Http\Controllers\Controller;
 use App\Models\ExpertProfile;
@@ -26,12 +31,19 @@ class PublicExpertController extends Controller
 
         $responsePayload = Cache::remember($cacheKey, 300, function () use ($request) {
             $query = ExpertProfile::with(['user:id,first_name,last_name,email,phone'])
-                ->select(['id', 'user_id', 'designation', 'company', 'specialization', 'hourly_rate', 'average_rating', 'total_reviews', 'profile_photo', 'is_available', 'experience_years'])
+                ->select(['id', 'user_id', 'designation', 'company', 'specialization', 'hourly_rate', 'average_rating', 'total_reviews', 'profile_photo', 'is_available', 'experience_years', 'approval_status'])
+                ->where(function($q) {
+                    $q->where('approval_status', 'approved')
+                      ->orWhere(function($sub) {
+                          $sub->whereNull('approval_status')
+                              ->where('is_verified', true);
+                      });
+                })
                 ->where(function($q) {
                     $q->where('is_available', true)
                       ->orWhereNull('is_available');
                 })
-                ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE', 'pending', 'Pending', 'PENDING'])->orWhereNull('status')->whereNull('deleted_at'));
+                ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE'])->whereNull('deleted_at'));
 
             if ($s = $request->query('search')) {
                 $query->where(function($q) use ($s) {
@@ -135,9 +147,17 @@ class PublicExpertController extends Controller
             'availabilities' => fn($q) => $q->where('is_active', true)
         ])
         ->where(function($q) {
+            $q->where('approval_status', 'approved')
+              ->orWhere(function($sub) {
+                  $sub->whereNull('approval_status')
+                      ->where('is_verified', true);
+              });
+        })
+        ->where(function($q) {
             $q->where('is_available', true)
               ->orWhereNull('is_available');
         })
+        ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE'])->whereNull('deleted_at'))
         ->where(function($q) use ($id) {
             $q->where('id', $id)->orWhere('user_id', $id);
         })
@@ -200,56 +220,63 @@ class PublicExpertController extends Controller
 
         // 1. Resolve ExpertProfile dynamically from request payload or session_id
         $expertProfile = null;
-        if ($request->has('expert_id') && $request->expert_id) {
-            $expertProfile = \App\Models\ExpertProfile::find($request->expert_id);
+        if ($request->filled('expert_id')) {
+            $expertProfile = \App\Models\ExpertProfile::with('user')->find($request->expert_id)
+                ?? \App\Models\ExpertProfile::with('user')->where('user_id', $request->expert_id)->first();
         }
-        if (!$expertProfile && $request->has('expert_profile_id') && $request->expert_profile_id) {
-            $expertProfile = \App\Models\ExpertProfile::find($request->expert_profile_id);
+        if (!$expertProfile && $request->filled('expert_profile_id')) {
+            $expertProfile = \App\Models\ExpertProfile::with('user')->find($request->expert_profile_id)
+                ?? \App\Models\ExpertProfile::with('user')->where('user_id', $request->expert_profile_id)->first();
         }
-        if (!$expertProfile) {
-            $sessionObj = MentorSession::find($session_id);
+        if (!$expertProfile && $session_id) {
+            $sessionObj = MentorSession::with('expertProfile.user')->find($session_id);
             if ($sessionObj && $sessionObj->expert_profile_id) {
-                $expertProfile = \App\Models\ExpertProfile::find($sessionObj->expert_profile_id);
+                $expertProfile = \App\Models\ExpertProfile::with('user')->find($sessionObj->expert_profile_id);
+            } elseif ($sessionObj && $sessionObj->expert_id) {
+                $expertProfile = \App\Models\ExpertProfile::with('user')->where('user_id', $sessionObj->expert_id)->first();
             }
         }
-        if (!$expertProfile) {
-            $expertProfile = \App\Models\ExpertProfile::find($session_id);
+        if (!$expertProfile && $session_id) {
+            $expertProfile = \App\Models\ExpertProfile::with('user')->find($session_id)
+                ?? \App\Models\ExpertProfile::with('user')->where('user_id', $session_id)->first();
         }
+
+        // Strict verification: Reject with 404 if no valid expert profile is found
         if (!$expertProfile) {
-            $expertProfile = \App\Models\ExpertProfile::first();
+            return response()->json([
+                'success' => false,
+                'message' => 'The selected expert could not be found or is unavailable.'
+            ], 404);
         }
 
         // 2. Resolve expert User
-        $expertUser = $expertProfile ? $expertProfile->user : null;
+        $expertUser = $expertProfile->user;
         if (!$expertUser) {
-            $expertUser = \App\Models\User::where('role', 'expert')->where('id', '!=', $studentUser->id)->first() 
-                ?? $studentUser;
+            $expertUser = \App\Models\User::find($expertProfile->user_id);
+        }
+        if (!$expertUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The user account associated with this expert profile was not found.'
+            ], 404);
         }
 
-        if (!$expertProfile) {
-            $expertProfile = \App\Models\ExpertProfile::create([
-                'user_id' => $expertUser->id,
-                'designation' => 'Lead Expert Mentor',
-                'company' => 'Blueboxx Education',
-                'average_rating' => 4.9,
-                'hourly_rate' => 999
-            ]);
-        }
-
-        // 3. Ensure a valid MentorSession exists linked to expertProfile->id
+        // 3. Ensure a valid MentorSession template exists linked to this expertProfile->id
         $session = MentorSession::find($session_id);
-        if (!$session || ($expertProfile && $session->expert_profile_id !== $expertProfile->id)) {
-            $session = MentorSession::where('expert_profile_id', $expertProfile->id)->first();
+        if (!$session || ($session->expert_profile_id && $session->expert_profile_id !== $expertProfile->id)) {
+            $session = MentorSession::where('expert_profile_id', $expertProfile->id)->where('is_active', true)->first()
+                ?? MentorSession::where('expert_profile_id', $expertProfile->id)->first();
         }
         if (!$session) {
+            $hourlyRate = (float)($expertProfile->hourly_rate ?? 999);
             $session = MentorSession::create([
                 'expert_profile_id' => $expertProfile->id,
-                'student_id' => $studentUser->id,
-                'expert_id' => $expertUser->id,
-                'title' => '1:1 Career Guidance',
-                'price' => 999,
-                'duration_minutes' => 30,
-                'is_active' => true
+                'student_id'        => $studentUser->id,
+                'expert_id'          => $expertUser->id,
+                'title'              => '1:1 Mentorship Session',
+                'price'              => $hourlyRate > 0 ? $hourlyRate : 999,
+                'duration_minutes'   => 45,
+                'is_active'          => true,
             ]);
         }
         
@@ -275,6 +302,8 @@ class PublicExpertController extends Controller
         try {
             DB::beginTransaction();
 
+            $bookingAmount = (float)($session->price > 0 ? $session->price : ($expertProfile->hourly_rate ?? 999));
+
             $booking = MentorBooking::create([
                 'session_id'    => $session->id,
                 'expert_id'     => $expertProfile->id,
@@ -282,14 +311,14 @@ class PublicExpertController extends Controller
                 'booking_date'  => $bookingDate,
                 'start_time'    => $startTime,
                 'end_time'      => $endTime,
-                'amount'        => $session->price > 0 ? $session->price : 999,
+                'amount'        => $bookingAmount,
                 'student_notes' => $data['notes'] ?? null,
                 'status'        => 'Pending',
             ]);
 
             // Generate Razorpay Order via Payment Gateway
             $receiptId = 'bk_' . $booking->id . '_' . Str::random(5);
-            $amountInPaise = (int)(($session->price > 0 ? $session->price : 999) * 100);
+            $amountInPaise = (int)($bookingAmount * 100);
             
             $gatewayOrder = $paymentGateway->createOrder($receiptId, $amountInPaise, 'INR');
 
@@ -305,6 +334,7 @@ class PublicExpertController extends Controller
                 'razorpay_order_id' => $orderId,
                 'data' => [
                     'booking_id'       => $booking->id,
+                    'expert_id'        => $expertProfile->id,
                     'gateway_order_id' => $orderId,
                     'amount'           => $booking->amount,
                     'currency'         => 'INR',
@@ -335,7 +365,8 @@ class PublicExpertController extends Controller
             'razorpay_signature' => 'required|string',
         ]);
 
-        $booking = MentorBooking::where('id', $booking_id)->first() ?? MentorBooking::where('student_id', $request->user()->id)->latest()->first();
+        $booking = MentorBooking::with(['expert.user', 'session', 'student'])->find($booking_id) 
+            ?? MentorBooking::with(['expert.user', 'session', 'student'])->where('student_id', $request->user()->id)->latest()->first();
 
         if (!$booking) {
             return response()->json(['success' => false, 'message' => 'Booking not found.'], 404);
@@ -353,20 +384,23 @@ class PublicExpertController extends Controller
         ]);
 
         try {
-            $expertProf = \App\Models\ExpertProfile::find($booking->expert_id) ?? \App\Models\ExpertProfile::first();
-            $expertUserId = $expertProf ? $expertProf->user_id : $request->user()->id;
+            $expertProf = $booking->expert ?? \App\Models\ExpertProfile::with('user')->find($booking->expert_id);
+            $expertUserId = $expertProf ? $expertProf->user_id : null;
 
-            \App\Models\MentorSession::create([
-                'student_id' => $booking->student_id,
-                'expert_id' => $expertUserId,
-                'expert_profile_id' => $expertProf ? $expertProf->id : null,
-                'title' => '1:1 Mentorship Session',
-                'scheduled_at' => \Carbon\Carbon::parse(($booking->booking_date ? $booking->booking_date->format('Y-m-d') : now()->toDateString()) . ' ' . ($booking->start_time ?? '10:00:00')),
-                'duration_minutes' => 60,
-                'price' => $booking->amount,
-                'status' => 'scheduled',
-                'notes' => $booking->student_notes
-            ]);
+            if ($expertUserId) {
+                \App\Models\MentorSession::create([
+                    'student_id'        => $booking->student_id,
+                    'expert_id'         => $expertUserId,
+                    'expert_profile_id' => $expertProf ? $expertProf->id : null,
+                    'title'             => $booking->session?->title ?? '1:1 Mentorship Session',
+                    'scheduled_at'      => \Carbon\Carbon::parse(($booking->booking_date ? $booking->booking_date->format('Y-m-d') : now()->toDateString()) . ' ' . ($booking->start_time ?? '10:00:00')),
+                    'duration_minutes'  => $booking->session?->duration_minutes ?? 60,
+                    'price'             => $booking->amount,
+                    'status'            => 'scheduled',
+                    'notes'             => $booking->student_notes,
+                    'meeting_link'      => $booking->meeting_link,
+                ]);
+            }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning("Failed to sync MentorSession: " . $e->getMessage());
         }
@@ -400,13 +434,37 @@ class PublicExpertController extends Controller
 
         // Dispatch Job to send Confirmation Email & Calendar Invite
         try {
-            $request->user()->notify(new \App\Notifications\BookingConfirmedNotification($booking));
+            $booking->student?->notify(new \App\Notifications\BookingConfirmedNotification($booking));
         } catch (\Exception $e) {}
+
+                // Dispatch Professional Booking Confirmation & Calendar Emails
+        try {
+            if ($booking->student && $booking->student->email) {
+                SendQueuedEmailJob::dispatch(
+                    $booking->student->email,
+                    new BookingConfirmedMail($booking, 'student'),
+                    'Booking Confirmed: ' . ($booking->session?->title ?? '1:1 Guidance Session') . ' | Blueboxx DA'
+                );
+            }
+            if ($booking->expert && $booking->expert->user && $booking->expert->user->email) {
+                SendQueuedEmailJob::dispatch(
+                    $booking->expert->user->email,
+                    new BookingConfirmedMail($booking, 'expert'),
+                    'New Mentorship Session Booked: ' . ($booking->session?->title ?? '1:1 Guidance Session')
+                );
+            }
+        } catch (\Throwable $mailErr) {
+            \Illuminate\Support\Facades\Log::warning("Failed to dispatch booking confirmation emails: " . $mailErr->getMessage());
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Booking confirmed successfully!',
-            'data'    => ['booking_id' => $booking->id, 'meeting_link' => $booking->meeting_link]
+            'data'    => [
+                'booking_id'   => $booking->id,
+                'expert_id'    => $booking->expert_id,
+                'meeting_link' => $booking->meeting_link
+            ]
         ]);
     }
 
@@ -536,3 +594,4 @@ class PublicExpertController extends Controller
         ], 201);
     }
 }
+

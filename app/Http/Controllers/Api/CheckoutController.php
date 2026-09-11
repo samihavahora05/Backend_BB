@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -9,6 +9,9 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\CourseEnrollment;
 use App\Jobs\SendEnrollmentEmailJob;
+use App\Jobs\SendQueuedEmailJob;
+use App\Mail\PaymentSuccessMail;
+use App\Mail\PaymentFailedMail;
 use App\Services\Payments\PaymentGatewayInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -218,6 +221,23 @@ class CheckoutController extends Controller
                 }
             }
 
+                        // Dispatch Professional Payment Success & Tax Invoice Email
+            if ($order && $order->user) {
+                try {
+                    $itemNames = $order->items->map(function($it) {
+                        return $it->course->title ?? 'Course Program';
+                    })->filter()->implode(', ');
+                    
+                    SendQueuedEmailJob::dispatch(
+                        $order->user->email,
+                        new PaymentSuccessMail($order, $payment, $itemNames ?: null),
+                        'Payment Confirmed: Order #' . ($order->order_number ?? $order->id)
+                    );
+                } catch (\Throwable $mailEx) {
+                    Log::warning('Failed to dispatch payment success email: ' . $mailEx->getMessage());
+                }
+            }
+
             DB::commit();
 
             return response()->json(['success' => true, 'message' => 'Payment verified and course enrolled successfully.']);
@@ -226,5 +246,53 @@ class CheckoutController extends Controller
             Log::error('Checkout Verify Payment Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'An error occurred while processing the payment.'], 500);
         }
+    }
+
+    /**
+     * Record a failed/cancelled payment attempt and dispatch professional cold recovery email
+     * POST /api/checkout/payment-failed
+     */
+    public function recordPaymentFailure(Request $request)
+    {
+        $user = $request->user();
+        $email = $request->email ?? $user?->email;
+        $orderId = $request->order_id;
+        $reason = $request->reason ?? 'Payment authorization was interrupted or cancelled.';
+        $itemTitle = $request->item_title;
+        $amount = $request->amount;
+
+        $order = null;
+        if ($orderId) {
+            $order = Order::where('id', $orderId)->orWhere('order_number', $orderId)->first();
+            if ($order) {
+                $order->update(['status' => 'failed']);
+                $user = $user ?? $order->user;
+                $amount = $amount ?? $order->total_amount;
+                if (!$itemTitle && $order->items->count()) {
+                    $itemTitle = $order->items->first()->course->title ?? null;
+                }
+            }
+        }
+
+        if ($user && $user->email) {
+            try {
+                SendQueuedEmailJob::dispatch(
+                    $user->email,
+                    new PaymentFailedMail(
+                        $user, 
+                        $order, 
+                        $itemTitle, 
+                        $amount ? (string)$amount : null, 
+                        $reason,
+                        config('app.frontend_url', 'https://blueboxx.in') . '/checkout'
+                    ),
+                    'Action Required: Complete your Blueboxx DA enrollment'
+                );
+            } catch (\Throwable $ex) {
+                Log::warning('Failed to dispatch payment failed email: ' . $ex->getMessage());
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Payment failure logged and recovery guidance dispatched.']);
     }
 }

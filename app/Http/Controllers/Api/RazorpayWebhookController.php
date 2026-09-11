@@ -1,9 +1,12 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendEnrollmentEmailJob;
+use App\Jobs\SendQueuedEmailJob;
+use App\Mail\PaymentSuccessMail;
+use App\Mail\PaymentFailedMail;
 use App\Models\Course;
 use App\Models\CourseEnrollment;
 use App\Models\Order;
@@ -92,3 +95,4 @@ class RazorpayWebhookController extends Controller
         return response()->json(['status' => 'event_ignored']);
     }
 }
+

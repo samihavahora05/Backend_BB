@@ -110,8 +110,14 @@ class ApprovalController extends Controller
         ]);
 
         // If Expert, activate profile
-        if ($user->hasRole('expert') && $user->expertProfile) {
-            $user->expertProfile->update(['is_verified' => true]);
+        if ($user->hasRole('expert')) {
+            $profile = $user->expertProfile ?? \App\Models\ExpertProfile::firstOrCreate(['user_id' => $user->id]);
+            $profile->update([
+                'is_verified' => true,
+                'approval_status' => 'approved',
+                'is_available' => true,
+            ]);
+            \Illuminate\Support\Facades\Cache::flush();
         }
         
         AuditLogService::log(auth()->id(), 'admin_approved_account', [

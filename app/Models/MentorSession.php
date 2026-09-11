@@ -55,4 +55,14 @@ class MentorSession extends Model
     {
         return $this->belongsTo(User::class, 'expert_id');
     }
+
+    public function getMeetingLinkAttribute(): ?string
+    {
+        return $this->attributes['meeting_url'] ?? null;
+    }
+
+    public function setMeetingLinkAttribute($value): void
+    {
+        $this->attributes['meeting_url'] = $value;
+    }
 }
