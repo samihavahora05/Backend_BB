@@ -1,4 +1,4 @@
-﻿@extends('emails.layout')
+@extends('emails.layout')
 
 @section('content')
     <div style="background: linear-gradient(135deg, #0d1635 0%, #1B2A6B 100%); border-radius: 12px 12px 0 0; padding: 28px 24px; text-align: center;">
