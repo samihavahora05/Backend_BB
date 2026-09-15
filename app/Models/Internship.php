@@ -61,6 +61,11 @@ class Internship extends Model
         return $this->belongsTo(User::class, 'company_id');
     }
 
+    public function companyProfile()
+    {
+        return $this->hasOneThrough(CompanyProfile::class, User::class, 'id', 'user_id', 'company_id', 'id');
+    }
+
     public function college()
     {
         return $this->belongsTo(User::class, 'college_id');

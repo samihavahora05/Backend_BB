@@ -53,23 +53,26 @@ class InternshipApplication extends Model
 
     public function getApplicantNameAttribute()
     {
-        if ($this->first_name || $this->last_name) {
-            return trim("{$this->first_name} {$this->last_name}");
+        if ($this->user && !empty($this->user->name)) {
+            return $this->user->name;
         }
-        if ($this->user) {
+        if ($this->user && (!empty($this->user->first_name) || !empty($this->user->last_name))) {
             return trim("{$this->user->first_name} {$this->user->last_name}");
+        }
+        if (!empty($this->first_name) || !empty($this->last_name)) {
+            return trim("{$this->first_name} {$this->last_name}");
         }
         return 'Applicant #' . $this->id;
     }
 
     public function getApplicantEmailAttribute()
     {
-        return $this->attributes['email'] ?? $this->user?->email ?? 'N/A';
+        return $this->user?->email ?? ($this->attributes['email'] ?? 'N/A');
     }
 
     public function getApplicantPhoneAttribute()
     {
-        return $this->attributes['phone'] ?? $this->user?->phone ?? 'N/A';
+        return $this->user?->phone ?? ($this->attributes['phone'] ?? 'N/A');
     }
 
     public function getSignatureUrlAttribute()

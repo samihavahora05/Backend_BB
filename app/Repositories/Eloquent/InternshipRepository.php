@@ -130,8 +130,27 @@ class InternshipRepository implements InternshipRepositoryInterface
 
     public function gradeSubmission(int $submissionId, array $data)
     {
-        $submission = InternshipSubmission::findOrFail($submissionId);
+        $submission = InternshipSubmission::with('task')->findOrFail($submissionId);
         $submission->update($data);
+
+        // Synchronize parent InternshipTask status, marks, and reviewer feedback
+        if ($submission->task) {
+            $task = $submission->task;
+            if ($data['status'] === 'approved') {
+                $task->update([
+                    'status'       => 'completed',
+                    'marks'        => $data['marks_obtained'] ?? $task->marks ?? 100,
+                    'feedback'     => $data['feedback'] ?? $task->feedback ?? 'Approved by Admin.',
+                    'completed_at' => now(),
+                ]);
+            } elseif ($data['status'] === 'resubmit' || $data['status'] === 'rejected') {
+                $task->update([
+                    'status'   => 'changes_required',
+                    'feedback' => $data['feedback'] ?? $task->feedback ?? 'Changes requested by Admin.',
+                ]);
+            }
+        }
+
         return $submission;
     }
 

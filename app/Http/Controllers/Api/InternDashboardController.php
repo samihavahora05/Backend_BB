@@ -13,19 +13,23 @@ class InternDashboardController extends Controller
     {
         $userId = $request->user()->id;
         
-        $applications = InternshipApplication::with('internship.companyProfile')
+        $applications = InternshipApplication::with('internship.company.companyProfile')
             ->where('user_id', $userId)
             ->latest()
             ->take(5)
             ->get();
             
         $recentApps = $applications->map(function ($app) {
+            $companyName = $app->internship?->company?->companyProfile?->company_name 
+                ?? $app->internship?->company_name 
+                ?? $app->internship?->company?->name 
+                ?? 'Company';
             return [
-                'company' => $app->internship->companyProfile->company_name ?? 'Company',
-                'role' => $app->internship->title ?? 'Internship Role',
+                'company' => $companyName,
+                'role' => $app->internship?->title ?? 'Internship Role',
                 'status' => $app->status,
-                'time' => $app->created_at->diffForHumans(),
-                'type' => $app->internship->type ?? 'Internship'
+                'time' => $app->created_at ? $app->created_at->diffForHumans() : '',
+                'type' => $app->internship?->type ?? 'Internship'
             ];
         });
 
@@ -52,20 +56,28 @@ class InternDashboardController extends Controller
     {
         $userId = $request->user()->id;
         
-        $applications = InternshipApplication::with('internship.companyProfile')
+        $applications = InternshipApplication::with('internship.company.companyProfile')
             ->where('user_id', $userId)
             ->latest()
             ->get();
             
         $apps = $applications->map(function ($app) {
+            $companyName = $app->internship?->company?->companyProfile?->company_name 
+                ?? $app->internship?->company_name 
+                ?? $app->internship?->company?->name 
+                ?? 'Company';
+            $companyLogo = $app->internship?->company?->companyProfile?->logo 
+                ?? $app->internship?->company_logo 
+                ?? null;
+
             return [
                 'id' => $app->id,
-                'role' => $app->internship->title ?? 'Internship Role',
-                'company' => $app->internship->companyProfile->company_name ?? 'Company',
-                'location' => $app->internship->location ?? 'Remote',
+                'role' => $app->internship?->title ?? 'Internship Role',
+                'company' => $companyName,
+                'location' => $app->internship?->location ?? 'Remote',
                 'status' => $app->status,
-                'type' => $app->internship->type ?? 'Internship',
-                'logo' => $app->internship->companyProfile->logo ? asset('storage/' . $app->internship->companyProfile->logo) : "https://ui-avatars.com/api/?name=".urlencode($app->internship->companyProfile->company_name ?? 'C')."&background=random"
+                'type' => $app->internship?->type ?? 'Internship',
+                'logo' => $companyLogo ? asset('storage/' . $companyLogo) : "https://ui-avatars.com/api/?name=".urlencode($companyName)."&background=random"
             ];
         });
 

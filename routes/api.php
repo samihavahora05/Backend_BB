@@ -296,6 +296,28 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/applicants', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'index']);
         Route::get('/applicants/{id}', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'show']);
         Route::put('/applicants/{id}/status', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'updateStatus']);
+
+        // Internship Applications (Specific Company Ownership)
+        Route::get('/internships/applications', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'applications']);
+        Route::get('/internships/applications/{id}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'showApplication']);
+        Route::post('/internships/applications/{id}/approve', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'approveApplication']);
+        Route::post('/internships/applications/{id}/reject', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'rejectApplication']);
+
+        // My Interns (Approved & Assigned only)
+        Route::get('/interns', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'interns']);
+        Route::get('/interns/{id}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'internDetail']);
+
+        // Company Task Management
+        Route::get('/tasks', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'tasks']);
+        Route::post('/tasks', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'storeTask']);
+        Route::get('/tasks/{id}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'showTask']);
+        Route::put('/tasks/{id}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'updateTask']);
+        Route::delete('/tasks/{id}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'deleteTask']);
+        Route::post('/tasks/{id}/review', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'reviewSubmission']);
+
+        // Company Intern Performance Tracking
+        Route::get('/performance', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'performance']);
+        Route::get('/performance/{internId}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'internPerformanceDetail']);
         
         // Interviews
         Route::get('/interviews', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'index']);
@@ -372,6 +394,13 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('/assessments/{id}/save-answer', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'saveAnswer']);
         Route::post('/assessments/{id}/submit', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'submit']);
         Route::get('/assessments/{id}/result/{attemptId}', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'getResult']);
+
+        // Intern Task Management & Mandatory Proof Submission
+        Route::get('/tasks/performance', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'performance']);
+        Route::get('/tasks', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'index']);
+        Route::get('/tasks/{id}', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'show']);
+        Route::post('/tasks/{id}/start', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'start']);
+        Route::post('/tasks/{id}/submit', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'submit']);
     });
 
     // Profiles API
@@ -1024,12 +1053,20 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('applications/{id}/appointment-letter', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'downloadAppointmentLetter']);
             Route::get('applications/{id}/signature', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'signature']);
             
-            // Tasks & Submissions
-            Route::get('{id}/tasks', [\App\Http\Controllers\Api\Admin\InternshipTaskController::class, 'index']);
-            Route::post('tasks', [\App\Http\Controllers\Api\Admin\InternshipTaskController::class, 'store']);
-            Route::put('tasks/{id}', [\App\Http\Controllers\Api\Admin\InternshipTaskController::class, 'update']);
-            Route::delete('tasks/{id}', [\App\Http\Controllers\Api\Admin\InternshipTaskController::class, 'destroy']);
+            // Global Tasks Management across all companies
+            Route::get('tasks/stats', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'stats']);
+            Route::get('tasks/approved-interns', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'approvedInterns']);
+            Route::get('tasks', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'index']);
+            Route::post('tasks', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'store']);
+            Route::get('tasks/{id}', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'show']);
+            Route::put('tasks/{id}', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'update']);
+            Route::delete('tasks/{id}', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'destroy']);
+            Route::post('tasks/{id}/review', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'review']);
             Route::put('submissions/{id}/grade', [\App\Http\Controllers\Api\Admin\InternshipTaskController::class, 'gradeSubmission']);
+
+            // Global Intern Performance Tracking
+            Route::get('performance', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'performance']);
+            Route::get('performance/{internId}', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'internPerformanceDetail']);
         });
         Route::apiResource('internships', \App\Http\Controllers\Api\Admin\InternshipController::class);
         

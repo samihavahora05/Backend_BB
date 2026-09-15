@@ -40,31 +40,47 @@ class AdminInternshipController extends Controller
     /**
      * Get platform statistics for internships and applications.
      */
-    public function stats()
+        public function stats()
     {
         $totalInternships = Internship::count();
-        $activeInternships = Internship::where('status', 'open')->count();
+        $openInternships = Internship::whereIn('status', ['open', 'published', 'active'])->count();
+        $draftInternships = Internship::where('status', 'draft')->count();
+        $closedInternships = Internship::whereIn('status', ['closed', 'archived'])->count();
+        
         $totalApplications = InternshipApplication::count();
-        $approvedApplications = InternshipApplication::where('status', 'approved')->count();
+        $approvedApplications = InternshipApplication::whereIn('status', ['approved', 'active', 'accepted', 'completed'])->count();
         $rejectedApplications = InternshipApplication::where('status', 'rejected')->count();
-        $underReviewApplications = InternshipApplication::whereIn('status', ['under_review', 'submitted', 'pending'])->count();
+        $pendingApplications = InternshipApplication::whereIn('status', ['pending', 'applied', 'under_review', 'submitted'])->count();
+        $submissionsCount = InternshipSubmission::count();
+        $pendingSubmissionsCount = InternshipSubmission::where('status', 'pending')->count();
+        $gradedSubmissionsCount = InternshipSubmission::where('status', 'approved')->count();
 
         return response()->json([
             'success' => true,
             'data' => [
+                'total'                     => $totalInternships,
+                'active'                    => $openInternships,
+                'open'                      => $openInternships,
+                'draft'                     => $draftInternships,
+                'closed'                    => $closedInternships,
+                'applications'              => $totalApplications,
+                'pending'                   => $pendingApplications,
+                'approved'                  => $approvedApplications,
+                'rejected'                  => $rejectedApplications,
+                'submissions'               => $submissionsCount,
+                'total_submissions'         => $submissionsCount,
+                'pending_submissions'       => $pendingSubmissionsCount,
+                'graded_submissions'        => $gradedSubmissionsCount,
                 'total_internships'         => $totalInternships,
-                'active_internships'        => $activeInternships,
+                'active_internships'        => $openInternships,
                 'total_applications'       => $totalApplications,
                 'approved_applications'     => $approvedApplications,
                 'rejected_applications'     => $rejectedApplications,
-                'under_review_applications' => $underReviewApplications,
+                'under_review_applications' => $pendingApplications,
             ]
         ]);
     }
 
-    /**
-     * Get all internship applications across all internships.
-     */
     public function allApplications(Request $request)
     {
         $query = InternshipApplication::with(['user', 'internship', 'appointmentLetter', 'reviewer']);
@@ -85,12 +101,33 @@ class AdminInternshipController extends Controller
 
         if ($request->filled('status')) {
             $status = strtolower($request->status);
-            $query->where('status', $status);
+            if ($status === 'pending' || $status === 'applied') {
+                $query->whereIn('status', ['pending', 'applied', 'under_review', 'submitted']);
+            } elseif ($status === 'under_review') {
+                $query->whereIn('status', ['under_review', 'pending', 'applied', 'submitted']);
+            } elseif ($status === 'approved' || $status === 'active') {
+                $query->whereIn('status', ['approved', 'active', 'accepted', 'completed']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         $apps = $query->latest()->paginate($request->input('per_page', 15));
 
         $apps->through(function($app) {
+            // Resolve real internship if relationship is missing
+            if (!$app->relationLoaded('internship') || !$app->internship) {
+                if ($app->internship_id) {
+                    $app->setRelation('internship', Internship::find($app->internship_id));
+                }
+                if (!$app->internship && $app->user_id) {
+                    $taskWithInternship = InternshipTask::where('assigned_to', $app->user_id)->whereNotNull('internship_id')->with('internship')->first();
+                    if ($taskWithInternship?->internship) {
+                        $app->setRelation('internship', $taskWithInternship->internship);
+                    }
+                }
+            }
+
             $app->applicant_name         = $app->applicant_name;
             $app->applicant_email        = $app->applicant_email;
             $app->applicant_phone        = $app->applicant_phone;
@@ -122,7 +159,16 @@ class AdminInternshipController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', strtolower($request->status));
+            $status = strtolower($request->status);
+            if ($status === 'pending' || $status === 'applied') {
+                $query->whereIn('status', ['pending', 'applied', 'under_review', 'submitted']);
+            } elseif ($status === 'under_review') {
+                $query->whereIn('status', ['under_review', 'pending', 'applied', 'submitted']);
+            } elseif ($status === 'approved' || $status === 'active') {
+                $query->whereIn('status', ['approved', 'active', 'accepted', 'completed']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         $apps = $query->latest()->paginate($request->input('per_page', 15));

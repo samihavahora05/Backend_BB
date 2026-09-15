@@ -20,7 +20,7 @@ class AdminAssessmentQuestionController extends Controller
      */
     public function index(Request $request, $assessmentId)
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->resolveAssessment($assessmentId);
 
         $query = AssessmentQuestion::where('assessment_id', $assessment->id);
 
@@ -39,15 +39,37 @@ class AdminAssessmentQuestionController extends Controller
             });
         }
 
-        $questions = $query->orderBy('order', 'asc')
-            ->orderBy('id', 'asc')
-            ->paginate($request->input('per_page', 20));
+        $perPage = $request->input('per_page', 100);
+        if ($perPage === 'all' || (int)$perPage >= 1000) {
+            $allQuestions = $query->orderBy('order', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+            $allQuestions->transform(function ($q) {
+                $q->makeVisible(['correct_answer']);
+                return $q;
+            });
+            $questions = [
+                'data'         => $allQuestions,
+                'total'        => $allQuestions->count(),
+                'per_page'     => $allQuestions->count(),
+                'current_page' => 1,
+                'last_page'    => 1,
+                'from'         => 1,
+                'to'           => $allQuestions->count(),
+            ];
+        } else {
+            $perPageInt = max(1, min(500, (int)$perPage));
+            $paginated = $query->orderBy('order', 'asc')
+                ->orderBy('id', 'asc')
+                ->paginate($perPageInt);
 
-        // Make correct_answer visible for admin management
-        $questions->getCollection()->transform(function ($q) {
-            $q->makeVisible(['correct_answer']);
-            return $q;
-        });
+            // Make correct_answer visible for admin management
+            $paginated->getCollection()->transform(function ($q) {
+                $q->makeVisible(['correct_answer']);
+                return $q;
+            });
+            $questions = $paginated;
+        }
 
         $categories = AssessmentQuestion::where('assessment_id', $assessment->id)
             ->select('category', DB::raw('count(*) as count'))
@@ -68,7 +90,7 @@ class AdminAssessmentQuestionController extends Controller
      */
     public function store(Request $request, $assessmentId)
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->resolveAssessment($assessmentId);
 
         $validated = $request->validate([
             'category'       => 'required|string|max:100',
@@ -267,7 +289,7 @@ class AdminAssessmentQuestionController extends Controller
             'file' => 'required|file|mimes:xlsx,xls,csv,json,txt|max:10240',
         ]);
 
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->resolveAssessment($assessmentId);
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension());
 
@@ -391,7 +413,7 @@ class AdminAssessmentQuestionController extends Controller
             'duplicate_strategy' => 'nullable|in:skip,update,create_new',
         ]);
 
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = $this->resolveAssessment($assessmentId);
         $strategy = $request->input('duplicate_strategy', 'update');
         $rawQuestions = $request->input('questions', []);
 
@@ -482,4 +504,29 @@ class AdminAssessmentQuestionController extends Controller
             'category_breakdown' => $breakdown,
         ]);
     }
+
+    /**
+     * Gracefully resolve assessment by ID or fallback to the primary default assessment
+     */
+    private function resolveAssessment($assessmentId): Assessment
+    {
+        $assessment = is_numeric($assessmentId) && $assessmentId > 0 ? Assessment::find($assessmentId) : null;
+        if (!$assessment) {
+            $assessment = Assessment::first();
+        }
+        if (!$assessment) {
+            $assessment = Assessment::create([
+                'title'              => '100 MCQ Internship Assessment',
+                'slug'               => '100-mcq-internship-assessment',
+                'description'        => 'Comprehensive 100 MCQ Assessment covering Web Development, Digital Marketing, Graphic Designing, and more.',
+                'total_questions'    => 0,
+                'total_marks'        => 0,
+                'passing_percentage' => 40,
+                'duration_minutes'   => 60,
+                'status'             => 'active',
+            ]);
+        }
+        return $assessment;
+    }
 }
+
