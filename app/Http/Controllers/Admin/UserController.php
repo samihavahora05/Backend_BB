@@ -263,15 +263,26 @@ class UserController extends Controller
             default => null
         };
         if ($profile) {
-            $profile->update(['is_verified' => true]);
+            $updateData = ['is_verified' => true];
+            if (\Illuminate\Support\Facades\Schema::hasColumn($profile->getTable(), 'verification_status')) {
+                $updateData['verification_status'] = 'verified';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn($profile->getTable(), 'approval_status')) {
+                $updateData['approval_status'] = 'approved';
+            }
+            $profile->update($updateData);
         }
-        $user->update(['status' => 'active']);
-        $user->notify(new PlatformNotification(
-            "Profile Approved! 🎉",
-            "Congratulations! Your account" . ($role ? " as a " . ucfirst($role) : "") . " has been successfully verified and activated.",
-            'profile_approved',
-            ['role' => $role]
-        ));
+        $user->update(['status' => 'active', 'account_status' => 'active', 'admin_approved' => true, 'admin_approved_at' => now()]);
+        try {
+            $user->notify(new PlatformNotification(
+                "Profile Approved! 🎉",
+                "Congratulations! Your account" . ($role ? " as a " . ucfirst($role) : "") . " has been successfully verified and activated.",
+                'profile_approved',
+                ['role' => $role]
+            ));
+        } catch (\Throwable $e) {
+            // notification optional
+        }
         return response()->json([
             "message" => ($role ? ucfirst($role) . " account" : "User") . " verified and activated successfully.",
             'status' => 'active'
