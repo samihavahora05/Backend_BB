@@ -212,58 +212,66 @@ class AdminAssessmentQuestionController extends Controller
         $sheet->setTitle('Questions Template');
 
         $headers = [
+            'Question ID',
             'Category',
-            'Question',
+            'Difficulty',
+            'Question Text',
             'Option A',
             'Option B',
             'Option C',
             'Option D',
-            'Correct Answer (A/B/C/D)',
-            'Marks',
-            'Explanation'
+            'Correct Answer',
+            'Explanation',
+            'Marks'
         ];
         $sheet->fromArray([$headers], null, 'A1');
 
         $sampleData = [
             [
+                1,
                 'Web Development',
+                'Easy',
                 'Which HTML5 element is used to specify a header for a document or section?',
                 '<top>',
                 '<header>',
                 '<head>',
                 '<section-head>',
                 'B',
-                1,
-                'The <header> element represents introductory content.'
+                'The <header> element represents introductory content.',
+                1
             ],
             [
+                2,
                 'Digital Marketing',
+                'Easy',
                 'What does SEO stand for in digital marketing?',
                 'Search Engine Optimization',
                 'Social Engine Operation',
                 'Systematic Electronic Outreach',
                 'Site Efficiency Organization',
                 'A',
-                1,
-                'SEO stands for Search Engine Optimization.'
+                'SEO stands for Search Engine Optimization.',
+                1
             ],
             [
+                3,
                 'Graphic Designing',
+                'Medium',
                 'Which color model is used for digital screens and web displays?',
                 'CMYK',
                 'RGB',
                 'Pantone',
                 'Monochrome',
                 'B',
-                1,
-                'RGB is an additive color model for electronic displays.'
+                'RGB is an additive color model for electronic displays.',
+                1
             ]
         ];
         $sheet->fromArray($sampleData, null, 'A2');
 
         // Style headers
-        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
-        foreach (range('A', 'I') as $col) {
+        $sheet->getStyle('A1:K1')->getFont()->setBold(true);
+        foreach (range('A', 'K') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -273,7 +281,7 @@ class AdminAssessmentQuestionController extends Controller
         });
 
         $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->headers->set('Content-Disposition', 'attachment; filename="assessment_questions_template.xlsx"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="100_MCQ_Question_Bank_Template.xlsx"');
         $response->headers->set('Cache-Control', 'max-age=0');
 
         return $response;
@@ -286,44 +294,12 @@ class AdminAssessmentQuestionController extends Controller
     public function previewImport(Request $request, $assessmentId)
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv,json,txt|max:10240',
+            'file' => 'required|file|max:20480',
         ]);
 
         $assessment = $this->resolveAssessment($assessmentId);
         $file = $request->file('file');
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        $rows = [];
-        if ($extension === 'json') {
-            $jsonContent = file_get_contents($file->getRealPath());
-            $decoded = json_decode($jsonContent, true);
-            $rows = is_array($decoded) ? $decoded : [];
-        } else {
-            $spreadsheet = IOFactory::load($file->getRealPath());
-            $sheet = $spreadsheet->getActiveSheet();
-            $data = $sheet->toArray(null, true, true, true);
-
-            if (!empty($data)) {
-                // Header row check
-                $firstRow = array_values(array_shift($data));
-                foreach ($data as $r) {
-                    $rowVals = array_values($r);
-                    if (empty(array_filter($rowVals))) continue;
-
-                    $rows[] = [
-                        'category'       => $rowVals[0] ?? '',
-                        'question'       => $rowVals[1] ?? '',
-                        'option_a'       => $rowVals[2] ?? '',
-                        'option_b'       => $rowVals[3] ?? '',
-                        'option_c'       => $rowVals[4] ?? '',
-                        'option_d'       => $rowVals[5] ?? '',
-                        'correct_answer' => $rowVals[6] ?? '',
-                        'marks'          => $rowVals[7] ?? 1,
-                        'explanation'    => $rowVals[8] ?? '',
-                    ];
-                }
-            }
-        }
+        $rawRows = $this->parseUploadedFileToRows($file);
 
         // Validate rows
         $validRows = [];
@@ -337,26 +313,30 @@ class AdminAssessmentQuestionController extends Controller
             ->mapWithKeys(fn($id, $q) => [strtolower(trim($q)) => $id])
             ->toArray();
 
-        foreach ($rows as $index => $row) {
+        foreach ($rawRows as $index => $row) {
             $rowNum = $index + 2;
-            $cat = trim((string)($row['category'] ?? ''));
+            $cat = trim((string)($row['category'] ?? 'General'));
+            if (empty($cat)) $cat = 'General';
+
             $qText = trim((string)($row['question'] ?? ''));
             $optA = trim((string)($row['option_a'] ?? ''));
             $optB = trim((string)($row['option_b'] ?? ''));
             $optC = trim((string)($row['option_c'] ?? ''));
             $optD = trim((string)($row['option_d'] ?? ''));
-            $correctAns = strtoupper(trim((string)($row['correct_answer'] ?? '')));
-            $marks = is_numeric($row['marks'] ?? null) ? (int)$row['marks'] : 1;
+            $rawAns = trim((string)($row['correct_answer'] ?? ''));
+            $correctAns = $this->resolveCorrectAnswer($rawAns, $optA, $optB, $optC, $optD);
+            $marks = is_numeric($row['marks'] ?? null) && (int)$row['marks'] > 0 ? (int)$row['marks'] : 1;
             $exp = trim((string)($row['explanation'] ?? ''));
 
             $errors = [];
-            if (empty($cat)) $errors[] = "Category is required.";
             if (empty($qText)) $errors[] = "Question text is required.";
             if (empty($optA)) $errors[] = "Option A is required.";
             if (empty($optB)) $errors[] = "Option B is required.";
             if (empty($optC)) $errors[] = "Option C is required.";
             if (empty($optD)) $errors[] = "Option D is required.";
-            if (!in_array($correctAns, ['A', 'B', 'C', 'D'])) $errors[] = "Correct Answer must be A, B, C, or D (Got: '{$correctAns}').";
+            if (!in_array($correctAns, ['A', 'B', 'C', 'D'])) {
+                $errors[] = "Correct Answer must be A, B, C, or D (Got: '{$rawAns}').";
+            }
 
             $isDuplicate = isset($existingQuestions[strtolower($qText)]);
 
@@ -368,7 +348,7 @@ class AdminAssessmentQuestionController extends Controller
                 'option_b'       => $optB,
                 'option_c'       => $optC,
                 'option_d'       => $optD,
-                'correct_answer' => $correctAns,
+                'correct_answer' => $correctAns ?: 'A',
                 'marks'          => $marks,
                 'explanation'    => $exp,
                 'is_duplicate'   => $isDuplicate,
@@ -390,7 +370,7 @@ class AdminAssessmentQuestionController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'total_found'      => count($rows),
+                'total_found'      => count($rawRows),
                 'valid_count'      => count($validRows),
                 'invalid_count'    => count($invalidRows),
                 'duplicate_count'  => count($duplicateRows),
@@ -431,20 +411,27 @@ class AdminAssessmentQuestionController extends Controller
                 $qText = trim((string)($item['question'] ?? ''));
                 if (empty($qText)) continue;
 
+                $optA = trim((string)($item['option_a'] ?? ''));
+                $optB = trim((string)($item['option_b'] ?? ''));
+                $optC = trim((string)($item['option_c'] ?? ''));
+                $optD = trim((string)($item['option_d'] ?? ''));
+                $rawAns = trim((string)($item['correct_answer'] ?? 'A'));
+                $correctAns = $this->resolveCorrectAnswer($rawAns, $optA, $optB, $optC, $optD) ?: 'A';
+
                 $existing = AssessmentQuestion::where('assessment_id', $assessment->id)
                     ->where('question', $qText)
                     ->first();
 
                 $payload = [
-                    'category'       => trim((string)($item['category'] ?? 'General')),
+                    'category'       => trim((string)($item['category'] ?? 'General')) ?: 'General',
                     'question'       => $qText,
-                    'option_a'       => trim((string)($item['option_a'] ?? '')),
-                    'option_b'       => trim((string)($item['option_b'] ?? '')),
-                    'option_c'       => trim((string)($item['option_c'] ?? '')),
-                    'option_d'       => trim((string)($item['option_d'] ?? '')),
-                    'correct_answer' => strtoupper(trim((string)($item['correct_answer'] ?? 'A'))),
+                    'option_a'       => $optA,
+                    'option_b'       => $optB,
+                    'option_c'       => $optC,
+                    'option_d'       => $optD,
+                    'correct_answer' => $correctAns,
                     'explanation'    => !empty($item['explanation']) ? trim((string)$item['explanation']) : null,
-                    'marks'          => is_numeric($item['marks'] ?? null) ? (int)$item['marks'] : 1,
+                    'marks'          => is_numeric($item['marks'] ?? null) && (int)$item['marks'] > 0 ? (int)$item['marks'] : 1,
                 ];
 
                 if ($existing) {
@@ -479,6 +466,277 @@ class AdminAssessmentQuestionController extends Controller
                 'total_in_db'    => AssessmentQuestion::where('assessment_id', $assessment->id)->count(),
             ]
         ]);
+    }
+
+    /**
+     * Helper to parse any uploaded file (.csv, .xlsx, .xls, .json) into normalized rows
+     */
+    private function parseUploadedFileToRows($file): array
+    {
+        $path = $file->getRealPath();
+        $ext = strtolower($file->getClientOriginalExtension());
+        $content = file_get_contents($path);
+
+        // 1. JSON parsing
+        if ($ext === 'json' || (str_starts_with(trim($content), '{') || str_starts_with(trim($content), '['))) {
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                if (isset($decoded['questions']) && is_array($decoded['questions'])) {
+                    $decoded = $decoded['questions'];
+                } elseif (isset($decoded['data']) && is_array($decoded['data'])) {
+                    $decoded = $decoded['data'];
+                }
+                return $this->normalizeArrayOfObjects($decoded);
+            }
+        }
+
+        // 2. Spreadsheet / CSV / XLS parsing via PhpSpreadsheet
+        $rowsData = [];
+        try {
+            $spreadsheet = IOFactory::load($path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rowsData = $sheet->toArray(null, true, true, false); // Returns 0-indexed numeric array of rows
+        } catch (\Throwable $e) {
+            // Fallback: parse CSV manually using str_getcsv
+            if ($ext === 'csv' || $ext === 'txt') {
+                $lines = preg_split('/\r\n|\r|\n/', trim($content));
+                foreach ($lines as $line) {
+                    if (trim($line) === '') continue;
+                    $rowsData[] = str_getcsv($line);
+                }
+            }
+        }
+
+        if (empty($rowsData)) {
+            return [];
+        }
+
+        // Filter out empty rows
+        $rowsData = array_values(array_filter($rowsData, function ($r) {
+            return is_array($r) && count(array_filter($r, fn($v) => $v !== null && trim((string)$v) !== '')) > 0;
+        }));
+
+        if (empty($rowsData)) {
+            return [];
+        }
+
+        // Header detection
+        $firstRow = $rowsData[0];
+        $headerMap = $this->detectHeaderColumns($firstRow);
+
+        if (!empty($headerMap)) {
+            // We identified recognized headers in row 0
+            array_shift($rowsData);
+            $normalized = [];
+            foreach ($rowsData as $rowVals) {
+                $item = [
+                    'category'       => isset($headerMap['category']) ? ($rowVals[$headerMap['category']] ?? '') : 'General',
+                    'question'       => isset($headerMap['question']) ? ($rowVals[$headerMap['question']] ?? '') : '',
+                    'option_a'       => isset($headerMap['option_a']) ? ($rowVals[$headerMap['option_a']] ?? '') : '',
+                    'option_b'       => isset($headerMap['option_b']) ? ($rowVals[$headerMap['option_b']] ?? '') : '',
+                    'option_c'       => isset($headerMap['option_c']) ? ($rowVals[$headerMap['option_c']] ?? '') : '',
+                    'option_d'       => isset($headerMap['option_d']) ? ($rowVals[$headerMap['option_d']] ?? '') : '',
+                    'correct_answer' => isset($headerMap['correct_answer']) ? ($rowVals[$headerMap['correct_answer']] ?? 'A') : 'A',
+                    'marks'          => isset($headerMap['marks']) ? ($rowVals[$headerMap['marks']] ?? 1) : 1,
+                    'explanation'    => isset($headerMap['explanation']) ? ($rowVals[$headerMap['explanation']] ?? '') : '',
+                ];
+                $normalized[] = $item;
+            }
+            return $normalized;
+        }
+
+        // Positional fallback based on column count and characteristics
+        return $this->parsePositionalRows($rowsData);
+    }
+
+    /**
+     * Detect column indices from header row
+     */
+    private function detectHeaderColumns(array $headerRow): array
+    {
+        $map = [];
+        $patterns = [
+            'category'       => ['category', 'cat', 'track', 'subject', 'topic', 'section', 'domain', 'module', 'stream'],
+            'question'       => ['question', 'questiontext', 'prompt', 'title', 'query', 'questiondescription', 'problem', 'qtext', 'q'],
+            'option_a'       => ['optiona', 'option1', 'opta', 'choicea', 'choice1', 'ans1', 'opt1', 'firstoption'],
+            'option_b'       => ['optionb', 'option2', 'optb', 'choiceb', 'choice2', 'ans2', 'opt2', 'secondoption'],
+            'option_c'       => ['optionc', 'option3', 'optc', 'choicec', 'choice3', 'ans3', 'opt3', 'thirdoption'],
+            'option_d'       => ['optiond', 'option4', 'optd', 'choiced', 'choice4', 'ans4', 'opt4', 'fourthoption'],
+            'correct_answer' => ['correctanswer', 'correct', 'answer', 'ans', 'correctoption', 'correctopt', 'rightanswer', 'solutionkey', 'key', 'correctans'],
+            'marks'          => ['marks', 'mark', 'score', 'points', 'point', 'weight', 'weightage'],
+            'explanation'    => ['explanation', 'solution', 'rationale', 'description', 'notes', 'note', 'reason', 'why', 'details', 'exp'],
+        ];
+
+        foreach ($headerRow as $idx => $cell) {
+            $clean = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', (string)$cell));
+            if ($clean === '') continue;
+
+            foreach ($patterns as $field => $aliases) {
+                if (isset($map[$field])) continue;
+
+                if (in_array($clean, $aliases, true)) {
+                    $map[$field] = $idx;
+                    break;
+                }
+
+                // Check exact single letter options like 'A', 'B', 'C', 'D' if labeled as such
+                if ($field === 'option_a' && ($clean === 'a' || $clean === 'opta')) { $map[$field] = $idx; break; }
+                if ($field === 'option_b' && ($clean === 'b' || $clean === 'optb')) { $map[$field] = $idx; break; }
+                if ($field === 'option_c' && ($clean === 'c' || $clean === 'optc')) { $map[$field] = $idx; break; }
+                if ($field === 'option_d' && ($clean === 'd' || $clean === 'optd')) { $map[$field] = $idx; break; }
+            }
+        }
+
+        // Require at least 'question' or ('option_a' and 'correct_answer') to consider it a valid header
+        if (isset($map['question']) || (isset($map['option_a']) && isset($map['correct_answer']))) {
+            return $map;
+        }
+
+        return [];
+    }
+
+    /**
+     * Positional row mapping when headers are missing
+     */
+    private function parsePositionalRows(array $rowsData): array
+    {
+        $normalized = [];
+        foreach ($rowsData as $rowVals) {
+            $rowVals = array_values($rowVals);
+            $colCount = count($rowVals);
+
+            // Layout 1: 10 columns -> [ID, Category, Difficulty, Question, OptA, OptB, OptC, OptD, CorrectAnswer, Explanation]
+            if ($colCount >= 10) {
+                $normalized[] = [
+                    'category'       => $rowVals[1] ?? 'General',
+                    'question'       => $rowVals[3] ?? '',
+                    'option_a'       => $rowVals[4] ?? '',
+                    'option_b'       => $rowVals[5] ?? '',
+                    'option_c'       => $rowVals[6] ?? '',
+                    'option_d'       => $rowVals[7] ?? '',
+                    'correct_answer' => $rowVals[8] ?? 'A',
+                    'marks'          => 1,
+                    'explanation'    => $rowVals[9] ?? '',
+                ];
+            }
+            // Layout 2: 9 columns -> [Category, Question, OptA, OptB, OptC, OptD, CorrectAnswer, Marks, Explanation]
+            elseif ($colCount === 9) {
+                $normalized[] = [
+                    'category'       => $rowVals[0] ?? 'General',
+                    'question'       => $rowVals[1] ?? '',
+                    'option_a'       => $rowVals[2] ?? '',
+                    'option_b'       => $rowVals[3] ?? '',
+                    'option_c'       => $rowVals[4] ?? '',
+                    'option_d'       => $rowVals[5] ?? '',
+                    'correct_answer' => $rowVals[6] ?? 'A',
+                    'marks'          => $rowVals[7] ?? 1,
+                    'explanation'    => $rowVals[8] ?? '',
+                ];
+            }
+            // Layout 3: 8 columns -> [Category, Question, OptA, OptB, OptC, OptD, CorrectAnswer, Explanation]
+            elseif ($colCount === 8) {
+                $normalized[] = [
+                    'category'       => $rowVals[0] ?? 'General',
+                    'question'       => $rowVals[1] ?? '',
+                    'option_a'       => $rowVals[2] ?? '',
+                    'option_b'       => $rowVals[3] ?? '',
+                    'option_c'       => $rowVals[4] ?? '',
+                    'option_d'       => $rowVals[5] ?? '',
+                    'correct_answer' => $rowVals[6] ?? 'A',
+                    'marks'          => 1,
+                    'explanation'    => $rowVals[7] ?? '',
+                ];
+            }
+            // Layout 4: 7 columns -> [Category, Question, OptA, OptB, OptC, OptD, CorrectAnswer]
+            elseif ($colCount >= 7) {
+                $normalized[] = [
+                    'category'       => $rowVals[0] ?? 'General',
+                    'question'       => $rowVals[1] ?? '',
+                    'option_a'       => $rowVals[2] ?? '',
+                    'option_b'       => $rowVals[3] ?? '',
+                    'option_c'       => $rowVals[4] ?? '',
+                    'option_d'       => $rowVals[5] ?? '',
+                    'correct_answer' => $rowVals[6] ?? 'A',
+                    'marks'          => 1,
+                    'explanation'    => '',
+                ];
+            }
+        }
+        return $normalized;
+    }
+
+    /**
+     * Normalize objects from JSON payload
+     */
+    private function normalizeArrayOfObjects(array $items): array
+    {
+        $normalized = [];
+        foreach ($items as $obj) {
+            if (!is_array($obj)) continue;
+
+            $map = [];
+            foreach ($obj as $k => $v) {
+                $cleanKey = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', (string)$k));
+                $map[$cleanKey] = $v;
+            }
+
+            $cat = $map['category'] ?? $map['track'] ?? $map['subject'] ?? 'General';
+            $qText = $map['question'] ?? $map['questiontext'] ?? $map['prompt'] ?? $map['title'] ?? '';
+            $optA = $map['optiona'] ?? $map['option1'] ?? $map['opta'] ?? $map['choicea'] ?? '';
+            $optB = $map['optionb'] ?? $map['option2'] ?? $map['optb'] ?? $map['choiceb'] ?? '';
+            $optC = $map['optionc'] ?? $map['option3'] ?? $map['optc'] ?? $map['choicec'] ?? '';
+            $optD = $map['optiond'] ?? $map['option4'] ?? $map['optd'] ?? $map['choiced'] ?? '';
+            $ans = $map['correctanswer'] ?? $map['correct'] ?? $map['answer'] ?? $map['ans'] ?? 'A';
+            $marks = $map['marks'] ?? $map['mark'] ?? $map['score'] ?? 1;
+            $exp = $map['explanation'] ?? $map['solution'] ?? $map['notes'] ?? '';
+
+            $normalized[] = [
+                'category'       => (string)$cat,
+                'question'       => (string)$qText,
+                'option_a'       => (string)$optA,
+                'option_b'       => (string)$optB,
+                'option_c'       => (string)$optC,
+                'option_d'       => (string)$optD,
+                'correct_answer' => (string)$ans,
+                'marks'          => $marks,
+                'explanation'    => (string)$exp,
+            ];
+        }
+        return $normalized;
+    }
+
+    /**
+     * Resolve correct answer into 'A', 'B', 'C', or 'D'
+     */
+    private function resolveCorrectAnswer(?string $ans, string $optA = '', string $optB = '', string $optC = '', string $optD = ''): ?string
+    {
+        if ($ans === null) return null;
+        $clean = strtoupper(trim($ans));
+        $clean = trim($clean, "()[]{}:., \t\n\r\0\x0B");
+
+        if (in_array($clean, ['A', 'B', 'C', 'D'], true)) {
+            return $clean;
+        }
+
+        if ($clean === '1') return 'A';
+        if ($clean === '2') return 'B';
+        if ($clean === '3') return 'C';
+        if ($clean === '4') return 'D';
+
+        if (preg_match('/^(?:OPTION|CHOICE)\s*([A-D])/i', $clean, $matches)) {
+            return strtoupper($matches[1]);
+        }
+
+        // Match against option text if the full text was entered as the answer
+        $target = strtolower(trim($ans));
+        if ($target !== '') {
+            if (strtolower(trim($optA)) === $target) return 'A';
+            if (strtolower(trim($optB)) === $target) return 'B';
+            if (strtolower(trim($optC)) === $target) return 'C';
+            if (strtolower(trim($optD)) === $target) return 'D';
+        }
+
+        return null;
     }
 
     /**
