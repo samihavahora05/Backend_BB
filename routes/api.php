@@ -40,9 +40,9 @@ use App\Http\Controllers\PaymentController;
 
 Route::get('/health', [HealthController::class, 'health']);
 Route::get('/stream/google-drive/{fileId}', [\App\Http\Controllers\Api\GoogleDriveStreamController::class, 'stream']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
-Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
+Route::middleware('throttle:10,1')->post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:15,1')->post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::middleware('throttle:6,1')->post('/resend-otp', [AuthController::class, 'resendOtp']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);

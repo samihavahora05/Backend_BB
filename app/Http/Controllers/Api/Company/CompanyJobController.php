@@ -10,59 +10,79 @@ use Illuminate\Support\Str;
 class CompanyJobController extends Controller
 {
     /**
-     * Get all jobs for the company
+     * Get all jobs for the company (Strictly type = job)
      */
     public function index(Request $request)
     {
         $companyId = $request->user()->id;
         
-        $jobs = Job::where('company_id', $companyId)
+        $query = Job::where('company_id', $companyId)
+            ->jobs()
             ->latest()
-            ->withCount('applications')
-            ->get()
-            ->map(function($job) {
-                $statusNormalized = strtolower($job->status ?? 'pending_approval');
-                $displayStatus = 'Pending Approval';
-                if (in_array($statusNormalized, ['active', 'open', 'published'])) {
-                    $displayStatus = 'Active';
-                } elseif (in_array($statusNormalized, ['draft'])) {
-                    $displayStatus = 'Draft';
-                } elseif (in_array($statusNormalized, ['rejected'])) {
-                    $displayStatus = 'Rejected';
-                } elseif (in_array($statusNormalized, ['closed', 'expired'])) {
-                    $displayStatus = 'Closed';
-                }
+            ->withCount('applications');
 
-                $salaryFormatted = 'Competitive';
-                if ($job->salary_min && $job->salary_max) {
-                    $salaryFormatted = '₹' . ($job->salary_min >= 100000 ? round($job->salary_min/100000, 1) . ' - ₹' . round($job->salary_max/100000, 1) . ' LPA' : $job->salary_min . ' - ' . $job->salary_max);
-                } elseif ($job->salary_min) {
-                    $salaryFormatted = '₹' . ($job->salary_min >= 100000 ? round($job->salary_min/100000, 1) . ' LPA' : $job->salary_min);
-                }
-
-                $remoteType = $job->remote_type ?: ($job->location === 'Remote' ? 'Remote' : 'On-site');
-                $location = $job->location ?: $remoteType;
-
-                return [
-                    'id' => $job->id,
-                    'job_id' => $job->job_id_prefix ?: ('JOB-' . date('Y') . '-' . $job->id),
-                    'title' => $job->title,
-                    'category' => $job->employment_type ?? 'Full-Time',
-                    'employment_type' => $job->employment_type ?? 'Full-Time',
-                    'status' => $displayStatus,
-                    'raw_status' => $job->status,
-                    'type' => $remoteType,
-                    'remote_type' => $remoteType,
-                    'location' => $location,
-                    'salary' => $salaryFormatted,
-                    'salary_min' => $job->salary_min,
-                    'salary_max' => $job->salary_max,
-                    'applicants' => $job->applications_count,
-                    'posted' => $job->created_at ? $job->created_at->diffForHumans() : 'Recently',
-                    'views' => $job->views_count ?? 0,
-                    'created_at' => $job->created_at,
-                ];
+        // Optional server-side search isolation
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhere('department', 'like', "%{$search}%");
             });
+        }
+
+        // Optional server-side status filter
+        if ($filter = $request->query('filter')) {
+            if ($filter === 'active') {
+                $query->whereIn('status', ['active', 'open', 'published', 'pending', 'pending_approval']);
+            } elseif ($filter === 'closed') {
+                $query->whereIn('status', ['closed', 'expired', 'rejected']);
+            }
+        }
+
+        $jobs = $query->get()->map(function($job) {
+            $statusNormalized = strtolower($job->status ?? 'pending_approval');
+            $displayStatus = 'Pending Approval';
+            if (in_array($statusNormalized, ['active', 'open', 'published'])) {
+                $displayStatus = 'Active';
+            } elseif (in_array($statusNormalized, ['draft'])) {
+                $displayStatus = 'Draft';
+            } elseif (in_array($statusNormalized, ['rejected'])) {
+                $displayStatus = 'Rejected';
+            } elseif (in_array($statusNormalized, ['closed', 'expired'])) {
+                $displayStatus = 'Closed';
+            }
+
+            $salaryFormatted = 'Competitive';
+            if ($job->salary_min && $job->salary_max) {
+                $salaryFormatted = '₹' . ($job->salary_min >= 100000 ? round($job->salary_min/100000, 1) . ' - ₹' . round($job->salary_max/100000, 1) . ' LPA' : $job->salary_min . ' - ' . $job->salary_max);
+            } elseif ($job->salary_min) {
+                $salaryFormatted = '₹' . ($job->salary_min >= 100000 ? round($job->salary_min/100000, 1) . ' LPA' : $job->salary_min);
+            }
+
+            $remoteType = $job->remote_type ?: ($job->location === 'Remote' ? 'Remote' : 'On-site');
+            $location = $job->location ?: $remoteType;
+
+            return [
+                'id' => $job->id,
+                'job_id' => $job->job_id_prefix ?: ('JOB-' . date('Y') . '-' . $job->id),
+                'title' => $job->title,
+                'category' => $job->employment_type ?? 'Full-Time',
+                'employment_type' => $job->employment_type ?? 'Full-Time',
+                'status' => $displayStatus,
+                'raw_status' => $job->status,
+                'type' => 'job',
+                'posting_type' => 'job',
+                'remote_type' => $remoteType,
+                'location' => $location,
+                'salary' => $salaryFormatted,
+                'salary_min' => $job->salary_min,
+                'salary_max' => $job->salary_max,
+                'applicants' => $job->applications_count,
+                'posted' => $job->created_at ? $job->created_at->diffForHumans() : 'Recently',
+                'views' => $job->views_count ?? 0,
+                'created_at' => $job->created_at,
+            ];
+        });
 
         return response()->json([
             'success' => true,
@@ -78,6 +98,7 @@ class CompanyJobController extends Controller
         $companyId = $request->user()->id;
         
         $job = Job::where('company_id', $companyId)
+            ->jobs()
             ->withCount('applications')
             ->findOrFail($id);
 
@@ -94,9 +115,10 @@ class CompanyJobController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'type' => 'nullable|string|in:job,internship,Job,Internship',
             'department' => 'nullable|string|max:255',
             'industry' => 'nullable|string|max:255',
-            'employment_type' => 'required|string',
+            'employment_type' => 'nullable|string',
             'experience_level' => 'nullable|string',
             'remote_type' => 'nullable|string',
             'location' => 'nullable|string',
@@ -118,16 +140,31 @@ class CompanyJobController extends Controller
             $status = 'pending_approval'; // Enforce admin approval requirement
         }
 
+        $inputPostingType = strtolower($validated['type'] ?? '');
+        $empType = $validated['employment_type'] ?? 'Full-Time';
+
+        // Determine posting type strictly
+        if ($inputPostingType === 'internship' || strtolower($empType) === 'internship') {
+            $postingType = 'internship';
+            $empType = 'Internship';
+        } else {
+            $postingType = 'job';
+            if (strtolower($empType) === 'internship') {
+                $empType = 'Full-Time';
+            }
+        }
+
         $remoteType = $validated['remote_type'] ?? 'Onsite';
         $location = !empty($validated['location']) ? $validated['location'] : ($remoteType === 'Remote' ? 'Remote' : 'On-site');
 
         $job = new Job();
         $job->company_id = $request->user()->id;
-        $job->job_id_prefix = 'JOB-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
+        $job->type = $postingType;
+        $job->job_id_prefix = ($postingType === 'internship' ? 'INT-' : 'JOB-') . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
         $job->title = $validated['title'];
         $job->department = $validated['department'] ?? 'Engineering';
         $job->industry = $validated['industry'] ?? 'Technology';
-        $job->employment_type = $validated['employment_type'];
+        $job->employment_type = $empType;
         $job->experience_level = $validated['experience_level'] ?? 'Entry Level';
         $job->remote_type = $remoteType;
         $job->location = $location;
@@ -149,7 +186,7 @@ class CompanyJobController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Job submitted successfully and is pending Admin approval.',
+            'message' => ($postingType === 'internship' ? 'Internship' : 'Job') . ' submitted successfully and is pending Admin approval.',
             'data' => $job
         ], 201);
     }
@@ -160,10 +197,11 @@ class CompanyJobController extends Controller
     public function update(Request $request, $id)
     {
         $companyId = $request->user()->id;
-        $job = Job::where('company_id', $companyId)->findOrFail($id);
+        $job = Job::where('company_id', $companyId)->jobs()->findOrFail($id);
 
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
+            'type' => 'nullable|string|in:job,internship,Job,Internship',
             'department' => 'nullable|string|max:255',
             'industry' => 'nullable|string|max:255',
             'employment_type' => 'sometimes|string',
@@ -183,6 +221,13 @@ class CompanyJobController extends Controller
             'status' => 'nullable|string'
         ]);
 
+        if (isset($validated['type'])) {
+            $validated['type'] = strtolower($validated['type']);
+            if ($validated['type'] === 'internship') {
+                $validated['employment_type'] = 'Internship';
+            }
+        }
+
         $job->fill($validated);
         $job->save();
 
@@ -199,7 +244,7 @@ class CompanyJobController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $companyId = $request->user()->id;
-        $job = Job::where('company_id', $companyId)->findOrFail($id);
+        $job = Job::where('company_id', $companyId)->jobs()->findOrFail($id);
 
         $status = strtolower($request->input('status', 'closed'));
         $job->status = $status;
@@ -218,7 +263,7 @@ class CompanyJobController extends Controller
     public function destroy(Request $request, $id)
     {
         $companyId = $request->user()->id;
-        $job = Job::where('company_id', $companyId)->findOrFail($id);
+        $job = Job::where('company_id', $companyId)->jobs()->findOrFail($id);
         $job->delete();
 
         return response()->json([

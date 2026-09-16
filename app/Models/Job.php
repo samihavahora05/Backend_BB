@@ -19,6 +19,63 @@ class Job extends Model
                 $job->job_id_prefix = 'JOB-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
             }
         });
+
+        static::saving(function ($job) {
+            // Auto-normalize and sync type and employment_type
+            if (!empty($job->type)) {
+                $job->type = strtolower($job->type) === 'internship' ? 'internship' : 'job';
+            } elseif (!empty($job->employment_type) && strtolower($job->employment_type) === 'internship') {
+                $job->type = 'internship';
+            } else {
+                $job->type = 'job';
+            }
+
+            if ($job->type === 'internship' && (empty($job->employment_type) || $job->employment_type === 'Full-Time')) {
+                $job->employment_type = 'Internship';
+            }
+        });
+    }
+
+    /**
+     * Scope query to only jobs
+     */
+    public function scopeJobs($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('type', 'job')
+              ->orWhere(function ($sq) {
+                  $sq->whereNull('type')
+                     ->where(function ($ssq) {
+                         $ssq->whereRaw('LOWER(employment_type) != ?', ['internship'])
+                             ->orWhereNull('employment_type');
+                     });
+              });
+        });
+    }
+
+    /**
+     * Scope query to only internships
+     */
+    public function scopeInternships($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('type', 'internship')
+              ->orWhere(function ($sq) {
+                  $sq->whereNull('type')
+                     ->whereRaw('LOWER(employment_type) = ?', ['internship']);
+              });
+        });
+    }
+
+    public function getTypeAttribute($value)
+    {
+        if (!empty($value)) {
+            return strtolower($value) === 'internship' ? 'internship' : 'job';
+        }
+        if (!empty($this->attributes['employment_type']) && strtolower($this->attributes['employment_type']) === 'internship') {
+            return 'internship';
+        }
+        return 'job';
     }
 
     protected $casts = [

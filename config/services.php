@@ -44,5 +44,9 @@ return [
         'secret' => env('RAZORPAY_KEY_SECRET'),
     ],
 
+    'turnstile' => [
+        'secret_key' => env('TURNSTILE_SECRET_KEY', '1x0000000000000000000000000000000AA'),
+    ],
+
 ];
 

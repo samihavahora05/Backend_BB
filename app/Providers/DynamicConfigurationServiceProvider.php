@@ -106,25 +106,25 @@ class DynamicConfigurationServiceProvider extends ServiceProvider
         $smtpSettings = $settings->where('group', 'smtp');
         if ($smtpSettings->isNotEmpty()) {
             $mapped = $smtpSettings->pluck('value', 'key');
+            $host = $mapped->get('host');
+            $username = $mapped->get('username');
+            $password = $mapped->get('password');
+            $hasCompleteCredentials = !empty($host) && !empty($username) && !empty($password);
 
-            // Never let a DB-stored SMTP configuration silently override the
-            // developer's own .env in local development — this previously
-            // caused registration to fail with a Gmail auth error even
-            // though MAIL_MAILER=log was set, because a stale/invalid
-            // credential saved via the admin Settings screen took priority
-            // on every request. Local always respects .env's MAIL_MAILER.
-            $hasCompleteCredentials = $mapped->get('host') && $mapped->get('username') && $mapped->get('password');
-
-            if (!app()->environment('local') && $mapped->has('mailer') && $mapped['mailer'] === 'SMTP' && $hasCompleteCredentials) {
+            if ($hasCompleteCredentials && strtoupper($mapped->get('mailer', 'SMTP')) === 'SMTP') {
                 config(['mail.default' => 'smtp']);
-                config(['mail.mailers.smtp.host' => $mapped->get('host')]);
-                config(['mail.mailers.smtp.port' => $mapped->get('port')]);
-                config(['mail.mailers.smtp.encryption' => $mapped->get('encryption')]);
-                config(['mail.mailers.smtp.username' => $mapped->get('username')]);
-                config(['mail.mailers.smtp.password' => $mapped->get('password')]);
+                config(['mail.mailers.smtp.host' => $host]);
+                config(['mail.mailers.smtp.port' => $mapped->get('port', 587)]);
+                config(['mail.mailers.smtp.encryption' => $mapped->get('encryption', 'tls')]);
+                config(['mail.mailers.smtp.username' => $username]);
+                config(['mail.mailers.smtp.password' => $password]);
 
-                config(['mail.from.address' => $mapped->get('from_address')]);
-                config(['mail.from.name' => $mapped->get('from_name')]);
+                if ($mapped->get('from_address')) {
+                    config(['mail.from.address' => $mapped->get('from_address')]);
+                }
+                if ($mapped->get('from_name')) {
+                    config(['mail.from.name' => $mapped->get('from_name')]);
+                }
             }
         }
     }

@@ -17,15 +17,26 @@ class CompanyDashboardController extends Controller
     {
         $companyId = $request->user()->id;
 
-        $jobs = Job::where('company_id', $companyId)->latest()->get();
+        // Separate Jobs and Internships strictly
+        $jobs = Job::where('company_id', $companyId)->jobs()->latest()->get();
+        $internships = Job::where('company_id', $companyId)->internships()->latest()->get();
+
         $activeJobsCount = $jobs->whereIn('status', ['Active', 'active', 'open', 'published'])->count();
         $pendingJobsCount = $jobs->whereIn('status', ['Pending', 'pending', 'pending_approval', 'Pending Approval'])->count();
+        $draftJobsCount = $jobs->whereIn('status', ['Draft', 'draft'])->count();
+        $closedJobsCount = $jobs->whereIn('status', ['Closed', 'closed', 'expired', 'rejected'])->count();
 
-        $jobIds = $jobs->pluck('id');
-        $applications = JobApplication::whereIn('job_id', $jobIds)->get();
+        $activeInternshipsCount = $internships->whereIn('status', ['Active', 'active', 'open', 'published'])->count();
+        $pendingInternshipsCount = $internships->whereIn('status', ['Pending', 'pending', 'pending_approval', 'Pending Approval'])->count();
+        $draftInternshipsCount = $internships->whereIn('status', ['Draft', 'draft'])->count();
+        $closedInternshipsCount = $internships->whereIn('status', ['Closed', 'closed', 'expired', 'rejected'])->count();
+
+        $allJobIds = $jobs->pluck('id')->merge($internships->pluck('id'));
+        $applications = JobApplication::whereIn('job_id', $allJobIds)->get();
         $totalApplicants = $applications->count();
         $hiredCount = $applications->whereIn('status', ['offer_sent', 'accepted', 'joined', 'hired'])->count();
 
+        // Active jobs list strictly includes Jobs (type = job)
         $activeJobsList = $jobs->map(function($job) {
             $statusNormalized = strtolower($job->status ?? 'pending_approval');
             $displayStatus = 'Pending Approval';
@@ -45,7 +56,8 @@ class CompanyDashboardController extends Controller
                 'category' => $job->employment_type ?? 'Full-Time',
                 'status' => $displayStatus,
                 'raw_status' => $job->status,
-                'type' => $job->remote_type ?? ($job->location === 'Remote' ? 'Remote' : 'On-site'),
+                'type' => 'job',
+                'remote_type' => $job->remote_type ?? ($job->location === 'Remote' ? 'Remote' : 'On-site'),
                 'applicants' => $job->applications()->count(),
                 'created_at' => $job->created_at ? $job->created_at->diffForHumans() : 'Recently',
             ];
@@ -78,6 +90,12 @@ class CompanyDashboardController extends Controller
                     'active_jobs' => $activeJobsCount,
                     'total_applicants' => $totalApplicants,
                     'pending_jobs' => $pendingJobsCount,
+                    'draft_jobs' => $draftJobsCount,
+                    'closed_jobs' => $closedJobsCount,
+                    'active_internships' => $activeInternshipsCount,
+                    'pending_internships' => $pendingInternshipsCount,
+                    'draft_internships' => $draftInternshipsCount,
+                    'closed_internships' => $closedInternshipsCount,
                     'hired' => $hiredCount,
                 ],
                 'active_jobs_list' => $activeJobsList,
@@ -93,7 +111,7 @@ class CompanyDashboardController extends Controller
     {
         $companyId = $request->user()->id;
 
-        $jobs = Job::where('company_id', $companyId)->get();
+        $jobs = Job::where('company_id', $companyId)->jobs()->get();
         $jobIds = $jobs->pluck('id');
 
         $applications = JobApplication::whereIn('job_id', $jobIds)
