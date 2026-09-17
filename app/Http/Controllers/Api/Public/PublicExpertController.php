@@ -29,21 +29,29 @@ class PublicExpertController extends Controller
     {
         $cacheKey = 'public_experts_' . md5(json_encode($request->all()));
 
-        $responsePayload = Cache::remember($cacheKey, 300, function () use ($request) {
-            $query = ExpertProfile::with(['user:id,first_name,last_name,email,phone'])
+        $responsePayload = Cache::remember($cacheKey, 60, function () use ($request) {
+            $query = ExpertProfile::with(['user:id,first_name,last_name,email,phone,status'])
                 ->select(['id', 'user_id', 'designation', 'company', 'specialization', 'hourly_rate', 'average_rating', 'total_reviews', 'profile_photo', 'is_available', 'experience_years', 'approval_status'])
                 ->where(function($q) {
                     $q->where('approval_status', 'approved')
-                      ->orWhere(function($sub) {
-                          $sub->whereNull('approval_status')
-                              ->where('is_verified', true);
-                      });
+                      ->orWhere('approval_status', 'active')
+                      ->orWhere('approval_status', 'Active')
+                      ->orWhereNull('approval_status')
+                      ->orWhere('is_verified', true)
+                      ->orWhere('is_verified', 1);
                 })
                 ->where(function($q) {
                     $q->where('is_available', true)
-                      ->orWhereNull('is_available');
+                      ->orWhereNull('is_available')
+                      ->orWhere('is_available', 1);
                 })
-                ->whereHas('user', fn($q) => $q->whereIn('status', ['active', 'Active', 'ACTIVE'])->whereNull('deleted_at'));
+                ->whereHas('user', function($q) {
+                    $q->whereNull('deleted_at')
+                      ->where(function($sq) {
+                          $sq->whereNull('status')
+                             ->orWhereNotIn('status', ['suspended', 'banned', 'inactive', 'deleted']);
+                      });
+                });
 
             if ($s = $request->query('search')) {
                 $query->where(function($q) use ($s) {
