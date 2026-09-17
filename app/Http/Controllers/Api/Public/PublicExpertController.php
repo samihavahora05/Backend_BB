@@ -487,15 +487,18 @@ class PublicExpertController extends Controller
             return response()->json(['success' => false, 'message' => 'Expert not found'], 404);
         }
 
-        $reviews = \App\Models\ExpertReview::where(function($q) use ($expert) {
-                $q->where('expert_id', $expert->id)
-                  ->orWhere('expert_id', $expert->user_id);
-            })
-            ->where(function($q) {
+        $expertIds = array_values(array_filter([$expert->id, $expert->user_id]));
+
+        $query = \App\Models\ExpertReview::query();
+        $query->whereIn('expert_id', $expertIds);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('expert_reviews', 'is_approved')) {
+            $query->where(function($q) {
                 $q->where('is_approved', true)->orWhereNull('is_approved');
-            })
-            ->latest()
-            ->get();
+            });
+        }
+
+        $reviews = $query->latest()->get();
 
         $avg = $reviews->count() > 0 ? round($reviews->avg('rating'), 1) : (float)($expert->average_rating ?? 5.0);
         $total = $reviews->count() > 0 ? $reviews->count() : (int)($expert->total_reviews ?? 0);
@@ -540,46 +543,64 @@ class PublicExpertController extends Controller
         $cleanText = strip_tags(trim($request->review_text));
         $sessionTitle = strip_tags(trim($request->input('session_title', '1:1 Mentorship Session')));
 
-        // Check for existing review by this user (prevent duplicates)
-        $existing = \App\Models\ExpertReview::where(function($q) use ($expert) {
-                $q->where('expert_id', $expert->id)
-                  ->orWhere('expert_id', $expert->user_id);
-            })
-            ->where(function($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhere('student_id', $user->id);
-            })
-            ->first();
+        $expertIds = array_values(array_filter([$expert->id, $expert->user_id]));
 
+        $hasUserIdCol = \Illuminate\Support\Facades\Schema::hasColumn('expert_reviews', 'user_id');
+        $hasStudentIdCol = \Illuminate\Support\Facades\Schema::hasColumn('expert_reviews', 'student_id');
+        $hasSessionTitleCol = \Illuminate\Support\Facades\Schema::hasColumn('expert_reviews', 'session_title');
+        $hasIsApprovedCol = \Illuminate\Support\Facades\Schema::hasColumn('expert_reviews', 'is_approved');
+
+        // Check for existing review by this user (prevent duplicates)
+        $existingQuery = \App\Models\ExpertReview::whereIn('expert_id', $expertIds);
+        if ($hasUserIdCol && $hasStudentIdCol) {
+            $existingQuery->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)->orWhere('student_id', $user->id);
+            });
+        } elseif ($hasStudentIdCol) {
+            $existingQuery->where('student_id', $user->id);
+        } elseif ($hasUserIdCol) {
+            $existingQuery->where('user_id', $user->id);
+        }
+
+        $existing = $existingQuery->first();
         $expertTargetId = $expert->user_id ?: $expert->id;
 
+        $reviewData = [
+            'expert_id'   => $expertTargetId,
+            'rating'      => (float)$request->rating,
+            'review_text' => $cleanText,
+        ];
+
+        if ($hasStudentIdCol) {
+            $reviewData['student_id'] = $user->id;
+        }
+        if ($hasUserIdCol) {
+            $reviewData['user_id'] = $user->id;
+        }
+        if ($hasSessionTitleCol) {
+            $reviewData['session_title'] = $sessionTitle;
+        }
+        if ($hasIsApprovedCol) {
+            $reviewData['is_approved'] = true;
+        }
+
         if ($existing) {
-            $existing->update([
-                'expert_id'     => $expertTargetId,
-                'rating'        => (float)$request->rating,
-                'review_text'   => $cleanText,
-                'session_title' => $sessionTitle,
-                'is_approved'   => true,
-            ]);
+            $existing->update($reviewData);
             $review = $existing;
             $message = 'Your review has been updated successfully!';
         } else {
-            $review = \App\Models\ExpertReview::create([
-                'expert_id'     => $expertTargetId,
-                'user_id'       => $user->id,
-                'student_id'    => $user->id,
-                'rating'        => (float)$request->rating,
-                'review_text'   => $cleanText,
-                'session_title' => $sessionTitle,
-                'is_approved'   => true,
-            ]);
+            $review = \App\Models\ExpertReview::create($reviewData);
             $message = 'Thank you! Your review has been saved successfully.';
         }
 
         // Recalculate and update ExpertProfile stats
-        $allReviews = \App\Models\ExpertReview::where(function($q) use ($expert) {
-            $q->where('expert_id', $expert->id)->orWhere('expert_id', $expert->user_id);
-        })->where('is_approved', true)->get();
+        $allReviewsQuery = \App\Models\ExpertReview::whereIn('expert_id', $expertIds);
+        if ($hasIsApprovedCol) {
+            $allReviewsQuery->where(function($q) {
+                $q->where('is_approved', true)->orWhereNull('is_approved');
+            });
+        }
+        $allReviews = $allReviewsQuery->get();
 
         $newAvg = $allReviews->count() > 0 ? round($allReviews->avg('rating'), 1) : 5.0;
         $newTotal = $allReviews->count();

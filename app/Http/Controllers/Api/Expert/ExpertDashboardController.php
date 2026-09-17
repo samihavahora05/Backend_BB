@@ -91,14 +91,18 @@ class ExpertDashboardController extends Controller
         // 4. Average Rating
         $averageRating = 0;
         if ($expertProfileId || $expertUserId) {
-            $averageRating = ExpertReview::where(function ($q) use ($expertProfileId, $expertUserId) {
+            $reviewQuery = ExpertReview::where(function ($q) use ($expertProfileId, $expertUserId) {
                     if ($expertProfileId) $q->where('expert_id', $expertProfileId);
                     if ($expertUserId) $q->orWhere('expert_id', $expertUserId);
-                })
-                ->where(function ($q) {
+                });
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('expert_reviews', 'is_approved')) {
+                $reviewQuery->where(function ($q) {
                     $q->where('is_approved', true)->orWhereNull('is_approved');
-                })
-                ->avg('rating') ?? 0;
+                });
+            }
+
+            $averageRating = $reviewQuery->avg('rating') ?? 0;
         }
 
         return response()->json([
