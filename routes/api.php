@@ -1133,15 +1133,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::delete('announcements/{id}', [\App\Http\Controllers\Api\Admin\AdminCommunicationController::class, 'deleteAnnouncement']);
         });
 
-        // ----- Backup Manager -----
-        Route::prefix('backups')->group(function () {
-            Route::get('settings', [\App\Http\Controllers\Api\Admin\AdminBackupController::class, 'getSettings']);
-            Route::put('settings', [\App\Http\Controllers\Api\Admin\AdminBackupController::class, 'updateSettings']);
-            Route::post('generate', [\App\Http\Controllers\Api\Admin\AdminBackupController::class, 'generate']);
-            Route::get('{id}/download', [\App\Http\Controllers\Api\Admin\AdminBackupController::class, 'download']);
-            Route::post('{id}/restore', [\App\Http\Controllers\Api\Admin\AdminBackupController::class, 'restore']);
-        });
-        Route::apiResource('backups', \App\Http\Controllers\Api\Admin\AdminBackupController::class)->only(['index', 'destroy']);
+
 
         Route::apiResource('course-subjects', \App\Http\Controllers\Api\Admin\AdminCourseSubjectController::class);
 

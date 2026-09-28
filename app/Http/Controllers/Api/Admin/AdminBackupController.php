@@ -117,15 +117,32 @@ class AdminBackupController extends Controller
 
     public function getSettings()
     {
-        $settings = BackupSetting::pluck('value', 'key');
+        $raw = BackupSetting::pluck('value', 'key');
+        $settings = [];
+        foreach ($raw as $k => $v) {
+            if ($v === '1' || $v === 'true' || $v === true) {
+                $settings[$k] = true;
+            } elseif ($v === '0' || $v === 'false' || $v === false) {
+                $settings[$k] = false;
+            } else {
+                $settings[$k] = $v;
+            }
+        }
         return response()->json(['success' => true, 'data' => $settings]);
     }
 
     public function updateSettings(Request $request)
     {
         foreach ($request->all() as $key => $value) {
-            BackupSetting::updateOrCreate(['key' => $key], ['value' => is_array($value) ? json_encode($value) : $value]);
+            if (is_bool($value)) {
+                $storeValue = $value ? 'true' : 'false';
+            } elseif (is_array($value)) {
+                $storeValue = json_encode($value);
+            } else {
+                $storeValue = (string) $value;
+            }
+            BackupSetting::updateOrCreate(['key' => $key], ['value' => $storeValue]);
         }
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'Settings updated successfully']);
     }
 }
