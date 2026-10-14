@@ -83,12 +83,27 @@ class AdminBlogController extends Controller
 
         if ($request->filled('categories')) {
             $cats = is_array($request->categories) ? $request->categories : explode(',', $request->categories);
+            $cats = array_filter(array_map('trim', $cats));
             $blog->categories()->sync($cats);
         }
 
         if ($request->filled('tags')) {
-            $tags = is_array($request->tags) ? $request->tags : explode(',', $request->tags);
-            $blog->tags()->sync($tags);
+            $rawTags = is_array($request->tags) ? $request->tags : explode(',', $request->tags);
+            $tagIds = [];
+            foreach ($rawTags as $tagName) {
+                $tagName = trim($tagName);
+                if (empty($tagName)) continue;
+                if (is_numeric($tagName)) {
+                    $tagIds[] = (int) $tagName;
+                } else {
+                    $tag = \App\Models\BlogTag::firstOrCreate(
+                        ['slug' => Str::slug($tagName)],
+                        ['name' => $tagName]
+                    );
+                    $tagIds[] = $tag->id;
+                }
+            }
+            $blog->tags()->sync(array_unique($tagIds));
         }
 
         return response()->json(['success' => true, 'data' => $blog]);
@@ -146,12 +161,27 @@ class AdminBlogController extends Controller
 
         if ($request->has('categories')) {
             $cats = is_array($request->categories) ? $request->categories : explode(',', $request->categories);
+            $cats = array_filter(array_map('trim', $cats));
             $blog->categories()->sync($cats);
         }
 
         if ($request->has('tags')) {
-            $tags = is_array($request->tags) ? $request->tags : explode(',', $request->tags);
-            $blog->tags()->sync($tags);
+            $rawTags = is_array($request->tags) ? $request->tags : explode(',', $request->tags);
+            $tagIds = [];
+            foreach ($rawTags as $tagName) {
+                $tagName = trim($tagName);
+                if (empty($tagName)) continue;
+                if (is_numeric($tagName)) {
+                    $tagIds[] = (int) $tagName;
+                } else {
+                    $tag = \App\Models\BlogTag::firstOrCreate(
+                        ['slug' => Str::slug($tagName)],
+                        ['name' => $tagName]
+                    );
+                    $tagIds[] = $tag->id;
+                }
+            }
+            $blog->tags()->sync(array_unique($tagIds));
         }
 
         return response()->json(['success' => true, 'data' => $blog]);
