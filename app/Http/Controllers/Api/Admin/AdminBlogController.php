@@ -56,7 +56,7 @@ class AdminBlogController extends Controller
         if ($request->filled('slug')) {
             $blog->slug = Str::slug($request->slug);
         }
-        $blog->content = $request->content;
+        $blog->content = $request->input('content');
         $blog->status = $request->status;
         $blog->author_id = $request->user()->id;
         $blog->excerpt = $request->excerpt;
@@ -155,7 +155,7 @@ class AdminBlogController extends Controller
         if ($request->filled('slug')) {
             $blog->slug = Str::slug($request->slug);
         }
-        $blog->content = $request->content;
+        $blog->content = $request->input('content');
         $blog->status = $request->status;
         if ($request->has('excerpt')) $blog->excerpt = $request->excerpt;
         if ($request->has('video_url')) $blog->video_url = $request->video_url;
