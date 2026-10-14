@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Blog extends Model
 {
@@ -90,5 +91,29 @@ class Blog extends Model
     public function activityLogs()
     {
         return $this->hasMany(BlogActivityLog::class);
+    }
+
+    /**
+     * Generate a unique slug for a blog from a given title or custom slug.
+     */
+    public static function generateUniqueSlug(string $titleOrSlug, ?int $ignoreId = null): string
+    {
+        $baseSlug = Str::slug($titleOrSlug);
+        if (empty($baseSlug)) {
+            $baseSlug = 'untitled-post';
+        }
+
+        $slug = $baseSlug;
+        $count = 1;
+
+        while (static::withTrashed()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+            ->exists()) {
+            $slug = "{$baseSlug}-{$count}";
+            $count++;
+        }
+
+        return $slug;
     }
 }

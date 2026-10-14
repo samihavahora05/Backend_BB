@@ -17,14 +17,9 @@ class BlogObserver
     {
         // Auto-slug
         if (empty($blog->slug)) {
-            $originalSlug = Str::slug($blog->title);
-            $slug = $originalSlug;
-            $count = 1;
-            while (Blog::where('slug', $slug)->where('id', '!=', $blog->id ?? 0)->exists()) {
-                $slug = $originalSlug . '-' . $count;
-                $count++;
-            }
-            $blog->slug = $slug;
+            $blog->slug = Blog::generateUniqueSlug($blog->title ?? 'untitled-post');
+        } else {
+            $blog->slug = Blog::generateUniqueSlug($blog->slug);
         }
 
         // Reading time (approx 200 words per min)
@@ -47,6 +42,21 @@ class BlogObserver
      */
     public function updating(Blog $blog): void
     {
+        // Ensure slug uniqueness if changed
+        if ($blog->isDirty('slug')) {
+            if (empty($blog->slug)) {
+                $blog->slug = Blog::generateUniqueSlug($blog->title ?? 'untitled-post', $blog->id);
+            } else {
+                // Ensure the provided slug is sanitized and unique
+                $baseSlug = Str::slug($blog->slug);
+                if (Blog::withTrashed()->where('slug', $baseSlug)->where('id', '!=', $blog->id)->exists()) {
+                    $blog->slug = Blog::generateUniqueSlug($baseSlug, $blog->id);
+                } else {
+                    $blog->slug = $baseSlug;
+                }
+            }
+        }
+
         // Update Reading time
         if ($blog->isDirty('content')) {
             $wordCount = str_word_count(strip_tags($blog->content));
@@ -74,7 +84,9 @@ class BlogObserver
      */
     public function deleted(Blog $blog): void
     {
-        $this->logActivity($blog, 'deleted');
+        if (!$blog->isForceDeleting()) {
+            $this->logActivity($blog, 'deleted');
+        }
     }
 
     /**
@@ -90,16 +102,23 @@ class BlogObserver
      */
     public function forceDeleted(Blog $blog): void
     {
-        $this->logActivity($blog, 'force_deleted');
+        // Activity log cannot reference force-deleted blog row
     }
 
     private function logActivity(Blog $blog, string $action)
     {
-        BlogActivityLog::create([
-            'blog_id' => $blog->id,
-            'user_id' => Auth::id(),
-            'action' => $action,
-            'details' => json_encode($blog->getChanges()),
-        ]);
+        $userId = Auth::id() ?: $blog->author_id;
+        if ($userId && $blog->exists) {
+            try {
+                BlogActivityLog::create([
+                    'blog_id' => $blog->id,
+                    'user_id' => $userId,
+                    'action' => $action,
+                    'details' => json_encode($blog->getChanges()),
+                ]);
+            } catch (\Throwable $e) {
+                // Silently ignore activity log failure to prevent breaking main blog operations
+            }
+        }
     }
 }

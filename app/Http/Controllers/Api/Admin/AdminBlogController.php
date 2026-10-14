@@ -46,11 +46,16 @@ class AdminBlogController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'status' => 'required|string|in:draft,published,archived',
+            'slug' => 'nullable|string|max:255|unique:blogs,slug',
+        ], [
+            'slug.unique' => 'This blog slug is already taken. Please choose another slug.',
         ]);
 
         $blog = new Blog();
         $blog->title = $request->title;
-        // slug is handled by observer
+        if ($request->filled('slug')) {
+            $blog->slug = Str::slug($request->slug);
+        }
         $blog->content = $request->content;
         $blog->status = $request->status;
         $blog->author_id = $request->user()->id;
@@ -79,7 +84,25 @@ class AdminBlogController extends Controller
         $blog->canonical_url = $request->canonical_url;
         $blog->og_image = $request->og_image;
         
-        $blog->save();
+        $saved = false;
+        $attempts = 0;
+        while (!$saved && $attempts < 5) {
+            try {
+                $blog->save();
+                $saved = true;
+            } catch (\Illuminate\Database\QueryException $e) {
+                // If collision on unique slug under race condition
+                if ($e->getCode() == 23000 || str_contains($e->getMessage(), '1062')) {
+                    $attempts++;
+                    $blog->slug = Blog::generateUniqueSlug($blog->title ?? 'untitled-post');
+                    if ($attempts >= 5) {
+                        throw $e;
+                    }
+                } else {
+                    throw $e;
+                }
+            }
+        }
 
         if ($request->filled('categories')) {
             $cats = is_array($request->categories) ? $request->categories : explode(',', $request->categories);
@@ -123,11 +146,14 @@ class AdminBlogController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'status' => 'required|string|in:draft,published,archived',
+            'slug' => 'nullable|string|max:255|unique:blogs,slug,' . $blog->id,
+        ], [
+            'slug.unique' => 'This blog slug is already taken. Please choose another slug.',
         ]);
 
         $blog->title = $request->title;
         if ($request->filled('slug')) {
-            $blog->slug = $request->slug;
+            $blog->slug = Str::slug($request->slug);
         }
         $blog->content = $request->content;
         $blog->status = $request->status;
