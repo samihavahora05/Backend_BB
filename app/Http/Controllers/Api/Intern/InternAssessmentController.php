@@ -25,6 +25,8 @@ class InternAssessmentController extends Controller
         }
 
         $assessments = Assessment::where('status', 'active')
+            ->where('total_questions', '>', 0)
+            ->where('slug', '!=', '100-mcq-internship-assessment')
             ->orderBy('id', 'asc')
             ->get()
             ->map(function ($assessment) use ($user) {
