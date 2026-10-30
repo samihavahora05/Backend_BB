@@ -247,7 +247,16 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('/virtual-classes/{id}/quiz/submit', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'submitQuiz']);
         Route::get('/mcq-results', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'mcqResults']);
         Route::get('/quiz-results', [\App\Http\Controllers\Api\Student\StudentVirtualClassController::class, 'mcqResults']);
-        
+
+        // MCQ Assessments for Students (Common IT & Digital Skills)
+        Route::get('/assessments', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'index']);
+        Route::get('/assessments/history', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'history']);
+        Route::get('/assessments/{id}', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'show']);
+        Route::post('/assessments/{id}/start', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'start']);
+        Route::post('/assessments/{id}/save-answer', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'saveAnswer']);
+        Route::post('/assessments/{id}/submit', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'submit']);
+        Route::get('/assessments/{id}/result/{attemptId}', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'getResult']);
+
         Route::get('/wishlist', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'index']);
         Route::delete('/wishlist/{type}/{id}', [\App\Http\Controllers\Api\Student\StudentWishlistController::class, 'destroy']);
 
