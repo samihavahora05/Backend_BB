@@ -47,7 +47,7 @@ class RegisterRequest extends FormRequest
             'email' => 'required|string|email|max:255',
             'phone' => 'nullable|string|max:20',
             'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
-            'role' => 'nullable|string|in:student,intern,job-seeker,jobseeker,company,college,expert',
+            'role' => 'nullable|string|in:student,intern,job-seeker,jobseeker,company,college,expert,freelancer',
             'turnstile_token' => ['nullable', 'string', new TurnstileRule()],
         ];
     }

@@ -97,7 +97,7 @@ class SyncBaselineDataCommand extends Command
 
     private function syncRoles(bool $dryRun): array
     {
-        $roles = ['super_admin', 'admin', 'student', 'expert', 'company', 'college', 'intern', 'job-seeker'];
+        $roles = ['super_admin', 'admin', 'student', 'expert', 'company', 'college', 'intern', 'job-seeker', 'freelancer'];
         $created = 0;
         $existing = 0;
 

@@ -38,7 +38,7 @@ class AuthController extends Controller
             $requestedRole = 'job-seeker';
         }
 
-        $allowedRoles = ['student', 'intern', 'job-seeker', 'company', 'college', 'expert'];
+        $allowedRoles = ['student', 'intern', 'job-seeker', 'company', 'college', 'expert', 'freelancer'];
         $roleName = in_array($requestedRole, $allowedRoles, true) ? $requestedRole : 'student';
 
         // 1. Check if email already exists in database

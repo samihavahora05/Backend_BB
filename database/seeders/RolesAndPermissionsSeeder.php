@@ -24,7 +24,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'company',
             'college',
             'intern',
-            'job-seeker'
+            'job-seeker',
+            'freelancer'
         ];
 
         foreach ($roles as $role) {
