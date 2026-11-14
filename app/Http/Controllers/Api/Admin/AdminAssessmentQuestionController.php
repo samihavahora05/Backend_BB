@@ -774,9 +774,9 @@ class AdminAssessmentQuestionController extends Controller
         }
         if (!$assessment) {
             $assessment = Assessment::create([
-                'title'              => '100 MCQ Internship Assessment',
-                'slug'               => '100-mcq-internship-assessment',
-                'description'        => 'Comprehensive 100 MCQ Assessment covering Web Development, Digital Marketing, Graphic Designing, and more.',
+                'title'              => '50 MCQ Internship Assessment',
+                'slug'               => '50-mcq-internship-assessment',
+                'description'        => 'Comprehensive 50 MCQ Assessment covering Web Development, Digital Marketing, Graphic Designing, and more.',
                 'total_questions'    => 0,
                 'total_marks'        => 0,
                 'passing_percentage' => 40,

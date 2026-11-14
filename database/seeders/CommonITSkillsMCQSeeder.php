@@ -45,7 +45,7 @@ class CommonITSkillsMCQSeeder extends Seeder
             ];
         }
 
-        // Clean up legacy empty assessment record (100 MCQ with 0 questions) so students only see the 50 MCQ assessment
+        // Clean up legacy empty assessment record (50 MCQ with 0 questions) so students only see the 50 MCQ assessment
         Assessment::where('slug', '100-mcq-internship-assessment')
             ->orWhere(function ($q) {
                 $q->where('total_questions', 0)

@@ -395,7 +395,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/resume', [\App\Http\Controllers\Api\InternDashboardController::class, 'resume']);
         Route::post('/resume', [\App\Http\Controllers\Api\InternDashboardController::class, 'uploadResume']);
 
-        // 100 MCQ Assessment System
+        // 50 MCQ Assessment System
         Route::get('/assessments', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'index']);
         Route::get('/assessments/history', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'history']);
         Route::get('/assessments/{id}', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'show']);
@@ -1192,7 +1192,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('mcq/courses', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'courses']);
         Route::get('mcq/export', [\App\Http\Controllers\Api\Admin\AdminMCQController::class, 'export']);
 
-        // ----- 100 MCQ Assessment System (Admin Results & Question Management) -----
+        // ----- 50 MCQ Assessment System (Admin Results & Question Management) -----
         Route::prefix('assessments')->group(function () {
             Route::get('results', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'results']);
             Route::get('results/{attemptId}', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'attemptDetail']);
