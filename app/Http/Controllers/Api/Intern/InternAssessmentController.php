@@ -10,9 +10,42 @@ use App\Models\AssessmentAnswer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class InternAssessmentController extends Controller
 {
+    /**
+     * Auto-heal / Ensure columns exist in assessment_attempts table dynamically
+     */
+    private static function ensureAttemptSchema(): void
+    {
+        try {
+            if (Schema::hasTable('assessment_attempts')) {
+                Schema::table('assessment_attempts', function ($table) {
+                    if (!Schema::hasColumn('assessment_attempts', 'is_qualified')) {
+                        $table->boolean('is_qualified')->default(false)->nullable();
+                    }
+                    if (!Schema::hasColumn('assessment_attempts', 'interview_scheduled_at')) {
+                        $table->dateTime('interview_scheduled_at')->nullable();
+                    }
+                    if (!Schema::hasColumn('assessment_attempts', 'meet_link')) {
+                        $table->string('meet_link', 500)->nullable();
+                    }
+                    if (!Schema::hasColumn('assessment_attempts', 'interview_status')) {
+                        $table->string('interview_status', 50)->default('pending')->nullable();
+                    }
+                    if (!Schema::hasColumn('assessment_attempts', 'whatsapp_sent')) {
+                        $table->boolean('whatsapp_sent')->default(false)->nullable();
+                    }
+                    if (!Schema::hasColumn('assessment_attempts', 'email_sent')) {
+                        $table->boolean('email_sent')->default(false)->nullable();
+                    }
+                });
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Dynamic attempt schema integrity check note: " . $e->getMessage());
+        }
+    }
     /**
      * List all available assessments and intern's previous attempts
      * GET /api/intern/assessments
@@ -227,6 +260,7 @@ class InternAssessmentController extends Controller
      */
     public function submit(Request $request, $id)
     {
+        self::ensureAttemptSchema();
         $request->validate([
             'attempt_id' => 'required|integer',
             'answers' => 'nullable|array', // Optional map of question_id => selected_answer (A/B/C/D)
@@ -393,6 +427,7 @@ class InternAssessmentController extends Controller
      */
     public function getResult(Request $request, $id, $attemptId)
     {
+        self::ensureAttemptSchema();
         $user = $request->user() ?? auth()->user();
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
