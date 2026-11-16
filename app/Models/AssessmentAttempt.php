@@ -24,6 +24,8 @@ class AssessmentAttempt extends Model
         'is_qualified',
         'interview_scheduled_at',
         'meet_link',
+        'meeting_code',
+        'google_space_name',
         'interview_status',
         'whatsapp_sent',
         'email_sent',
