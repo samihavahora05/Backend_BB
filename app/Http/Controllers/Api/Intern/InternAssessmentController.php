@@ -260,66 +260,67 @@ class InternAssessmentController extends Controller
      */
     public function submit(Request $request, $id)
     {
-        self::ensureAttemptSchema();
-        $request->validate([
-            'attempt_id' => 'required|integer',
-            'answers' => 'nullable|array', // Optional map of question_id => selected_answer (A/B/C/D)
-        ]);
-
-        $user = $request->user() ?? auth()->user();
-        $attempt = AssessmentAttempt::where('id', $request->attempt_id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
-
-        if ($attempt->status === 'completed') {
-            return response()->json([
-                'success' => true,
-                'message' => 'Assessment has already been submitted.',
-                'data' => [
-                    'attempt_id' => $attempt->id,
-                    'score' => $attempt->score,
-                    'percentage' => $attempt->percentage,
-                    'correct_answers' => $attempt->correct_answers,
-                    'wrong_answers' => $attempt->wrong_answers,
-                    'unanswered' => $attempt->unanswered,
-                ]
+        try {
+            self::ensureAttemptSchema();
+            $request->validate([
+                'attempt_id' => 'required|integer',
+                'answers' => 'nullable|array', // Optional map of question_id => selected_answer (A/B/C/D)
             ]);
-        }
 
-        // Fetch all questions for this assessment including correct_answer (server-side ONLY)
-        $questions = AssessmentQuestion::where('assessment_id', $attempt->assessment_id)
-            ->get(['id', 'category', 'correct_answer', 'marks', 'order']);
+            $user = $request->user() ?? auth()->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+            }
 
-        $rawAnswers = $request->input('answers', []);
-        $submittedAnswers = [];
-        if (is_array($rawAnswers)) {
-            foreach ($rawAnswers as $k => $v) {
-                if (is_array($v) && isset($v['question_id'])) {
-                    $submittedAnswers[$v['question_id']] = $v['selected_answer'] ?? null;
-                } else {
-                    $submittedAnswers[$k] = $v;
+            $attempt = AssessmentAttempt::where('id', $request->attempt_id)
+                ->where('user_id', $user->id)
+                ->firstOrFail();
+
+            if ($attempt->status === 'completed') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Assessment has already been submitted.',
+                    'data' => [
+                        'attempt_id' => $attempt->id,
+                        'score' => $attempt->score,
+                        'percentage' => $attempt->percentage,
+                        'correct_answers' => $attempt->correct_answers,
+                        'wrong_answers' => $attempt->wrong_answers,
+                        'unanswered' => $attempt->unanswered,
+                    ]
+                ]);
+            }
+
+            // Fetch all questions for this assessment including correct_answer (server-side ONLY)
+            $questions = AssessmentQuestion::where('assessment_id', $attempt->assessment_id)
+                ->get(['id', 'category', 'correct_answer', 'marks', 'order']);
+
+            $rawAnswers = $request->input('answers', []);
+            $submittedAnswers = [];
+            if (is_array($rawAnswers)) {
+                foreach ($rawAnswers as $k => $v) {
+                    if (is_array($v) && isset($v['question_id'])) {
+                        $submittedAnswers[$v['question_id']] = $v['selected_answer'] ?? null;
+                    } else {
+                        $submittedAnswers[$k] = $v;
+                    }
                 }
             }
-        }
 
-        // Also merge any answers saved in the DB
-        $dbAnswers = AssessmentAnswer::where('attempt_id', $attempt->id)->get()->keyBy('question_id');
+            // Also merge any answers saved in the DB
+            $dbAnswers = AssessmentAnswer::where('attempt_id', $attempt->id)->get()->keyBy('question_id');
 
-        $totalCorrect = 0;
-        $totalWrong = 0;
-        $totalUnanswered = 0;
-        $totalScore = 0;
+            $totalCorrect = 0;
+            $totalWrong = 0;
+            $totalUnanswered = 0;
+            $totalScore = 0;
 
-        $categoryStats = [
-            'Web Development' => ['total' => 0, 'correct' => 0, 'wrong' => 0, 'unanswered' => 0, 'score' => 0],
-            'Digital Marketing' => ['total' => 0, 'correct' => 0, 'wrong' => 0, 'unanswered' => 0, 'score' => 0],
-            'Graphic Designing' => ['total' => 0, 'correct' => 0, 'wrong' => 0, 'unanswered' => 0, 'score' => 0],
-        ];
+            $categoryStats = [
+                'Web Development' => ['total' => 0, 'correct' => 0, 'wrong' => 0, 'unanswered' => 0, 'score' => 0],
+                'Digital Marketing' => ['total' => 0, 'correct' => 0, 'wrong' => 0, 'unanswered' => 0, 'score' => 0],
+                'Graphic Designing' => ['total' => 0, 'correct' => 0, 'wrong' => 0, 'unanswered' => 0, 'score' => 0],
+            ];
 
-        DB::transaction(function () use (
-            $attempt, $questions, $submittedAnswers, $dbAnswers,
-            &$totalCorrect, &$totalWrong, &$totalUnanswered, &$totalScore, &$categoryStats
-        ) {
             foreach ($questions as $q) {
                 $category = $q->category ?? 'General';
                 if (!isset($categoryStats[$category])) {
@@ -356,19 +357,22 @@ class InternAssessmentController extends Controller
                     $categoryStats[$category]['wrong']++;
                 }
 
-                // Update or create answer row
-                AssessmentAnswer::updateOrCreate(
-                    [
-                        'attempt_id' => $attempt->id,
-                        'question_id' => $q->id,
-                    ],
-                    [
-                        'selected_answer' => $selected,
-                        'correct_answer' => $correct,
-                        'is_correct' => $selected ? $isCorrect : null,
-                        'marks_obtained' => $marksObtained,
-                    ]
-                );
+                try {
+                    AssessmentAnswer::updateOrCreate(
+                        [
+                            'attempt_id' => $attempt->id,
+                            'question_id' => $q->id,
+                        ],
+                        [
+                            'selected_answer' => $selected,
+                            'correct_answer' => $correct,
+                            'is_correct' => $selected ? $isCorrect : null,
+                            'marks_obtained' => $marksObtained,
+                        ]
+                    );
+                } catch (\Throwable $ae) {
+                    Log::warning("Answer saving error for Q#{$q->id}: " . $ae->getMessage());
+                }
             }
 
             $percentage = $attempt->total_questions > 0 
@@ -388,42 +392,52 @@ class InternAssessmentController extends Controller
                 'category_scores' => $categoryStats,
             ];
 
-            if (Schema::hasColumn('assessment_attempts', 'is_qualified')) {
-                $updateData['is_qualified'] = $isQualified;
-            }
+            try {
+                if (Schema::hasColumn('assessment_attempts', 'is_qualified')) {
+                    $updateData['is_qualified'] = $isQualified;
+                }
+            } catch (\Throwable $e) {}
 
             $attempt->update($updateData);
-        });
 
-        // Step 2 Automation: If score is 30+, automatically trigger Google Meet & notifications
-        if ($attempt->score >= 30) {
-            try {
-                \App\Services\InterviewAutomationService::processQualifiedAttempt($attempt);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error("Interview automation trigger error for attempt #{$attempt->id}: " . $e->getMessage());
+            // Step 2 Automation: If score is 30+, automatically trigger Google Meet & notifications
+            if ($totalScore >= 30) {
+                try {
+                    \App\Services\InterviewAutomationService::processQualifiedAttempt($attempt);
+                } catch (\Throwable $e) {
+                    Log::error("Interview automation trigger error for attempt #{$attempt->id}: " . $e->getMessage());
+                }
             }
+
+            try {
+                $attempt->refresh();
+            } catch (\Throwable $e) {}
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Assessment submitted successfully.',
+                'data' => [
+                    'attempt_id' => $attempt->id,
+                    'score' => $attempt->score,
+                    'percentage' => $attempt->percentage,
+                    'total_questions' => $attempt->total_questions,
+                    'correct_answers' => $attempt->correct_answers,
+                    'wrong_answers' => $attempt->wrong_answers,
+                    'unanswered' => $attempt->unanswered,
+                    'category_scores' => $attempt->category_scores,
+                    'submitted_at' => $attempt->submitted_at ? $attempt->submitted_at->toISOString() : now()->toISOString(),
+                    'is_qualified' => (bool)($attempt->is_qualified ?? ($attempt->score >= 30)),
+                    'meet_link' => $attempt->meet_link ?? null,
+                    'interview_scheduled_at' => $attempt->interview_scheduled_at ? $attempt->interview_scheduled_at->toISOString() : null,
+                ]
+            ]);
+        } catch (\Throwable $mainEx) {
+            Log::error("CRITICAL ASSESSMENT SUBMIT ERROR: " . $mainEx->getMessage() . " at " . $mainEx->getFile() . ":" . $mainEx->getLine());
+            return response()->json([
+                'success' => false,
+                'message' => 'Submission Error: ' . $mainEx->getMessage(),
+            ], 500);
         }
-
-        $attempt->refresh();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Assessment submitted successfully.',
-            'data' => [
-                'attempt_id' => $attempt->id,
-                'score' => $attempt->score,
-                'percentage' => $attempt->percentage,
-                'total_questions' => $attempt->total_questions,
-                'correct_answers' => $attempt->correct_answers,
-                'wrong_answers' => $attempt->wrong_answers,
-                'unanswered' => $attempt->unanswered,
-                'category_scores' => $attempt->category_scores,
-                'submitted_at' => $attempt->submitted_at ? $attempt->submitted_at->toISOString() : now()->toISOString(),
-                'is_qualified' => (bool)($attempt->is_qualified ?? ($attempt->score >= 30)),
-                'meet_link' => $attempt->meet_link ?? null,
-                'interview_scheduled_at' => $attempt->interview_scheduled_at ? $attempt->interview_scheduled_at->toISOString() : null,
-            ]
-        ]);
     }
 
     /**
