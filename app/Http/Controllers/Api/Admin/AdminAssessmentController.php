@@ -215,4 +215,37 @@ class AdminAssessmentController extends Controller
         $service = app(\App\Services\AppointmentLetterService::class);
         return $service->download($app);
     }
+
+    /**
+     * Resend or Regenerate Google Meet Interview Link & Notifications
+     * POST /api/admin/assessments/results/{attemptId}/resend-interview
+     */
+    public function resendInterview(Request $request, $attemptId)
+    {
+        $attempt = AssessmentAttempt::with(['user', 'assessment'])->findOrFail($attemptId);
+
+        // Optional custom meeting link passed by admin
+        $customMeetLink = $request->input('meet_link');
+        if (!empty($customMeetLink)) {
+            $attempt->update(['meet_link' => $customMeetLink]);
+        } else {
+            // Force regenerate
+            $attempt->update(['meet_link' => null]);
+        }
+
+        \App\Services\InterviewAutomationService::processQualifiedAttempt($attempt);
+
+        $attempt->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'New interview link generated and dispatched via Mail & WhatsApp successfully!',
+            'data' => [
+                'meet_link' => $attempt->meet_link,
+                'scheduled_at' => $attempt->interview_scheduled_at?->toISOString(),
+                'email_sent' => (bool)$attempt->email_sent,
+                'whatsapp_sent' => (bool)$attempt->whatsapp_sent,
+            ]
+        ]);
+    }
 }

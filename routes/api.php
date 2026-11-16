@@ -1203,6 +1203,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('results/{attemptId}', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'attemptDetail']);
             Route::post('results/{attemptId}/approve-internship', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'approveInternship']);
             Route::get('results/{attemptId}/download-appointment-letter', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'downloadAppointmentLetter']);
+            Route::post('results/{attemptId}/resend-interview', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'resendInterview']);
 
             // Question Management, CRUD & Excel Import
             Route::get('questions/sample-template', [\App\Http\Controllers\Api\Admin\AdminAssessmentQuestionController::class, 'sampleTemplate']);
