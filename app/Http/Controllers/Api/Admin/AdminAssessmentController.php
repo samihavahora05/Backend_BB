@@ -101,12 +101,118 @@ class AdminAssessmentController extends Controller
                 ];
             });
 
+        $application = \App\Models\InternshipApplication::with('appointmentLetter')
+            ->where('user_id', $attempt->user_id)
+            ->latest()
+            ->first();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'attempt' => $attempt,
                 'answers' => $answers,
+                'application' => $application,
+                'is_signed' => !empty($application?->signed_at) || !empty($application?->signature_path),
+                'signed_at' => $application?->signed_at?->toISOString(),
+                'signature_url' => $application?->signature_path ? asset('storage/' . $application->signature_path) : null,
+                'is_approved' => $application?->status === 'approved',
             ]
         ]);
+    }
+
+    /**
+     * Admin approves internship and sends Offer Letter Email
+     * POST /api/admin/assessments/results/{attemptId}/approve-internship
+     */
+    public function approveInternship(Request $request, $attemptId)
+    {
+        $attempt = AssessmentAttempt::with(['user', 'assessment'])->findOrFail($attemptId);
+        $user = $attempt->user;
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'User not found.'], 404);
+        }
+
+        $app = \App\Models\InternshipApplication::where('user_id', $user->id)->latest()->first();
+
+        if (!$app) {
+            $internship = \App\Models\Internship::first();
+            $app = \App\Models\InternshipApplication::create([
+                'user_id' => $user->id,
+                'internship_id' => $internship?->id ?? 1,
+                'status' => 'pending_approval',
+                'applicant_name' => $user->name,
+                'applicant_email' => $user->email,
+                'applicant_phone' => $user->phone,
+            ]);
+        }
+
+        // Verify that candidate has signed the appointment letter before approval
+        if (empty($app->signed_at) && empty($app->signature_path) && empty($app->candidate_signature_base64)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Candidate has not E-Signed the Appointment Letter yet. Signature is mandatory before approval.'
+            ], 422);
+        }
+
+        // 1. Approve application
+        $app->update([
+            'status' => 'approved',
+            'approved_at' => now(),
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'offer_letter_sent_at' => now(),
+        ]);
+
+        // 2. Generate / compile official appointment letter with appointment service
+        try {
+            $appointmentService = app(\App\Services\AppointmentLetterService::class);
+            $appointmentService->ensureSchema();
+            $options = [
+                'designation' => $request->input('designation', 'Software Development Intern'),
+                'department' => $request->input('department', 'Engineering & Tech'),
+                'stipend_amount' => $request->input('stipend_amount', 18000),
+                'signatory_name' => $request->input('signatory_name', 'BlueBoxx Operations Head'),
+            ];
+            $letter = $appointmentService->generate($app, auth()->id(), $options);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Appointment letter generation note: " . $e->getMessage());
+        }
+
+        // 3. Send Official Offer Letter Email
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(
+                new \App\Mail\InternshipApprovalMail($app, $letter ?? null)
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Offer letter email delivery failed: " . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Internship approved successfully! Offer Letter has been mailed to the intern.',
+            'data' => [
+                'application_id' => $app->id,
+                'status' => $app->status,
+                'approved_at' => $app->approved_at->toISOString(),
+            ]
+        ]);
+    }
+
+    /**
+     * Download E-Signed Appointment Letter PDF for Admin
+     * GET /api/admin/assessments/results/{attemptId}/download-appointment-letter
+     */
+    public function downloadAppointmentLetter(Request $request, $attemptId)
+    {
+        $attempt = AssessmentAttempt::findOrFail($attemptId);
+        $app = \App\Models\InternshipApplication::with('appointmentLetter')->where('user_id', $attempt->user_id)->latest()->first();
+
+        if (!$app) {
+            return response()->json(['success' => false, 'message' => 'No application found for candidate.'], 404);
+        }
+
+        $service = app(\App\Services\AppointmentLetterService::class);
+        return $service->download($app);
     }
 }

@@ -184,4 +184,125 @@ class InternDashboardController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Get Appointment Letter details for Intern review & E-Sign
+     * GET /api/intern/appointment-letter
+     */
+    public function getAppointmentLetter(Request $request)
+    {
+        $user = $request->user();
+
+        // Find active application or create a default onboarding appointment application
+        $app = \App\Models\InternshipApplication::with(['appointmentLetter', 'internship'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->first();
+
+        // If no formal application yet, link with qualified assessment attempt
+        $attempt = \App\Models\AssessmentAttempt::where('user_id', $user->id)
+            ->where('score', '>=', 30)
+            ->where('status', 'completed')
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'has_qualified' => (bool)$attempt,
+                'application' => $app,
+                'is_signed' => !empty($app?->signed_at) || !empty($app?->signature_path),
+                'signed_at' => $app?->signed_at?->toISOString(),
+                'status' => $app?->status ?? ($attempt ? 'ready_for_esign' : 'pending_assessment'),
+                'candidate_name' => $user->name,
+                'candidate_email' => $user->email,
+                'candidate_phone' => $user->phone,
+                'appointment_letter' => $app?->appointmentLetter,
+            ]
+        ]);
+    }
+
+    /**
+     * E-Sign Appointment Letter (Save Drawn or Uploaded Base64 Signature)
+     * POST /api/intern/appointment-letter/sign
+     */
+    public function signAppointmentLetter(Request $request)
+    {
+        $request->validate([
+            'signature' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $sigData = $request->input('signature');
+
+        // Find existing application or create an approved internship onboarding record
+        $app = \App\Models\InternshipApplication::where('user_id', $user->id)->latest()->first();
+
+        if (!$app) {
+            $internship = \App\Models\Internship::first();
+            $app = \App\Models\InternshipApplication::create([
+                'user_id' => $user->id,
+                'internship_id' => $internship?->id ?? 1,
+                'status' => 'pending_approval',
+                'applicant_name' => $user->name,
+                'applicant_email' => $user->email,
+                'applicant_phone' => $user->phone,
+            ]);
+        }
+
+        // Process Base64 Signature image and save to storage
+        $filename = null;
+        if (str_starts_with($sigData, 'data:image')) {
+            if (preg_match('/^data:image\/(\w+);base64,/', $sigData, $type)) {
+                $data = substr($sigData, strpos($sigData, ',') + 1);
+                $type = strtolower($type[1]);
+                if (!in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    $type = 'png';
+                }
+                $decoded = base64_decode($data);
+                if ($decoded !== false) {
+                    $filename = 'signatures/signature_' . $user->id . '_' . time() . '.' . $type;
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                    \Illuminate\Support\Facades\Storage::disk('local')->put($filename, $decoded);
+                }
+            }
+        }
+
+        $app->update([
+            'signature_path' => $filename,
+            'candidate_signature_base64' => $sigData,
+            'signed_at' => now(),
+            'terms_accepted' => true,
+            'terms_accepted_at' => now(),
+            'status' => 'signed_pending_approval',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Appointment Letter E-Signed successfully. Submitted to Admin for final approval.',
+            'data' => [
+                'application_id' => $app->id,
+                'signed_at' => $app->signed_at->toISOString(),
+                'status' => $app->status,
+                'signature_url' => $filename ? asset('storage/' . $filename) : null,
+            ]
+        ]);
+    }
+
+    /**
+     * Download Appointment Letter PDF
+     * GET /api/intern/appointment-letter/download
+     */
+    public function downloadAppointmentLetter(Request $request)
+    {
+        $user = $request->user();
+        $app = \App\Models\InternshipApplication::with('appointmentLetter')->where('user_id', $user->id)->latest()->first();
+
+        if (!$app) {
+            return response()->json(['success' => false, 'message' => 'No application record found.'], 404);
+        }
+
+        $service = app(\App\Services\AppointmentLetterService::class);
+        return $service->download($app);
+    }
 }

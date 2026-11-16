@@ -197,22 +197,22 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
 });
 
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        
-        // Role Change Requests
-        Route::post('/role-change-requests', [\App\Http\Controllers\Api\RoleChangeRequestController::class, 'store']);
-        Route::get('/role-change-requests/my-status', [\App\Http\Controllers\Api\RoleChangeRequestController::class, 'myStatus']);
-        
-        // Notifications
-        Route::prefix('notifications')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
-            Route::put('/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
-            Route::put('/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
-            Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
-        });
-        Route::post('/change-password', [AuthController::class, 'changePassword']);
-        Route::get('/me', [AuthController::class, 'me']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Role Change Requests
+    Route::post('/role-change-requests', [\App\Http\Controllers\Api\RoleChangeRequestController::class, 'store']);
+    Route::get('/role-change-requests/my-status', [\App\Http\Controllers\Api\RoleChangeRequestController::class, 'myStatus']);
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::put('/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+        Route::put('/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+        Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+    });
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
+    Route::get('/me', [AuthController::class, 'me']);
 
 
     // Checkout Integration
@@ -227,11 +227,11 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/courses', [\App\Http\Controllers\Api\Student\StudentCourseController::class, 'index']);
         Route::post('/courses/{course_id}/lessons/{lesson_id}/complete', [\App\Http\Controllers\Api\Student\StudentCourseController::class, 'markLessonComplete']);
         Route::get('/dashboard', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
-        
+
         // New Real Data Endpoints
         Route::get('/referrals', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'index']);
         Route::post('/referrals/track/{code}', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'trackClick']);
-        
+
         // Profile
         Route::get('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'getProfile']);
         Route::put('/profile', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'updateProfile']);
@@ -280,7 +280,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/internships', [\App\Http\Controllers\Api\Student\StudentInternshipController::class, 'index']);
         Route::get('/scholarships', [\App\Http\Controllers\Api\Student\StudentScholarshipController::class, 'index']);
         Route::get('/certificates', [\App\Http\Controllers\Api\Student\StudentCertificateController::class, 'index']);
-        
+
         // Resume
         Route::post('/resume/upload', [\App\Http\Controllers\Api\Student\StudentResumeController::class, 'upload']);
     });
@@ -292,15 +292,15 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Dashboard
         Route::get('/dashboard', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'index']);
         Route::get('/analytics', [\App\Http\Controllers\Api\Company\CompanyDashboardController::class, 'analytics']);
-        
+
         // Jobs
         Route::apiResource('/jobs', \App\Http\Controllers\Api\Company\CompanyJobController::class);
         Route::put('/jobs/{id}/status', [\App\Http\Controllers\Api\Company\CompanyJobController::class, 'updateStatus']);
-        
+
         // Internships
         Route::apiResource('/internships', \App\Http\Controllers\Api\Company\CompanyInternshipController::class);
         Route::put('/internships/{id}/status', [\App\Http\Controllers\Api\Company\CompanyInternshipController::class, 'updateStatus']);
-        
+
         // Applicants
         Route::get('/applicants', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'index']);
         Route::get('/applicants/{id}', [\App\Http\Controllers\Api\Company\CompanyApplicantController::class, 'show']);
@@ -327,20 +327,20 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Company Intern Performance Tracking
         Route::get('/performance', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'performance']);
         Route::get('/performance/{internId}', [\App\Http\Controllers\Api\Company\CompanyInternTaskController::class, 'internPerformanceDetail']);
-        
+
         // Interviews
         Route::get('/interviews', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'index']);
         Route::post('/interviews', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'store']);
         Route::put('/interviews/{id}', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'update']);
         Route::delete('/interviews/{id}', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'destroy']);
         Route::put('/interviews/{id}/status', [\App\Http\Controllers\Api\Company\CompanyInterviewController::class, 'updateStatus']);
-        
+
         // Offers
         Route::get('/offers', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'index']);
         Route::post('/offers', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'store']);
         Route::put('/offers/{id}', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'update']);
         Route::delete('/offers/{id}', [\App\Http\Controllers\Api\Company\CompanyOfferController::class, 'destroy']);
-        
+
         // Settings & Team
         Route::get('/settings', [\App\Http\Controllers\Company\CompanySettingsController::class, 'getSettings']);
         Route::put('/settings', [\App\Http\Controllers\Company\CompanySettingsController::class, 'updateSettings']);
@@ -359,24 +359,24 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::middleware(['auth:sanctum', 'role:job-seeker|jobseeker'])->prefix('jobseeker')->name('jobseeker.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'index']);
-        
+
         // Applications
         Route::get('/applications', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'applications']);
         Route::post('/applications/{id}/withdraw', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'withdrawApplication']);
-        
+
         // Interviews
         Route::get('/interviews', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'interviews']);
-        
+
         // Offers
         Route::get('/offers', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'offers']);
         Route::post('/offers/{id}/accept', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'acceptOffer']);
         Route::post('/offers/{id}/reject', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'rejectOffer']);
-        
+
         // Profile
         Route::get('/profile', [\App\Http\Controllers\Api\JobseekerProfileController::class, 'show']);
         Route::put('/profile', [\App\Http\Controllers\Api\JobseekerProfileController::class, 'update']);
         Route::post('/resume', [\App\Http\Controllers\Api\JobseekerProfileController::class, 'uploadResume']);
-        
+
         // Settings
         Route::get('/settings', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'settings']);
         Route::put('/settings', [\App\Http\Controllers\Api\JobseekerDashboardController::class, 'updateSettings']);
@@ -404,6 +404,11 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('/assessments/{id}/submit', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'submit']);
         Route::get('/assessments/{id}/result/{attemptId}', [\App\Http\Controllers\Api\Intern\InternAssessmentController::class, 'getResult']);
 
+        // Appointment Letter & E-Sign Flow for Intern
+        Route::get('/appointment-letter', [\App\Http\Controllers\Api\InternDashboardController::class, 'getAppointmentLetter']);
+        Route::post('/appointment-letter/sign', [\App\Http\Controllers\Api\InternDashboardController::class, 'signAppointmentLetter']);
+        Route::get('/appointment-letter/download', [\App\Http\Controllers\Api\InternDashboardController::class, 'downloadAppointmentLetter']);
+
         // Intern Task Management & Mandatory Proof Submission
         Route::get('/tasks/performance', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'performance']);
         Route::get('/tasks', [\App\Http\Controllers\Api\Intern\InternTaskController::class, 'index']);
@@ -428,7 +433,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     // Dashboard Stats API
     Route::get('/dashboard/student', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
     Route::get('/dashboard/student/placement-progress', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'placementProgress']);
-    
+
     // Global Notification Routes
 
     Route::prefix('notifications')->group(function () {
@@ -437,7 +442,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
     });
-    
+
     Route::post('/notifications/device-token', [NotificationController::class, 'storeDeviceToken']);
     Route::get('/certificates', [CertificateController::class, 'index']);
     Route::apiResource('mentor-sessions', MentorSessionController::class);
@@ -488,7 +493,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Mentor Sessions (Unified & Deduplicated - Only 1 Card per Call)
         Route::get('/mentor-sessions', function (\Illuminate\Http\Request $r) {
             $userId = $r->user()->id;
-            
+
             $sessions = \App\Models\MentorSession::with(['expert', 'expertProfile.user'])
                 ->where('student_id', $userId)
                 ->orderBy('scheduled_at', 'desc')
@@ -553,25 +558,25 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Checkout & Razorpay Payments
         Route::post('/checkout/create-order', [\App\Http\Controllers\Api\CheckoutController::class, 'createOrder']);
         Route::post('/checkout/verify-payment', [\App\Http\Controllers\Api\CheckoutController::class, 'verifyPayment']);
-    Route::post('/checkout/payment-failed', [\App\Http\Controllers\Api\CheckoutController::class, 'recordPaymentFailure']);
+        Route::post('/checkout/payment-failed', [\App\Http\Controllers\Api\CheckoutController::class, 'recordPaymentFailure']);
 
         // Referrals
         Route::get('/referrals', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'index']);
         Route::post('/referrals/track/{code}', [\App\Http\Controllers\Api\Student\StudentReferralController::class, 'trackClick'])->withoutMiddleware(['auth:sanctum']);
 
         // Certificates earned
-        Route::get('/certificates', function(\Illuminate\Http\Request $r) {
+        Route::get('/certificates', function (\Illuminate\Http\Request $r) {
             $certs = \App\Models\IssuedCertificate::with(['course'])
                 ->where('user_id', $r->user()->id)
                 ->where('status', 'Issued')
                 ->latest('issued_at')
                 ->get()
                 ->map(fn($c) => [
-                    'id'                 => $c->id,
+                    'id' => $c->id,
                     'certificate_number' => $c->certificate_number,
-                    'course'             => $c->course->title ?? 'N/A',
-                    'issued_at'          => $c->issued_at?->format('M d, Y'),
-                    'status'             => $c->status,
+                    'course' => $c->course->title ?? 'N/A',
+                    'issued_at' => $c->issued_at?->format('M d, Y'),
+                    'status' => $c->status,
                 ]);
             return response()->json(['success' => true, 'data' => $certs]);
         });
@@ -580,20 +585,20 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/payments', [\App\Http\Controllers\Api\Student\StudentOrderController::class, 'index']);
 
         // Orders & Payments history
-        Route::get('/orders', function(\Illuminate\Http\Request $r) {
+        Route::get('/orders', function (\Illuminate\Http\Request $r) {
             $orders = \App\Models\Order::with(['items', 'payments'])
                 ->where('user_id', $r->user()->id)
                 ->latest()
                 ->get()
                 ->map(fn($o) => [
-                    'id'           => $o->id,
+                    'id' => $o->id,
                     'order_number' => $o->order_number,
-                    'amount'       => $o->total_amount,
-                    'status'       => $o->status,
-                    'items'        => $o->items->map(fn($i) => [
+                    'amount' => $o->total_amount,
+                    'status' => $o->status,
+                    'items' => $o->items->map(fn($i) => [
                         'type' => class_basename($i->purchasable_type),
-                        'id'   => $i->purchasable_id,
-                        'price'=> $i->price,
+                        'id' => $i->purchasable_id,
+                        'price' => $i->price,
                     ]),
                     'paid_at' => $o->updated_at?->format('M d, Y'),
                 ]);
@@ -617,7 +622,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             return response()->json([
                 'success' => true,
                 'message' => 'Profile photo updated successfully.',
-                'avatar'  => asset('storage/' . $path),
+                'avatar' => asset('storage/' . $path),
             ]);
         });
         Route::delete('/account', [\App\Http\Controllers\Api\Student\StudentProfileController::class, 'deleteAccount']);
@@ -625,7 +630,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Dashboard Stats
         Route::get('/dashboard/student', [\App\Http\Controllers\Api\Student\StudentDashboardController::class, 'metrics']);
     });
-    
+
     // Expert Dashboard & Bookings API
     Route::middleware('role:expert')->prefix('expert')->name('expert.')->group(function () {
         Route::get('/profile', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'getProfile']);
@@ -647,13 +652,13 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('/bookings/{id}', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'showBooking']);
         Route::put('/bookings/{id}/status', [\App\Http\Controllers\Api\Expert\ExpertDashboardController::class, 'updateBookingStatus']);
     });
-    
+
     // College Portal API (Placement Cell)
     Route::middleware('role:college')->prefix('college')->name('college.')->group(function () {
         // Dashboard & Students
         Route::get('/dashboard', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'index']);
         Route::get('/students', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'students']);
-        
+
         // Placement Drives
         Route::apiResource('/placement-drives', \App\Http\Controllers\Api\College\CollegePlacementDriveController::class);
         Route::post('/placement-drives/{id}/duplicate', [\App\Http\Controllers\Api\College\CollegePlacementDriveController::class, 'duplicate']);
@@ -661,7 +666,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('/placement-drives/{id}/close', [\App\Http\Controllers\Api\College\CollegePlacementDriveController::class, 'close']);
         Route::put('/placement-drives/{id}/archive', [\App\Http\Controllers\Api\College\CollegePlacementDriveController::class, 'archive']);
         Route::get('/placement-drives/{id}/export', [\App\Http\Controllers\Api\College\CollegePlacementDriveController::class, 'export']);
-        
+
         // Internship Drives
         Route::apiResource('/internship-drives', \App\Http\Controllers\Api\College\CollegeInternshipDriveController::class);
         Route::post('/internship-drives/{id}/duplicate', [\App\Http\Controllers\Api\College\CollegeInternshipDriveController::class, 'duplicate']);
@@ -669,29 +674,29 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('/internship-drives/{id}/close', [\App\Http\Controllers\Api\College\CollegeInternshipDriveController::class, 'close']);
         Route::put('/internship-drives/{id}/archive', [\App\Http\Controllers\Api\College\CollegeInternshipDriveController::class, 'archive']);
         Route::get('/internship-drives/{id}/export', [\App\Http\Controllers\Api\College\CollegeInternshipDriveController::class, 'export']);
-        
+
         // BlueBoxx Admin info (for drive creation — only BlueBoxx can be partner)
-        Route::get('/blueboxx-admin', function() {
+        Route::get('/blueboxx-admin', function () {
             $admin = \App\Models\User::role('super_admin')->first();
             return response()->json(['success' => true, 'data' => $admin ? ['id' => $admin->id, 'name' => $admin->name] : null]);
         });
-        
+
         // Connected Companies
         Route::get('/companies', [\App\Http\Controllers\Api\College\CollegeCompanyController::class, 'index']);
         Route::delete('/companies/{id}', [\App\Http\Controllers\Api\College\CollegeCompanyController::class, 'destroy']);
-        
+
         // Student Management
         Route::post('/students', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'storeStudent']);
         Route::delete('/students/{id}', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'destroyStudent']);
         Route::get('/students/export', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'exportStudents']);
         Route::post('/students/import', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'importStudents']);
-        
+
         // Reports
         Route::get('/reports/export', [\App\Http\Controllers\Api\College\CollegeDashboardController::class, 'exportReports']);
-        
+
         // Notifications
-        Route::get('/notifications', function(\Illuminate\Http\Request $request) {
-            $notifications = $request->user()->notifications()->take(20)->get()->map(function($n) {
+        Route::get('/notifications', function (\Illuminate\Http\Request $request) {
+            $notifications = $request->user()->notifications()->take(20)->get()->map(function ($n) {
                 return [
                     'id' => $n->id,
                     'type' => $n->type,
@@ -702,7 +707,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             });
             return response()->json(['success' => true, 'data' => $notifications]);
         });
-        Route::put('/notifications/read-all', function(\Illuminate\Http\Request $request) {
+        Route::put('/notifications/read-all', function (\Illuminate\Http\Request $request) {
             $request->user()->unreadNotifications->markAsRead();
             return response()->json(['success' => true]);
         });
@@ -711,33 +716,33 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
     // College Profile Settings — accessible to college AND super_admin
     Route::prefix('college')->name('college_api.')->group(function () {
-        Route::get('/profile', function(\Illuminate\Http\Request $request) {
+        Route::get('/profile', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
             $profile = \Illuminate\Support\Facades\DB::table('college_profiles')->where('user_id', $user->id)->first();
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'name'             => $user->name,
-                    'email'            => $user->email,
-                    'phone'            => $profile->phone ?? '',
-                    'website'          => $profile->website ?? '',
-                    'address'          => $profile->address ?? '',
-                    'contact_person'   => $profile->contact_person ?? '',
-                    'placement_drive'  => $profile->placement_officer ?? '2026 Batch',
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $profile->phone ?? '',
+                    'website' => $profile->website ?? '',
+                    'address' => $profile->address ?? '',
+                    'contact_person' => $profile->contact_person ?? '',
+                    'placement_drive' => $profile->placement_officer ?? '2026 Batch',
                     'target_placement' => '90',
                 ]
             ]);
         });
-        Route::put('/profile', function(\Illuminate\Http\Request $request) {
+        Route::put('/profile', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
             $data = $request->validate([
-                'name'             => 'sometimes|string|max:255',
-                'email'            => 'sometimes|nullable|email|max:255',
-                'phone'            => 'sometimes|nullable|string|max:30',
-                'website'          => 'sometimes|nullable|string|max:255',
-                'address'          => 'sometimes|nullable|string|max:500',
-                'contact_person'   => 'sometimes|nullable|string|max:255',
-                'placement_drive'  => 'sometimes|nullable|string|max:100',
+                'name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|nullable|email|max:255',
+                'phone' => 'sometimes|nullable|string|max:30',
+                'website' => 'sometimes|nullable|string|max:255',
+                'address' => 'sometimes|nullable|string|max:500',
+                'contact_person' => 'sometimes|nullable|string|max:255',
+                'placement_drive' => 'sometimes|nullable|string|max:100',
                 'target_placement' => 'sometimes|nullable|string|max:10',
             ]);
 
@@ -751,15 +756,15 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             \Illuminate\Support\Facades\DB::table('college_profiles')->updateOrInsert(
                 ['user_id' => $user->id],
                 [
-                    'phone'             => $data['phone'] ?? null,
-                    'website'           => $data['website'] ?? null,
-                    'address'           => $data['address'] ?? null,
-                    'contact_person'    => $data['contact_person'] ?? null,
+                    'phone' => $data['phone'] ?? null,
+                    'website' => $data['website'] ?? null,
+                    'address' => $data['address'] ?? null,
+                    'contact_person' => $data['contact_person'] ?? null,
                     'placement_officer' => $data['placement_drive'] ?? null,
-                    'college_name'      => $data['name'] ?? $user->name,
-                    'email'             => $data['email'] ?? $user->email,
-                    'updated_at'        => now(),
-                    'created_at'        => now(),
+                    'college_name' => $data['name'] ?? $user->name,
+                    'email' => $data['email'] ?? $user->email,
+                    'updated_at' => now(),
+                    'created_at' => now(),
                 ]
             );
 
@@ -770,12 +775,12 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     // Auth Scholarships & Contests (Applying)
     Route::post('/scholarships/{id}/apply', [ScholarshipProgramController::class, 'apply']);
     Route::post('/contests/{id}/register', [ContestController::class, 'registerUser']);
-    
+
     // Auth Blog Interactions & Reviews
     Route::post('/blogs/{id}/like', [BlogController::class, 'toggleLike']);
     Route::post('/blogs/{id}/comments', [BlogController::class, 'addComment']);
     Route::post('/reviews', [ReviewController::class, 'store']);
-    
+
     // Admin API
     Route::middleware(['auth:sanctum', 'role:super_admin|admin'])->prefix('admin')->name('admin.')->group(function () {
         // --- CMS Ecosystem (Admin) ---
@@ -783,17 +788,17 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::post('cms/companies', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storeCompany']);
         Route::put('cms/companies/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updateCompany']);
         Route::delete('cms/companies/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deleteCompany']);
-        
+
         Route::get('cms/placement-partners', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getPlacementPartners']);
         Route::post('cms/placement-partners', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storePlacementPartner']);
         Route::put('cms/placement-partners/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updatePlacementPartner']);
         Route::delete('cms/placement-partners/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deletePlacementPartner']);
-        
+
         Route::get('cms/colleges', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getColleges']);
         Route::post('cms/colleges', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storeCollege']);
         Route::put('cms/colleges/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updateCollege']);
         Route::delete('cms/colleges/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'deleteCollege']);
-        
+
         Route::get('cms/portfolios', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'getPortfolios']);
         Route::post('cms/portfolios', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'storePortfolio']);
         Route::put('cms/portfolios/{id}', [\App\Http\Controllers\Api\Admin\CmsEcosystemController::class, 'updatePortfolio']);
@@ -838,7 +843,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('approvals/{id}/approve', [ApprovalController::class, 'approve']);
         Route::put('approvals/{id}/reject', [ApprovalController::class, 'reject']);
         Route::put('approvals/{id}/suspend', [ApprovalController::class, 'suspend']);
-        
+
         // Leads & CRM API
         Route::get('crm/dashboard', [\App\Http\Controllers\Api\Admin\AdminCRMController::class, 'dashboard']);
         Route::delete('leads/bulk', [\App\Http\Controllers\Api\Admin\AdminLeadController::class, 'bulkDelete']);
@@ -856,26 +861,26 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // System Settings
         Route::get('settings', [\App\Http\Controllers\Api\Admin\AdminSystemSettingController::class, 'index']);
         Route::post('settings', [\App\Http\Controllers\Api\Admin\AdminSystemSettingController::class, 'update']);
-        
+
         // System Settings V2 (Enterprise Module)
         Route::post('system-settings/smtp/test', [\App\Http\Controllers\Api\Admin\SystemSettingsController::class, 'testSmtp']);
         Route::get('system-settings/{group}', [\App\Http\Controllers\Api\Admin\SystemSettingsController::class, 'getSettings']);
         Route::post('system-settings/{group}', [\App\Http\Controllers\Api\Admin\SystemSettingsController::class, 'updateSettings']);
-        
+
         Route::post('system-licenses/{id}/action', [\App\Http\Controllers\Api\Admin\SystemLicenseController::class, 'action']);
         Route::apiResource('system-licenses', \App\Http\Controllers\Api\Admin\SystemLicenseController::class);
-        
+
         Route::apiResource('system-email-templates', \App\Http\Controllers\Api\Admin\SystemEmailTemplateController::class);
-        
+
         Route::get('system-api-credentials', [\App\Http\Controllers\Api\Admin\SystemApiController::class, 'index']);
         Route::post('system-api-credentials/{provider}/show-secret', [\App\Http\Controllers\Api\Admin\SystemApiController::class, 'showSecret']);
         Route::post('system-api-credentials/{provider}/test', [\App\Http\Controllers\Api\Admin\SystemApiController::class, 'testConnection']);
         Route::put('system-api-credentials/{provider}', [\App\Http\Controllers\Api\Admin\SystemApiController::class, 'update']);
         Route::delete('system-api-credentials/{provider}', [\App\Http\Controllers\Api\Admin\SystemApiController::class, 'destroy']);
-        
+
         // System Logs
         Route::get('/security/logs', [\App\Http\Controllers\Api\Admin\AdminLogController::class, 'index']);
-        
+
         // Session Management
         Route::prefix('security/sessions')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\Admin\AdminSessionController::class, 'index']);
@@ -899,10 +904,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::prefix('certificates')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'index']);
             Route::post('/', [\App\Http\Controllers\Api\Admin\AdminCertificateController::class, 'store']);
-            
+
             Route::get('/settings', [\App\Http\Controllers\Api\Admin\CertificateSettingController::class, 'show']);
             Route::put('/settings', [\App\Http\Controllers\Api\Admin\CertificateSettingController::class, 'update']);
-            
+
             Route::apiResource('fonts', \App\Http\Controllers\Api\Admin\CertificateFontController::class)->only(['index', 'store', 'destroy']);
             Route::apiResource('templates', \App\Http\Controllers\Api\Admin\CertificateTemplateController::class);
         });
@@ -911,7 +916,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Blog System (Enterprise)
         Route::post('blogs/upload-image', [\App\Http\Controllers\Api\Admin\AdminBlogController::class, 'uploadImage']);
         Route::apiResource('blogs', \App\Http\Controllers\Api\Admin\AdminBlogController::class);
-        
+
         // Admin Roles & Permissions
         Route::post('roles/import', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'importRoles']);
         Route::get('roles/export', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'exportRoles']);
@@ -937,46 +942,46 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // Admin Lead Management
         Route::apiResource('consultations', ConsultationController::class)->except(['store']);
         Route::apiResource('callback-requests', CallbackRequestController::class)->except(['store']);
-        
+
         // Admin Scholarships & Contests
         Route::apiResource('scholarships', ScholarshipProgramController::class)->except(['index', 'show']);
         Route::get('contests', [ContestController::class, 'adminIndex']);
         Route::apiResource('contests', ContestController::class)->except(['index', 'show']);
-        
+
         // Admin Site Content (FAQs, Testimonials, Reviews, Partners, Success Stories)
         Route::apiResource('faqs', FaqController::class)->except(['index', 'show']);
         Route::apiResource('testimonials', TestimonialController::class)->except(['index', 'show']);
         Route::apiResource('reviews', ReviewController::class)->except(['index', 'store']);
         Route::apiResource('placement-partners', PlacementPartnerController::class)->except(['index', 'show']);
         Route::apiResource('success-stories', SuccessStoryController::class)->except(['index', 'show']);
-        
+
         // Admin Verify Profile endpoint
         Route::put('verify-profile/{user}', [UserController::class, 'verifyProfile']);
-        
+
         // Student Settings
         Route::get('students/settings', [\App\Http\Controllers\Api\Admin\AdminStudentSettingController::class, 'index']);
         Route::put('students/settings', [\App\Http\Controllers\Api\Admin\AdminStudentSettingController::class, 'update']);
-        
+
         // ----- Enterprise Student Management -----
         Route::prefix('students')->group(function () {
             // Bulk Actions
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminStudentController::class, 'bulkDelete']);
             Route::post('bulk-status', [\App\Http\Controllers\Api\Admin\AdminStudentController::class, 'bulkUpdateStatus']);
-            
+
             // Settings
             Route::get('settings', [\App\Http\Controllers\Api\Admin\AdminStudentSettingController::class, 'index']);
             Route::post('settings', [\App\Http\Controllers\Api\Admin\AdminStudentSettingController::class, 'update']);
-            
+
             Route::get('export', [\App\Http\Controllers\Api\Admin\AdminStudentController::class, 'export']);
             Route::post('import', [\App\Http\Controllers\Api\Admin\AdminStudentImportController::class, 'import']);
-            
+
             Route::put('{id}/suspend', [\App\Http\Controllers\Api\Admin\AdminStudentController::class, 'suspend']);
             Route::put('{id}/activate', [\App\Http\Controllers\Api\Admin\AdminStudentController::class, 'activate']);
             Route::post('{id}/reset-password', [\App\Http\Controllers\Api\Admin\AdminStudentController::class, 'resetPassword']);
             Route::get('{id}/dashboard-data', [\App\Http\Controllers\Api\Admin\AdminStudentDashboardController::class, 'getAggregatedData']);
         });
         Route::apiResource('students', \App\Http\Controllers\Api\Admin\AdminStudentController::class);
-        
+
         // ----- Enterprise ATS Jobs Management -----
         Route::match(['post', 'get'], 'jobs/import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
         Route::match(['post', 'get'], 'jobs-import', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'importCsv']);
@@ -989,7 +994,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('export', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'export']);
             Route::get('dashboard-metrics', [\App\Http\Controllers\Api\Admin\AdminJobDashboardController::class, 'getMetrics']);
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'duplicate'])->where('id', '[0-9]+');
-            
+
             Route::get('{id}/applications', [\App\Http\Controllers\Api\Admin\AdminJobApplicationController::class, 'index'])->where('id', '[0-9]+');
             Route::match(['put', 'patch', 'post'], '{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'updateStatus'])->where('id', '[0-9]+');
         });
@@ -1000,25 +1005,25 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::get('placement-drives', [\App\Http\Controllers\Api\Admin\AdminPlacementDriveController::class, 'index']);
         Route::put('placement-drives/{id}/approve', [\App\Http\Controllers\Api\Admin\AdminPlacementDriveController::class, 'approve']);
         Route::put('placement-drives/{id}/reject', [\App\Http\Controllers\Api\Admin\AdminPlacementDriveController::class, 'reject']);
-        
+
         // College Internship Drives
         Route::get('internship-drives', [\App\Http\Controllers\Api\Admin\AdminInternshipDriveController::class, 'index']);
         Route::put('internship-drives/{id}/approve', [\App\Http\Controllers\Api\Admin\AdminInternshipDriveController::class, 'approve']);
         Route::put('internship-drives/{id}/reject', [\App\Http\Controllers\Api\Admin\AdminInternshipDriveController::class, 'reject']);
-        
+
         // ATS Applications & Interviews
         Route::prefix('job-applications')->group(function () {
             Route::get('{id}', [\App\Http\Controllers\Api\Admin\AdminJobApplicationController::class, 'show']);
             Route::put('{id}/status', [\App\Http\Controllers\Api\Admin\AdminJobApplicationController::class, 'updateStatus']);
-            
+
             // Interviews
             Route::post('{id}/interviews', [\App\Http\Controllers\Api\Admin\AdminJobInterviewController::class, 'schedule']);
         });
-        
+
         Route::prefix('job-interviews')->group(function () {
             Route::put('{id}/grade', [\App\Http\Controllers\Api\Admin\AdminJobInterviewController::class, 'grade']);
         });
-        
+
         // ----- Enterprise LMS Instructor Management -----
         Route::prefix('instructors')->group(function () {
             Route::get('export', [\App\Http\Controllers\Api\Admin\AdminInstructorController::class, 'export']);
@@ -1034,7 +1039,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         });
         Route::match(['put', 'patch', 'post'], 'instructors/{id}', [\App\Http\Controllers\Api\Admin\AdminInstructorController::class, 'update']);
         Route::apiResource('instructors', \App\Http\Controllers\Api\Admin\AdminInstructorController::class);
-        
+
         // ----- Enterprise Internship Management -----
         Route::prefix('internships')->group(function () {
             Route::post('bulk-update-status', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'bulkUpdateStatus']);
@@ -1042,12 +1047,12 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::post('{id}/duplicate', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'duplicate']);
             Route::get('stats', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'stats']);
             Route::get('sample-csv', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'sampleCsv']);
-                        Route::get('sample-template', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'sampleTemplate']);
+            Route::get('sample-template', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'sampleTemplate']);
             Route::post('import/preview', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'previewImport']);
             Route::post('import/confirm', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'confirmImport']);
             Route::post('import', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'importCsv']);
             Route::get('export', [\App\Http\Controllers\Api\Admin\InternshipController::class, 'export']);
-            
+
             // Global Applications & Submissions – use AdminInternshipController (no policy gates)
             Route::get('all-applications', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'allApplications']);
             Route::get('all-submissions', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'allSubmissions']);
@@ -1057,11 +1062,11 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('applications/{id}', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'showApplication']);
             Route::put('applications/{id}/status', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'updateApplicationStatus']);
             Route::post('applications/{id}/appointment-details', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'saveAppointmentDetails']);
-              Route::post('applications/{id}/approve', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'approveApplication']);
+            Route::post('applications/{id}/approve', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'approveApplication']);
             Route::post('applications/{id}/reject', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'rejectApplication']);
             Route::get('applications/{id}/appointment-letter', [\App\Http\Controllers\Api\Admin\AdminInternshipController::class, 'downloadAppointmentLetter']);
             Route::get('applications/{id}/signature', [\App\Http\Controllers\Api\Public\PublicInternshipController::class, 'signature']);
-            
+
             // Global Tasks Management across all companies
             Route::get('tasks/stats', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'stats']);
             Route::get('tasks/approved-interns', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'approvedInterns']);
@@ -1078,7 +1083,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('performance/{internId}', [\App\Http\Controllers\Api\Admin\AdminInternshipTaskController::class, 'internPerformanceDetail']);
         });
         Route::apiResource('internships', \App\Http\Controllers\Api\Admin\InternshipController::class);
-        
+
         // ----- Contests Management -----
         Route::prefix('contests')->group(function () {
             Route::get('registrations', [\App\Http\Controllers\ContestController::class, 'adminRegistrations']);
@@ -1092,7 +1097,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 
         // ----- Courses -----
         Route::prefix('courses')->group(function () {
-                        Route::get('sample-template', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'sampleTemplate']);
+            Route::get('sample-template', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'sampleTemplate']);
             Route::post('import/preview', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'previewImport']);
             Route::post('import/confirm', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'confirmImport']);
             Route::post('bulk-delete', [\App\Http\Controllers\Api\Admin\AdminCourseController::class, 'bulkDelete']);
@@ -1134,7 +1139,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::get('broadcasts', [\App\Http\Controllers\Api\Admin\AdminCommunicationController::class, 'broadcasts']);
             Route::post('broadcasts', [\App\Http\Controllers\Api\Admin\AdminCommunicationController::class, 'sendBroadcast']);
             Route::delete('broadcasts/{id}', [\App\Http\Controllers\Api\Admin\AdminCommunicationController::class, 'deleteBroadcast']);
-            
+
             // Announcements
             Route::get('announcements', [\App\Http\Controllers\Api\Admin\AdminCommunicationController::class, 'getAnnouncements']);
             Route::post('announcements', [\App\Http\Controllers\Api\Admin\AdminCommunicationController::class, 'storeAnnouncement']);
@@ -1160,7 +1165,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         // ----- Course Settings -----
         Route::get('course-settings', [\App\Http\Controllers\Api\Admin\AdminCourseSettingController::class, 'index']);
         Route::put('course-settings', [\App\Http\Controllers\Api\Admin\AdminCourseSettingController::class, 'update']);
-        
+
         // ----- Courses -----
         // ----- Course Curriculum -----
         Route::prefix('courses/{course_id}/curriculum')->group(function () {
@@ -1171,7 +1176,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::put('modules/reorder', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'reorderModules']);
             Route::put('modules/{id}', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'updateModule']);
             Route::delete('modules/{id}', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'destroyModule']);
-            
+
             Route::post('modules/{module_id}/lessons', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'storeLesson']);
             Route::put('lessons/reorder', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'reorderLessons']);
             Route::put('lessons/{id}', [\App\Http\Controllers\Api\Admin\AdminCourseCurriculumController::class, 'updateLesson']);
@@ -1196,6 +1201,8 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::prefix('assessments')->group(function () {
             Route::get('results', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'results']);
             Route::get('results/{attemptId}', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'attemptDetail']);
+            Route::post('results/{attemptId}/approve-internship', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'approveInternship']);
+            Route::get('results/{attemptId}/download-appointment-letter', [\App\Http\Controllers\Api\Admin\AdminAssessmentController::class, 'downloadAppointmentLetter']);
 
             // Question Management, CRUD & Excel Import
             Route::get('questions/sample-template', [\App\Http\Controllers\Api\Admin\AdminAssessmentQuestionController::class, 'sampleTemplate']);
@@ -1212,10 +1219,10 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::prefix('certificates')->group(function () {
             Route::get('stats', [\App\Http\Controllers\Api\Admin\CertificateController::class, 'stats']);
             Route::put('{id}/status', [\App\Http\Controllers\Api\Admin\CertificateController::class, 'updateStatus']);
-            
+
             Route::apiResource('templates', \App\Http\Controllers\Api\Admin\CertificateTemplateController::class);
             Route::apiResource('fonts', \App\Http\Controllers\Api\Admin\CertificateFontController::class);
-            
+
             Route::get('settings', [\App\Http\Controllers\Api\Admin\CertificateSettingController::class, 'show']);
             Route::put('settings', [\App\Http\Controllers\Api\Admin\CertificateSettingController::class, 'update']);
         });
@@ -1232,7 +1239,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
             Route::put('{id}/spam', [\App\Http\Controllers\Api\Admin\AdminCourseQAController::class, 'markSpam']);
         });
         Route::apiResource('course-qa', \App\Http\Controllers\Api\Admin\AdminCourseQAController::class);
-        
+
         // ----- Virtual Classes -----
         Route::prefix('virtual-classes')->group(function () {
             Route::get('stats', [\App\Http\Controllers\Api\Admin\VirtualClassController::class, 'stats']);
@@ -1279,7 +1286,7 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
         Route::put('zoom-settings', [\App\Http\Controllers\Api\Admin\ZoomSettingsController::class, 'update']);
         Route::post('zoom-settings/test-connection', [\App\Http\Controllers\Api\Admin\ZoomSettingsController::class, 'testConnection']);
 
-        
+
     });
 
     // Protected User Hiring Applications
@@ -1320,19 +1327,20 @@ Route::get('/qa-routes-map', function () {
         'api_endpoints' => [],
         'backend_routes' => []
     ];
-    
+
     $routes = \Illuminate\Support\Facades\Route::getRoutes();
     foreach ($routes as $route) {
         $uri = $route->uri();
         $methods = implode('|', $route->methods());
-        
-        if (str_starts_with($uri, '_ignition') || str_starts_with($uri, 'sanctum') || str_starts_with($uri, 'broadcasting')) continue;
-        
+
+        if (str_starts_with($uri, '_ignition') || str_starts_with($uri, 'sanctum') || str_starts_with($uri, 'broadcasting'))
+            continue;
+
         $routeInfo = [
             'uri' => $uri,
             'methods' => $methods,
         ];
-        
+
         if (str_starts_with($uri, 'api/')) {
             $scanData['api_endpoints'][] = $routeInfo;
         } else {
@@ -1343,7 +1351,7 @@ Route::get('/qa-routes-map', function () {
 });
 
 Route::get('/test-notify', function () {
-    $user = \App\Models\User::whereHas('roles', function($q) {
+    $user = \App\Models\User::whereHas('roles', function ($q) {
         $q->where('name', 'student');
     })->first();
 

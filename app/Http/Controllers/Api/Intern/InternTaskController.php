@@ -123,7 +123,7 @@ class InternTaskController extends Controller
     }
 
     /**
-     * 3. Start Task (Transition to in_progress)
+     * 3. Start Task (Transition to in_progress) with 25-minute sprint timer
      * POST /api/intern/tasks/{id}/start
      */
     public function start(Request $request, $id)
@@ -131,17 +131,24 @@ class InternTaskController extends Controller
         $internId = $this->getInternId($request);
         $task = InternshipTask::where('assigned_to', $internId)->findOrFail($id);
 
-        if ($task->status === 'assigned') {
-            $task->update([
-                'status'     => 'in_progress',
-                'start_date' => $task->start_date ?? now(),
-            ]);
+        $now = now();
+        $updates = [
+            'status'     => 'in_progress',
+            'start_date' => $task->start_date ?? $now,
+            'started_at' => $task->started_at ?? $now,
+        ];
+
+        // If due_date not set or task restarted, establish 25 minute deadline
+        if (!$task->due_date || $task->status === 'assigned') {
+            $updates['due_date'] = $now->copy()->addMinutes(25);
         }
+
+        $task->update($updates);
 
         return response()->json([
             'success' => true,
-            'message' => 'Task marked as In Progress.',
-            'data'    => $task,
+            'message' => 'Task sprint started! 25-minute timer has begun.',
+            'data'    => $task->fresh(),
         ]);
     }
 
@@ -185,6 +192,8 @@ class InternTaskController extends Controller
             'file'               => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,webp,zip|max:20480',
             'github_link'        => 'nullable|url|max:255',
             'video_link'         => 'nullable|url|max:255',
+            'time_taken_seconds' => 'nullable|integer|min:0',
+            'self_analysis'      => 'nullable|string|max:5000',
         ]);
 
         $uploadedProofFiles = $validated['proof_files'] ?? [];
@@ -204,6 +213,18 @@ class InternTaskController extends Controller
             ], 422);
         }
 
+        $now = now();
+        $timeTaken = $validated['time_taken_seconds'] ?? null;
+        if ($timeTaken === null && $task->started_at) {
+            $timeTaken = max(0, $now->diffInSeconds($task->started_at));
+        }
+
+        // If time taken is more than 25 minutes (1500 seconds), mark as delayed
+        $isDelayed = ($timeTaken !== null && $timeTaken > 1500);
+        if ($task->due_date && $now->gt($task->due_date)) {
+            $isDelayed = true;
+        }
+
         $latestVersion = InternshipSubmission::where('task_id', $task->id)->max('version') ?? 0;
         $nextVersion = $latestVersion + 1;
 
@@ -217,6 +238,9 @@ class InternTaskController extends Controller
             'file_paths'         => $uploadedProofFiles,
             'github_link'        => $validated['github_link'] ?? null,
             'video_link'         => $validated['video_link'] ?? null,
+            'time_taken_seconds' => $timeTaken,
+            'is_delayed'         => $isDelayed,
+            'self_analysis'      => $validated['self_analysis'] ?? null,
             'status'             => 'pending',
         ];
 
@@ -238,7 +262,11 @@ class InternTaskController extends Controller
         }
 
         $task->update([
-            'status' => 'submitted',
+            'status'                      => 'submitted',
+            'time_taken_seconds'          => $timeTaken,
+            'is_delayed'                  => $isDelayed,
+            'self_analysis'               => $validated['self_analysis'] ?? $task->self_analysis,
+            'self_analysis_submitted_at'  => !empty($validated['self_analysis']) ? $now : $task->self_analysis_submitted_at,
         ]);
 
         return response()->json([
@@ -248,6 +276,37 @@ class InternTaskController extends Controller
                 'task'       => $task->fresh(['latestSubmission']),
                 'submission' => $submission,
             ]
+        ]);
+    }
+
+    /**
+     * 4b. Submit Mandatory 5-Minute Self-Analysis for Task
+     * POST /api/intern/tasks/{id}/self-analysis
+     */
+    public function submitSelfAnalysis(Request $request, $id)
+    {
+        $internId = $this->getInternId($request);
+        $task = InternshipTask::where('assigned_to', $internId)->findOrFail($id);
+
+        $validated = $request->validate([
+            'self_analysis' => 'required|string|min:10|max:5000',
+        ]);
+
+        $task->update([
+            'self_analysis'              => $validated['self_analysis'],
+            'self_analysis_submitted_at' => now(),
+        ]);
+
+        // Also update latest submission if exists
+        $submission = InternshipSubmission::where('task_id', $task->id)->where('user_id', $internId)->latest()->first();
+        if ($submission) {
+            $submission->update(['self_analysis' => $validated['self_analysis']]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => '5-Minute Self-Analysis saved successfully! You can now proceed.',
+            'data'    => $task->fresh(['latestSubmission']),
         ]);
     }
 
