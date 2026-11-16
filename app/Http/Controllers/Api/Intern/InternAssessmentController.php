@@ -341,6 +341,8 @@ class InternAssessmentController extends Controller
                 ? round(($totalScore / $attempt->total_questions) * 100, 2) 
                 : 0.00;
 
+            $isQualified = ($totalScore >= 30);
+
             $attempt->update([
                 'submitted_at' => now(),
                 'correct_answers' => $totalCorrect,
@@ -350,8 +352,20 @@ class InternAssessmentController extends Controller
                 'percentage' => $percentage,
                 'status' => 'completed',
                 'category_scores' => $categoryStats,
+                'is_qualified' => $isQualified,
             ]);
         });
+
+        // Step 2 Automation: If score is 30+, automatically trigger Google Meet & notifications
+        if ($attempt->score >= 30) {
+            try {
+                \App\Services\InterviewAutomationService::processQualifiedAttempt($attempt);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Interview automation trigger error for attempt #{$attempt->id}: " . $e->getMessage());
+            }
+        }
+
+        $attempt->refresh();
 
         return response()->json([
             'success' => true,
@@ -366,6 +380,9 @@ class InternAssessmentController extends Controller
                 'unanswered' => $attempt->unanswered,
                 'category_scores' => $attempt->category_scores,
                 'submitted_at' => $attempt->submitted_at->toISOString(),
+                'is_qualified' => (bool)$attempt->is_qualified,
+                'meet_link' => $attempt->meet_link,
+                'interview_scheduled_at' => $attempt->interview_scheduled_at?->toISOString(),
             ]
         ]);
     }
@@ -428,6 +445,10 @@ class InternAssessmentController extends Controller
                     'percentage' => (float)$attempt->percentage,
                     'status' => $attempt->status,
                     'category_scores' => $attempt->category_scores,
+                    'is_qualified' => (bool)$attempt->is_qualified,
+                    'meet_link' => $attempt->meet_link,
+                    'interview_scheduled_at' => $attempt->interview_scheduled_at?->toISOString(),
+                    'interview_status' => $attempt->interview_status,
                 ],
                 'answers' => $answers,
             ]
