@@ -377,7 +377,7 @@ class InternAssessmentController extends Controller
 
             $isQualified = ($totalScore >= 30);
 
-            $attempt->update([
+            $updateData = [
                 'submitted_at' => now(),
                 'correct_answers' => $totalCorrect,
                 'wrong_answers' => $totalWrong,
@@ -386,8 +386,13 @@ class InternAssessmentController extends Controller
                 'percentage' => $percentage,
                 'status' => 'completed',
                 'category_scores' => $categoryStats,
-                'is_qualified' => $isQualified,
-            ]);
+            ];
+
+            if (Schema::hasColumn('assessment_attempts', 'is_qualified')) {
+                $updateData['is_qualified'] = $isQualified;
+            }
+
+            $attempt->update($updateData);
         });
 
         // Step 2 Automation: If score is 30+, automatically trigger Google Meet & notifications
@@ -413,10 +418,10 @@ class InternAssessmentController extends Controller
                 'wrong_answers' => $attempt->wrong_answers,
                 'unanswered' => $attempt->unanswered,
                 'category_scores' => $attempt->category_scores,
-                'submitted_at' => $attempt->submitted_at->toISOString(),
-                'is_qualified' => (bool)$attempt->is_qualified,
-                'meet_link' => $attempt->meet_link,
-                'interview_scheduled_at' => $attempt->interview_scheduled_at?->toISOString(),
+                'submitted_at' => $attempt->submitted_at ? $attempt->submitted_at->toISOString() : now()->toISOString(),
+                'is_qualified' => (bool)($attempt->is_qualified ?? ($attempt->score >= 30)),
+                'meet_link' => $attempt->meet_link ?? null,
+                'interview_scheduled_at' => $attempt->interview_scheduled_at ? $attempt->interview_scheduled_at->toISOString() : null,
             ]
         ]);
     }
