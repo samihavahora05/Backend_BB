@@ -2,135 +2,174 @@
 
 namespace App\Services;
 
+use App\Models\GoogleOAuthToken;
+use App\Models\GoogleMeetInterview;
+use App\Models\AssessmentAttempt;
 use Google_Client;
-use Google_Service_Calendar;
-use Google_Service_Calendar_Event;
-use Google_Service_Calendar_EventDateTime;
-use Google_Service_Calendar_ConferenceData;
-use Google_Service_Calendar_CreateConferenceRequest;
-use Google_Service_Calendar_ConferenceSolutionKey;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class GoogleMeetService
 {
+    const ORGANIZER_EMAIL = 'info.blueboxx@gmail.com';
+    const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/meetings.space.created';
+    const MEET_REST_API = 'https://meet.googleapis.com/v2/spaces';
+
     /**
-     * Get configured Google Client
+     * Get Google_Client configured for Google Meet REST API OAuth 2.0 flow
      */
     public static function getClient(): Google_Client
     {
         $client = new Google_Client();
-        $client->setApplicationName('BlueBoxx Portal');
+        $client->setApplicationName('BlueBoxx Google Meet Integration');
+        
+        // Use the official Google Meet scope required
         $client->setScopes([
-            Google_Service_Calendar::CALENDAR_EVENTS,
-            Google_Service_Calendar::CALENDAR,
+            self::REQUIRED_SCOPE,
+            'https://www.googleapis.com/auth/userinfo.email',
+            'openid',
         ]);
+        
         $client->setAccessType('offline');
-        $client->setPrompt('select_account consent');
+        $client->setPrompt('consent'); // Force refresh_token on connect
+        $client->setIncludeGrantedScopes(true);
 
-        // Check for json file path or credentials in storage / root
-        $jsonPath = base_path('../client_secret_google.json');
-        if (!file_exists($jsonPath)) {
-            $jsonPath = storage_path('app/google/client_secret.json');
-        }
+        $clientId = env('GOOGLE_CLIENT_ID');
+        $clientSecret = env('GOOGLE_CLIENT_SECRET');
+        $redirectUri = env('GOOGLE_REDIRECT_URI', 'https://backend.blueboxx.in/api/auth/google/callback');
 
-        if (file_exists($jsonPath)) {
-            $client->setAuthConfig($jsonPath);
-        } else {
-            $client->setClientId(env('GOOGLE_CLIENT_ID'));
-            $client->setClientSecret(env('GOOGLE_CLIENT_SECRET'));
-            $client->setRedirectUri(env('GOOGLE_REDIRECT_URI', 'https://backend.blueboxx.in/api/auth/google/callback'));
-        }
-
-        // Check if access/refresh token is saved
-        $tokenPath = storage_path('app/google/token.json');
-        if (file_exists($tokenPath)) {
-            $accessToken = json_decode(file_get_contents($tokenPath), true);
-            $client->setAccessToken($accessToken);
-
-            if ($client->isAccessTokenExpired()) {
-                if ($client->getRefreshToken()) {
-                    $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-                    file_put_contents($tokenPath, json_encode($client->getAccessToken()));
-                }
-            }
-        }
+        $client->setClientId($clientId);
+        $client->setClientSecret($clientSecret);
+        $client->setRedirectUri($redirectUri);
 
         return $client;
     }
 
     /**
-     * Create live Google Meet via Calendar API, or fallback to configured active room
+     * Retrieve valid Access Token, automatically refreshing with refresh_token if expired
      */
-    public static function createMeeting(string $summary, string $description, $startTime, $endTime = null, array $attendeeEmails = []): ?string
+    public static function getValidAccessToken(): ?string
     {
-        // 1. Check if an official permanent Google Meet link is configured in .env
-        $configuredRoom = env('DEFAULT_INTERVIEW_MEET_LINK');
+        $tokenRecord = GoogleOAuthToken::where('email', self::ORGANIZER_EMAIL)->latest()->first();
+
+        if (!$tokenRecord || empty($tokenRecord->access_token)) {
+            Log::warning("Google Meet: No OAuth token stored for organizer " . self::ORGANIZER_EMAIL);
+            return null;
+        }
+
+        $createdAt = $tokenRecord->created_at_timestamp ? $tokenRecord->created_at_timestamp->timestamp : $tokenRecord->updated_at->timestamp;
+        $expiresIn = $tokenRecord->expires_in ?: 3500;
+        $isExpired = (time() >= ($createdAt + $expiresIn - 120)); // Buffer 2 minutes
+
+        if (!$isExpired) {
+            return $tokenRecord->access_token;
+        }
+
+        // Refresh token if expired
+        if (empty($tokenRecord->refresh_token)) {
+            Log::warning("Google Meet: Token expired and no refresh_token found for " . self::ORGANIZER_EMAIL);
+            return null;
+        }
 
         try {
             $client = self::getClient();
+            $newToken = $client->fetchAccessTokenWithRefreshToken($tokenRecord->refresh_token);
 
-            // If token exists and authenticated, create real Google Calendar Event with Google Meet conference
-            if ($client->getAccessToken() && !$client->isAccessTokenExpired()) {
-                $service = new Google_Service_Calendar($client);
-
-                $event = new Google_Service_Calendar_Event([
-                    'summary' => $summary,
-                    'description' => $description,
-                    'start' => new Google_Service_Calendar_EventDateTime([
-                        'dateTime' => $startTime->toRfc3339String(),
-                        'timeZone' => config('app.timezone', 'Asia/Kolkata'),
-                    ]),
-                    'end' => new Google_Service_Calendar_EventDateTime([
-                        'dateTime' => ($endTime ?? $startTime->copy()->addMinutes(45))->toRfc3339String(),
-                        'timeZone' => config('app.timezone', 'Asia/Kolkata'),
-                    ]),
-                ]);
-
-                // Attach Google Meet conference
-                $conferenceRequest = new Google_Service_Calendar_CreateConferenceRequest();
-                $conferenceRequest->setRequestId('bb-meet-' . Str::uuid()->toString());
-                $solutionKey = new Google_Service_Calendar_ConferenceSolutionKey();
-                $solutionKey->setType('hangoutsMeet');
-                $conferenceRequest->setConferenceSolutionKey($solutionKey);
-
-                $conferenceData = new Google_Service_Calendar_ConferenceData();
-                $conferenceData->setCreateRequest($conferenceRequest);
-                $event->setConferenceData($conferenceData);
-
-                // Add attendees
-                if (!empty($attendeeEmails)) {
-                    $attendees = [];
-                    foreach ($attendeeEmails as $email) {
-                        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                            $attendees[] = ['email' => $email];
-                        }
-                    }
-                    $event->setAttendees($attendees);
-                }
-
-                $createdEvent = $service->events->insert('primary', $event, [
-                    'conferenceDataVersion' => 1,
-                    'sendUpdates' => 'all',
-                ]);
-
-                $meetLink = $createdEvent->getHangoutLink();
-                if (!empty($meetLink)) {
-                    Log::info("Google Meet created successfully via Calendar API: {$meetLink}");
-                    return $meetLink;
-                }
+            if (isset($newToken['error'])) {
+                Log::error("Google Meet token refresh failed: " . json_encode($newToken));
+                return null;
             }
+
+            $tokenRecord->update([
+                'access_token' => $newToken['access_token'],
+                'expires_in' => $newToken['expires_in'] ?? 3600,
+                'created_at_timestamp' => now(),
+            ]);
+
+            Log::info("Google Meet access token refreshed successfully for " . self::ORGANIZER_EMAIL);
+            return $newToken['access_token'];
         } catch (\Throwable $e) {
-            Log::warning("Google Calendar API Event Creation note: " . $e->getMessage());
+            Log::error("Google Meet refresh exception: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Create actual Google Meet Space via official Google Meet REST API v2
+     * POST https://meet.googleapis.com/v2/spaces
+     * Returns array with meeting_uri, meeting_code, google_space_name, space_details
+     */
+    public static function createMeetingSpace(?AssessmentAttempt $attempt = null): ?array
+    {
+        $accessToken = self::getValidAccessToken();
+
+        if (!$accessToken) {
+            Log::error("Google Meet API abort: Organizer " . self::ORGANIZER_EMAIL . " is not connected or token is invalid.");
+            return null;
         }
 
-        // 2. Return configured permanent room if available
-        if (!empty($configuredRoom)) {
-            return $configuredRoom;
-        }
+        try {
+            // Official Google Meet v2 spaces endpoint
+            $response = Http::withToken($accessToken)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                ])
+                ->post(self::MEET_REST_API, [
+                    'config' => [
+                        'accessType' => 'OPEN', // OPEN / TRUSTED
+                    ],
+                ]);
 
-        // 3. Fallback: Google Meet launch room with direct meeting identifier
-        return 'https://meet.google.com/new';
+            if (!$response->successful()) {
+                Log::error("Google Meet REST API v2 error [{$response->status()}]: " . $response->body());
+                return null;
+            }
+
+            $data = $response->json();
+            /*
+             * Response schema from POST https://meet.googleapis.com/v2/spaces:
+             * {
+             *   "name": "spaces/123456789",
+             *   "meetingUri": "https://meet.google.com/xxx-yyyy-zzz",
+             *   "meetingCode": "xxx-yyyy-zzz",
+             *   "config": { ... },
+             *   "activeConference": { ... }
+             * }
+             */
+            $meetingUri = $data['meetingUri'] ?? null;
+            $meetingCode = $data['meetingCode'] ?? null;
+            $spaceName = $data['name'] ?? null;
+
+            if (empty($meetingUri)) {
+                Log::error("Google Meet REST API returned no meetingUri: " . json_encode($data));
+                return null;
+            }
+
+            // Save record in google_meet_interviews table
+            $interviewRecord = GoogleMeetInterview::create([
+                'attempt_id' => $attempt?->id,
+                'user_id' => $attempt?->user_id,
+                'google_space_name' => $spaceName,
+                'meeting_code' => $meetingCode,
+                'meeting_uri' => $meetingUri,
+                'organizer_email' => self::ORGANIZER_EMAIL,
+                'meeting_status' => 'scheduled',
+                'scheduled_at' => now()->addDay()->setTime(11, 0, 0),
+                'space_details' => $data,
+            ]);
+
+            Log::info("REAL Google Meet Space successfully created: {$meetingUri} (Code: {$meetingCode})");
+
+            return [
+                'meeting_uri' => $meetingUri,
+                'meeting_code' => $meetingCode,
+                'space_name' => $spaceName,
+                'space_details' => $data,
+                'interview_id' => $interviewRecord->id,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("Google Meet Space generation exception: " . $e->getMessage());
+            return null;
+        }
     }
 }

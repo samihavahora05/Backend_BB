@@ -229,19 +229,28 @@ class AdminAssessmentController extends Controller
         if (!empty($customMeetLink)) {
             $attempt->update(['meet_link' => $customMeetLink]);
         } else {
-            // Force regenerate
-            $attempt->update(['meet_link' => null]);
+            // Force regenerate via Google Meet REST API v2
+            $attempt->update(['meet_link' => null, 'meeting_code' => null, 'google_space_name' => null]);
         }
 
         \App\Services\InterviewAutomationService::processQualifiedAttempt($attempt);
 
         $attempt->refresh();
 
+        if (empty($attempt->meet_link) || str_contains($attempt->meet_link, 'landing')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Google Meet could not be generated. Please make sure info.blueboxx@gmail.com is authorized at /api/auth/google/connect.',
+            ], 422);
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'New interview link generated and dispatched via Mail & WhatsApp successfully!',
+            'message' => 'New Google Meet generated & dispatched via Mail & WhatsApp successfully!',
             'data' => [
-                'meet_link' => $attempt->meet_link,
+                'meeting_url' => $attempt->meet_link,
+                'meeting_code' => $attempt->meeting_code,
+                'meeting_status' => $attempt->interview_status,
                 'scheduled_at' => $attempt->interview_scheduled_at?->toISOString(),
                 'email_sent' => (bool)$attempt->email_sent,
                 'whatsapp_sent' => (bool)$attempt->whatsapp_sent,

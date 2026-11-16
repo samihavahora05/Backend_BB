@@ -35,24 +35,30 @@ class InterviewAutomationService
             return;
         }
 
-        // 1. Generate unique Google Meet / Interview Room Link via Google Meet Service or configured room
+        // 1. Generate genuine Google Meet Space via official Google Meet REST API v2
         $scheduledTime = now()->addDay()->setTime(11, 0, 0);
         $user = $attempt->user;
 
-        $meetLink = GoogleMeetService::createMeeting(
-            "BlueBoxx Technical Interview - " . ($user?->name ?? 'Candidate'),
-            "Interview for candidate who qualified the 50 MCQ Assessment with {$attempt->score}/50 marks.",
-            $scheduledTime,
-            $scheduledTime->copy()->addMinutes(45),
-            array_filter([$user?->email, env('ADMIN_INTERVIEW_EMAIL', 'support@blueboxx.in')])
-        );
+        $spaceData = GoogleMeetService::createMeetingSpace($attempt);
+        $meetLink = $spaceData['meeting_uri'] ?? null;
+        $meetingCode = $spaceData['meeting_code'] ?? null;
+        $spaceName = $spaceData['space_name'] ?? null;
 
-        if (empty($meetLink) || $meetLink === 'https://meet.google.com/new') {
-            $meetLink = env('DEFAULT_INTERVIEW_MEET_LINK', 'https://meet.google.com/landing');
+        // If Google Meet API token is missing or unauthorized, fail safely with explicit alert, NEVER redirect to landing
+        if (empty($meetLink)) {
+            Log::error("CRITICAL: Google Meet REST API space could not be generated for attempt #{$attempt->id}. Check /api/auth/google/status.");
+            $meetLink = env('DEFAULT_INTERVIEW_MEET_LINK');
+        }
+
+        if (empty($meetLink)) {
+            Log::warning("No default meeting fallback provided. Skipping invalid link construction.");
+            return;
         }
 
         $attempt->update([
             'meet_link' => $meetLink,
+            'meeting_code' => $meetingCode,
+            'google_space_name' => $spaceName,
             'interview_scheduled_at' => $scheduledTime,
             'interview_status' => 'scheduled',
         ]);
