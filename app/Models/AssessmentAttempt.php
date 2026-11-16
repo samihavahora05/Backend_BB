@@ -21,11 +21,18 @@ class AssessmentAttempt extends Model
         'percentage',
         'status',
         'category_scores',
+        'is_qualified',
+        'interview_scheduled_at',
+        'meet_link',
+        'interview_status',
+        'whatsapp_sent',
+        'email_sent',
     ];
 
     protected $casts = [
         'started_at' => 'datetime',
         'submitted_at' => 'datetime',
+        'interview_scheduled_at' => 'datetime',
         'total_questions' => 'integer',
         'correct_answers' => 'integer',
         'wrong_answers' => 'integer',
@@ -33,6 +40,9 @@ class AssessmentAttempt extends Model
         'score' => 'integer',
         'percentage' => 'float',
         'category_scores' => 'array',
+        'is_qualified' => 'boolean',
+        'whatsapp_sent' => 'boolean',
+        'email_sent' => 'boolean',
     ];
 
     public function assessment(): BelongsTo
