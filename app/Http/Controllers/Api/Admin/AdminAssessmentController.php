@@ -29,20 +29,40 @@ class AdminAssessmentController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter: qualified for interview (score >= 30) or below 30
+        if ($request->filled('filter')) {
+            if ($request->filter === 'qualified') {
+                $query->where('score', '>=', 30)->where('status', 'completed');
+            } elseif ($request->filter === 'not_qualified') {
+                $query->where('score', '<', 30)->where('status', 'completed');
+            }
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
         $attempts = $query->orderBy('id', 'desc')->paginate($request->input('per_page', 20));
 
+        // Add stats count for admin tabs
+        $totalCompleted = AssessmentAttempt::where('status', 'completed')->count();
+        $qualifiedCount = AssessmentAttempt::where('status', 'completed')->where('score', '>=', 30)->count();
+        $notQualifiedCount = AssessmentAttempt::where('status', 'completed')->where('score', '<', 30)->count();
+
         return response()->json([
             'success' => true,
             'data' => $attempts,
+            'stats' => [
+                'total_completed' => $totalCompleted,
+                'qualified_30_plus' => $qualifiedCount,
+                'not_qualified' => $notQualifiedCount,
+            ]
         ]);
     }
 
