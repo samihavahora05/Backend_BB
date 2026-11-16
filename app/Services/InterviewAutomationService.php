@@ -35,13 +35,21 @@ class InterviewAutomationService
             return;
         }
 
-        // 1. Generate unique Google Meet / Interview Room Link
-        // Standard Google Meet format: https://meet.google.com/xxx-yyyy-zzz
-        $meetCode = strtolower(Str::random(3)) . '-' . strtolower(Str::random(4)) . '-' . strtolower(Str::random(3));
-        $meetLink = "https://meet.google.com/{$meetCode}";
-
-        // Schedule interview automatically for next business day (tomorrow 11:00 AM)
+        // 1. Generate unique Google Meet / Interview Room Link via Google Meet Service or configured room
         $scheduledTime = now()->addDay()->setTime(11, 0, 0);
+        $user = $attempt->user;
+
+        $meetLink = GoogleMeetService::createMeeting(
+            "BlueBoxx Technical Interview - " . ($user?->name ?? 'Candidate'),
+            "Interview for candidate who qualified the 50 MCQ Assessment with {$attempt->score}/50 marks.",
+            $scheduledTime,
+            $scheduledTime->copy()->addMinutes(45),
+            array_filter([$user?->email, env('ADMIN_INTERVIEW_EMAIL', 'support@blueboxx.in')])
+        );
+
+        if (empty($meetLink) || $meetLink === 'https://meet.google.com/new') {
+            $meetLink = env('DEFAULT_INTERVIEW_MEET_LINK', 'https://meet.google.com/landing');
+        }
 
         $attempt->update([
             'meet_link' => $meetLink,
