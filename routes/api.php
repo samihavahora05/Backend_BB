@@ -39,6 +39,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 
 Route::get('/health', [HealthController::class, 'health']);
+Route::get('/auth/google/connect', [\App\Http\Controllers\Api\GoogleAuthController::class, 'connect']);
+Route::get('/auth/google/callback', [\App\Http\Controllers\Api\GoogleAuthController::class, 'callback']);
 Route::get('/stream/google-drive/{fileId}', [\App\Http\Controllers\Api\GoogleDriveStreamController::class, 'stream']);
 Route::middleware('throttle:10,1')->post('/register', [AuthController::class, 'register']);
 Route::middleware('throttle:15,1')->post('/verify-otp', [AuthController::class, 'verifyOtp']);
