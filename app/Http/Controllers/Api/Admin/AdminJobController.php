@@ -30,16 +30,18 @@ class AdminJobController extends Controller
             $cleanId = ltrim($search, '#');
             $query->where(function ($q) use ($search, $cleanId) {
                 if (is_numeric($cleanId)) {
-                    $q->where('id', (int)$cleanId);
+                    $q->where('id', (int)$cleanId)
+                      ->orWhere('job_id_prefix', 'like', "%{$cleanId}%");
+                } else {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('job_id_prefix', 'like', "%{$search}%")
+                      ->orWhere('company_name', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%")
+                      ->orWhereHas('company', function ($q2) use ($search) {
+                          $q2->where('first_name', 'like', "%{$search}%")
+                             ->orWhere('last_name', 'like', "%{$search}%");
+                      });
                 }
-                $q->orWhere('title', 'like', "%{$search}%")
-                  ->orWhere('job_id_prefix', 'like', "%{$search}%")
-                  ->orWhere('company_name', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhereHas('company', function ($q2) use ($search) {
-                      $q2->where('first_name', 'like', "%{$search}%")
-                         ->orWhere('last_name', 'like', "%{$search}%");
-                  });
             });
         }
 
