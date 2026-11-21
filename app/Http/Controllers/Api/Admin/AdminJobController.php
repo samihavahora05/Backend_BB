@@ -26,9 +26,14 @@ class AdminJobController extends Controller
             ->withCount(['applications', 'views']);
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
+            $search = trim($request->search);
+            $cleanId = ltrim($search, '#');
+            $query->where(function ($q) use ($search, $cleanId) {
+                if (is_numeric($cleanId)) {
+                    $q->where('id', (int)$cleanId);
+                }
+                $q->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('job_id_prefix', 'like', "%{$search}%")
                   ->orWhere('company_name', 'like', "%{$search}%")
                   ->orWhere('location', 'like', "%{$search}%")
                   ->orWhereHas('company', function ($q2) use ($search) {
